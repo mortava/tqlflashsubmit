@@ -930,7 +930,7 @@ export default function App() {
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: 'defylocks@qualr.com', subject: `RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)}`, html }),
+        body: JSON.stringify({ to: 'tposupport@tqlend.com', subject: `RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)}`, html }),
       })
       if (res.ok) {
         setRowStatus('success')
@@ -950,7 +950,7 @@ export default function App() {
     const html = buildFullPricingHtml([
       { label: 'Name', value: rowLockFields.name },
       { label: 'Email', value: rowLockFields.email },
-      { label: 'DEFY Loan Number', value: rowLockFields.loanNumber },
+      { label: 'TQL Loan Number', value: rowLockFields.loanNumber },
       { label: 'Selected Rate', value: formatPercent(rate) },
       { label: 'Selected Price', value: price.toFixed(3) },
       { label: 'Selected APR', value: formatPercent(apr) },
@@ -961,7 +961,7 @@ export default function App() {
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: 'defylocks@qualr.com', subject: `LOCK REQUEST — ${formatPercent(rate)} @ ${price.toFixed(3)}`, html }),
+        body: JSON.stringify({ to: 'tposupport@tqlend.com', subject: `LOCK REQUEST — ${formatPercent(rate)} @ ${price.toFixed(3)}`, html }),
       })
       if (res.ok) {
         setRowStatus('success')
@@ -996,7 +996,7 @@ export default function App() {
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: 'defylocks@qualr.com', subject: `HELP DESK — ${helpDeskFields.topic}`, html }),
+        body: JSON.stringify({ to: 'tposupport@tqlend.com', subject: `HELP DESK — ${helpDeskFields.topic}`, html }),
       })
       if (res.ok) {
         setHelpDeskStatus('success')
@@ -1308,21 +1308,21 @@ export default function App() {
             <IconSubmitLoan className="w-[18px] h-[18px] shrink-0" />
             <span className="text-[13px] truncate">Flash Submit</span>
           </button>
-          {/* Rent AVM — HIDDEN */}
-          {/* Help Desk — partner only */}
-          {isPartner && (
-            <button
-              type="button"
-              onClick={() => { setHelpDeskFields({ name: helpDeskDefaults.name, email: helpDeskDefaults.email, topic: '', message: '' }); setHelpDeskStatus('idle'); setShowHelpDesk(true) }}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900"
-            >
-              <HelpCircle className="w-[18px] h-[18px] shrink-0" />
-              <span className="text-[13px] truncate">Help Desk</span>
-            </button>
-          )}
-          {/* Launch OpenLOS — HIDDEN */}
-          {/* RTL Terminal — HIDDEN */}
-          {/* vBASE — HIDDEN */}
+          {/* Broker Package — greyed out */}
+          <a href="https://brokerpack.tqltpo.com/broker-apply" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed pointer-events-none">
+            <CheckCircle className="w-[18px] h-[18px] shrink-0" />
+            <span className="text-[13px] truncate">Broker Package</span>
+          </a>
+          {/* Help Desk — greyed out */}
+          <button
+            type="button"
+            onClick={() => { setHelpDeskFields({ name: helpDeskDefaults.name, email: helpDeskDefaults.email, topic: '', message: '' }); setHelpDeskStatus('idle'); setShowHelpDesk(true) }}
+            className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed"
+            disabled
+          >
+            <HelpCircle className="w-[18px] h-[18px] shrink-0" />
+            <span className="text-[13px] truncate">Help Desk</span>
+          </button>
         </nav>
 
         {/* User Info (login moved to top header) */}
@@ -1390,20 +1390,16 @@ export default function App() {
                 <span className="text-[13px]">Flash Submit</span>
               </button>
               {/* Rent AVM — HIDDEN */}
-              {/* Help Desk — partner only */}
-              {isPartner && (
-                <button
-                  type="button"
-                  onClick={() => { setMobileMenuOpen(false); setHelpDeskFields({ name: helpDeskDefaults.name, email: helpDeskDefaults.email, topic: '', message: '' }); setHelpDeskStatus('idle'); setShowHelpDesk(true) }}
-                  className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900"
-                >
-                  <HelpCircle className="w-[18px] h-[18px] shrink-0" />
-                  <span className="text-[13px]">Help Desk</span>
-                </button>
-              )}
-              {/* Launch OpenLOS — HIDDEN */}
-              {/* RTL Terminal — HIDDEN */}
-              {/* vBASE — HIDDEN */}
+              {/* Broker Package — greyed out */}
+              <span className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed">
+                <CheckCircle className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[13px]">Broker Package</span>
+              </span>
+              {/* Help Desk — greyed out */}
+              <span className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed">
+                <HelpCircle className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[13px]">Help Desk</span>
+              </span>
             </nav>
             <div className="px-3 py-4 border-t border-slate-200">
               {isPartner && profile ? (
@@ -1457,7 +1453,7 @@ export default function App() {
                 </button>
                 {/* Partners Login — HIDDEN */}
                 <a
-                  href="https://apps.docusign.com/webforms/us/095ff92910ccc16fe109ea3aad3cc927"
+                  href="https://brokerpack.tqltpo.com/broker-apply"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-all active:scale-[0.98]"
@@ -1991,9 +1987,9 @@ export default function App() {
                         <div>
                           <div className="text-sm font-bold text-slate-900 mb-1">Scenario Out of Scope</div>
                           <p className="text-xs text-slate-500 leading-relaxed">
-                            Please check your input fields and try again. If you continue to receive this message then your details just missed our static Rate Sheet. Please fire a Scenario Details Email over to{' '}
-                            <a href="mailto:defylocks@qualr.com" className="text-slate-900 font-semibold hover:underline">defylocks@qualr.com</a>{' '}
-                            for a Fast Custom Quote.
+                            Please check your input fields and try again. If you receive this message more than once then your details just missed our Static Rate Sheet. Please shoot this Scenario Details Email over to{' '}
+                            <a href="mailto:tposupport@tqlend.com" className="text-slate-900 font-semibold hover:underline">tposupport@tqlend.com</a>{' '}
+                            for a Super Fast Quote!
                           </p>
                         </div>
                       </div>
@@ -2257,17 +2253,13 @@ export default function App() {
                                                           Request Lock
                                                         </button>
                                                       )}
-                                                      {isPartner && (
-                                                        <a
-                                                          href="https://defysub.defywholesale.com"
-                                                          target="_blank"
-                                                          rel="noopener noreferrer"
-                                                          onClick={(e) => { e.stopPropagation(); setOpenActionDropdown(null) }}
-                                                          className="block w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 transition-colors no-underline"
-                                                        >
-                                                          Select Rate + Submit File
-                                                        </a>
-                                                      )}
+                                                      <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); setOpenActionDropdown(null); setCurrentView('submit') }}
+                                                        className="block w-full text-left px-3 py-2 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                                                      >
+                                                        Flash Submit to Encompass
+                                                      </button>
                                                     </div>
                                                   )}
                                                 </div>
@@ -2336,7 +2328,7 @@ export default function App() {
                                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                             <input type="text" placeholder="Your Name *" value={rowLockFields.name} onChange={(e) => setRowLockFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
                                             <input type="email" placeholder="Email *" value={rowLockFields.email} onChange={(e) => setRowLockFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
-                                            <input type="text" placeholder="DEFY Loan Number *" value={rowLockFields.loanNumber} onChange={(e) => setRowLockFields(prev => ({ ...prev, loanNumber: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
+                                            <input type="text" placeholder="TQL Loan Number *" value={rowLockFields.loanNumber} onChange={(e) => setRowLockFields(prev => ({ ...prev, loanNumber: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
                                           </div>
                                           <div className="flex items-center gap-3">
                                             <button type="button" onClick={handleRowLock} disabled={rowSending || !rowLockFields.name || !rowLockFields.email || !rowLockFields.loanNumber} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white bg-slate-900 rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -2426,17 +2418,13 @@ export default function App() {
                                                     Request Lock
                                                   </button>
                                                 )}
-                                                {isPartner && (
-                                                  <a
-                                                    href="https://defysub.defywholesale.com"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={() => setOpenActionDropdown(null)}
-                                                    className="block w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 transition-colors no-underline"
-                                                  >
-                                                    Select Rate + Submit File
-                                                  </a>
-                                                )}
+                                                <button
+                                                  type="button"
+                                                  onClick={() => { setOpenActionDropdown(null); setCurrentView('submit') }}
+                                                  className="block w-full text-left px-3 py-2 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                                                >
+                                                  Flash Submit to Encompass
+                                                </button>
                                               </div>
                                             )}
                                           </div>
