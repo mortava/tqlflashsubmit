@@ -93,7 +93,13 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
         body: JSON.stringify({ mismoXml }),
       })
 
-      const data = await res.json() as { success: boolean; loanId?: string; loanNumber?: string; error?: string }
+      const text = await res.text()
+      let data: { success: boolean; loanId?: string; loanNumber?: string; error?: string }
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error(`Server error (${res.status}): ${text.slice(0, 200)}`)
+      }
 
       if (!data.success) {
         throw new Error(data.error || 'Submission failed')
@@ -155,7 +161,13 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
           }),
         })
 
-        const data = await res.json() as { success: boolean; error?: string }
+        const docText = await res.text()
+        let data: { success: boolean; error?: string }
+        try {
+          data = JSON.parse(docText)
+        } catch {
+          throw new Error(`Server error (${res.status}): ${docText.slice(0, 200)}`)
+        }
 
         setUploadedDocs(prev => prev.map((d, idx) =>
           idx === i ? { ...d, status: data.success ? 'done' : 'error', error: data.error } : d
