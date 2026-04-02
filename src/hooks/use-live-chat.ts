@@ -1,0 +1,356 @@
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { supabase } from '@/lib/supabase'
+import { generateId } from '@/lib/utils'
+
+export interface LiveChatMessage {
+  id: string
+  conversation_id: string
+  sender_role: 'user' | 'agent'
+  sender_name: string
+  content: string
+  image_url?: string | null
+  created_at: string
+}
+
+export interface LiveChatConversation {
+  id: string
+  user_id: string
+  user_name: string
+  status: 'open' | 'closed'
+  department: 'support' | 'sales'
+  created_at: string
+}
+
+interface UseLiveChatOptions {
+  userId?: string
+  userName?: string
+  /** If the user is a chat_system_user (client role), pass their ID for assignment routing */
+  systemUserId?: string
+}
+
+// Notification sound for USER side — bright ascending chime when agent replies
+export function playUserNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc1 = ctx.createOscillator()
+    const osc2 = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc1.connect(gain)
+    osc2.connect(gain)
+    gain.connect(ctx.destination)
+    osc1.type = 'sine'
+    osc1.frequency.setValueAtTime(523, ctx.currentTime)
+    osc1.start(ctx.currentTime)
+    osc1.stop(ctx.currentTime + 0.15)
+    osc2.type = 'sine'
+    osc2.frequency.setValueAtTime(659, ctx.currentTime + 0.15)
+    osc2.start(ctx.currentTime + 0.15)
+    osc2.stop(ctx.currentTime + 0.35)
+    gain.gain.setValueAtTime(0.35, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45)
+  } catch {}
+}
+
+// Notification sound for ADMIN side — deeper triple-knock when user messages
+export function playAdminNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const notes = [392, 392, 494]
+    const times = [0, 0.12, 0.24]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + times[i])
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + times[i])
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + times[i] + 0.1)
+      osc.start(ctx.currentTime + times[i])
+      osc.stop(ctx.currentTime + times[i] + 0.12)
+    })
+  } catch {}
+}
+
+export function useLiveChat({ userId, userName, systemUserId }: UseLiveChatOptions = {}) {
+  const [conversation, setConversation] = useState<LiveChatConversation | null>(null)
+  const [messages, setMessages] = useState<LiveChatMessage[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const resolvedUserId = useMemo(() => userId || 'anonymous-' + generateId(), [userId])
+  const resolvedUserName = userName || 'Guest'
+
+  // Track which DB message IDs we've already seen (for sound dedup)
+  const seenDbIdsRef = useRef<Set<string>>(new Set())
+
+  // === Canonical merge: DB is source of truth, keep unsent optimistic msgs ===
+  const mergeFromDb = useCallback((dbData: LiveChatMessage[], playSound: boolean) => {
+    setMessages((prev) => {
+      const dbIds = new Set(dbData.map((m) => m.id))
+      // Keep optimistic user messages not yet confirmed by DB
+      // An optimistic msg is "confirmed" if DB has a matching message
+      const keptOptimistic = prev.filter((m) => {
+        if (dbIds.has(m.id) || m.sender_role !== 'user') return false
+        // Check content match OR image match
+        return !dbData.some((d) =>
+          d.sender_role === 'user' && (
+            (d.content && d.content === m.content) ||
+            (d.image_url && m.image_url && d.image_url.includes('chat-images'))
+          )
+        )
+      })
+
+      // Detect genuinely new agent messages for notification sound
+      if (playSound) {
+        const newAgentMsgs = dbData.filter((m) => m.sender_role === 'agent' && !seenDbIdsRef.current.has(m.id))
+        if (newAgentMsgs.length > 0 && (prev.length > 0 || seenDbIdsRef.current.size > 0)) {
+          playUserNotificationSound()
+          if (document.hidden && Notification.permission === 'granted') {
+            new Notification('OpenPrice', { body: newAgentMsgs[newAgentMsgs.length - 1].content, icon: '/vite.svg' })
+          }
+        }
+      }
+
+      // Update seen IDs
+      dbData.forEach((m) => seenDbIdsRef.current.add(m.id))
+
+      const merged = [...dbData, ...keptOptimistic]
+      // Only update state if actually different
+      if (merged.length === prev.length && merged.every((m, i) => m.id === prev[i]?.id)) return prev
+      return merged
+    })
+  }, [])
+
+  // === POLLING — single source of truth, fetch every 3s ===
+  useEffect(() => {
+    if (!conversation) return
+    console.log('[Chat] Starting poll for', conversation.id)
+    seenDbIdsRef.current = new Set()
+
+    const poll = async () => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('conversation_id', conversation.id)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('[Chat] Poll error:', error)
+        return
+      }
+      if (data) {
+        mergeFromDb(data as LiveChatMessage[], true)
+      }
+    }
+
+    // Initial fetch
+    poll()
+    const interval = setInterval(poll, 3000)
+    return () => clearInterval(interval)
+  }, [conversation?.id, mergeFromDb])
+
+  // Load existing open conversation on mount
+  useEffect(() => {
+    async function loadExisting() {
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .select('*')
+        .eq('user_id', resolvedUserId)
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error) {
+        console.log('[Chat] No existing conversation:', error.code)
+        return
+      }
+      if (data) {
+        console.log('[Chat] Loaded existing conversation:', data.id)
+        setConversation(data as LiveChatConversation)
+        const { data: msgs } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('conversation_id', data.id)
+          .order('created_at', { ascending: true })
+        if (msgs) setMessages(msgs as LiveChatMessage[])
+      }
+    }
+    loadExisting()
+  }, [resolvedUserId])
+
+  const startConversation = useCallback(
+    async (department: 'support' | 'sales' = 'support') => {
+      setLoading(true)
+      console.log('[Chat] Starting conversation, department:', department)
+
+      // If this user is a chat system client, look up their assigned manager
+      let assignedManagerId: string | undefined
+      let companyId: string | undefined
+      if (systemUserId) {
+        const { data: assignment } = await supabase
+          .from('chat_assignments')
+          .select('sales_manager_id, company_id')
+          .eq('client_id', systemUserId)
+          .limit(1)
+          .single()
+        if (assignment) {
+          assignedManagerId = assignment.sales_manager_id
+          companyId = assignment.company_id
+        }
+      }
+
+      const insertData: any = {
+        user_id: resolvedUserId,
+        user_name: resolvedUserName,
+        department,
+      }
+      if (systemUserId) insertData.system_user_id = systemUserId
+      if (assignedManagerId) insertData.assigned_manager_id = assignedManagerId
+      if (companyId) insertData.company_id = companyId
+
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .insert(insertData)
+        .select()
+        .single()
+
+      setLoading(false)
+      if (error) {
+        console.error('[Chat] Start conversation error:', error)
+        throw error
+      }
+
+      console.log('[Chat] Conversation created:', data.id, assignedManagerId ? `assigned to manager ${assignedManagerId}` : 'unassigned')
+      const convo = data as LiveChatConversation
+      setConversation(convo)
+      setMessages([])
+      return convo
+    },
+    [resolvedUserId, resolvedUserName, systemUserId]
+  )
+
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!content.trim() || !conversation) return
+
+      const localMsg: LiveChatMessage = {
+        id: generateId(),
+        conversation_id: conversation.id,
+        sender_role: 'user',
+        sender_name: resolvedUserName,
+        content: content.trim(),
+        created_at: new Date().toISOString(),
+      }
+
+      // Optimistic update
+      setMessages((prev) => [...prev, localMsg])
+
+      const { error } = await supabase.from('chat_messages').insert({
+        conversation_id: conversation.id,
+        sender_role: 'user',
+        sender_name: resolvedUserName,
+        content: content.trim(),
+      })
+
+      if (error) {
+        console.error('[Chat] Send message error:', error)
+        setMessages((prev) => prev.filter((m) => m.id !== localMsg.id))
+        return
+      }
+
+      console.log('[Chat] Message sent OK')
+      await supabase
+        .from('chat_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversation.id)
+    },
+    [conversation, resolvedUserName]
+  )
+
+  const sendImage = useCallback(
+    async (file: File, caption?: string) => {
+      if (!conversation) return
+      const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+      if (!allowed.includes(file.type)) {
+        console.error('[Chat] Invalid file type:', file.type)
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        console.error('[Chat] File too large:', file.size)
+        return
+      }
+
+      const ext = file.name.split('.').pop() || 'png'
+      const path = `${conversation.id}/${Date.now()}_${generateId()}.${ext}`
+      const localUrl = URL.createObjectURL(file)
+
+      const localMsg: LiveChatMessage = {
+        id: generateId(),
+        conversation_id: conversation.id,
+        sender_role: 'user',
+        sender_name: resolvedUserName,
+        content: caption?.trim() || '',
+        image_url: localUrl,
+        created_at: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, localMsg])
+
+      const { error: uploadError } = await supabase.storage
+        .from('chat-images')
+        .upload(path, file, { contentType: file.type })
+
+      if (uploadError) {
+        console.error('[Chat] Upload error:', uploadError)
+        setMessages((prev) => prev.filter((m) => m.id !== localMsg.id))
+        return
+      }
+
+      const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+
+      const { error } = await supabase.from('chat_messages').insert({
+        conversation_id: conversation.id,
+        sender_role: 'user',
+        sender_name: resolvedUserName,
+        content: caption?.trim() || '',
+        image_url: publicUrl,
+      })
+
+      if (error) {
+        console.error('[Chat] Send image message error:', error)
+        setMessages((prev) => prev.filter((m) => m.id !== localMsg.id))
+        return
+      }
+
+      console.log('[Chat] Image sent OK')
+      await supabase
+        .from('chat_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversation.id)
+    },
+    [conversation, resolvedUserName]
+  )
+
+  const endConversation = useCallback(async () => {
+    if (conversation) {
+      await supabase
+        .from('chat_conversations')
+        .update({ status: 'closed' })
+        .eq('id', conversation.id)
+    }
+    setConversation(null)
+    setMessages([])
+  }, [conversation])
+
+  return {
+    conversation,
+    messages,
+    loading,
+    startConversation,
+    sendMessage,
+    sendImage,
+    endConversation,
+    isConnected: true,
+  }
+}

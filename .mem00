@@ -1,0 +1,74 @@
+# Session Memory — openpricev5 (DEFY CLOUD / OpenPrice)
+**Date**: 2026-03-24 15:30 CDT
+**Branch**: master
+**Session Focus**: DSCR % passthrough fix for values 1.0/1.00/1.000 and prepay options investigation
+
+## Status
+- **Completed**:
+  - Added `dscrRangeFromNumeric()` fallback in API to compute DSCR range from numeric value when `dscrRatio` string is missing/invalid
+  - Added DSCR ratio normalization in API handler before SOAP request
+  - Explicitly sending `dscrManualInput` in frontend request body
+  - Added DSCR debug logging in frontend submit and API response (`debugSentValues.dscrManualInput`)
+  - Fixed comma stripping for `grossRent`/`presentHousingExpense` in SOAP XML builder (prevents NaN)
+  - Deployed both commits to Vercel production
+- **In Progress**: User reports issue persists — "out of scope" when entering DSCR 1.0
+- **Next Up**:
+  - Reproduce the EXACT user scenario (may involve different loan amount, credit score, or LTV)
+  - User also reports only 60MO and 48MO prepay options showing — API test confirms ALL 6 programs returned (0MO, 12MO, 24MO, 36MO, 48MO, 60MO), so this may be a frontend display/filter issue or a different test scenario
+- **Blockers**: Cannot reproduce the "out of scope" or missing prepay issues with default test values ($600K loan, $800K property, 740 FICO, 75% LTV, Investment, DSCR)
+
+## Change Tree
+```
+modified:  api/get-pricing.ts (+44/-6)
+  - Added dscrRangeFromNumeric() function to compute DSCR range from raw numeric value
+  - Updated mapDSCRRatio() to accept fallback dscrValue and dscrManualInput params
+  - Added dscrRatio normalization step in handler (computes range from numeric if missing)
+  - Fixed comma stripping: Number(String(val).replace(/,/g,'')) for grossRent/presentHousingExpense
+  - Added dscrManualInput to debugSentValues response
+
+modified:  src/App.tsx (+14/-1)
+  - Added console.log('[DSCR Submit]', {...}) for debugging DSCR values sent
+  - Explicitly sends dscrManualInput in request body (not just via spread)
+```
+
+## Key Decisions
+- DSCR tier mapping is correct: 1.0/1.00/1.000 all map to range '1.00-1.149' (code 3)
+- MeridianLink correctly differentiates DSCR tiers — DSCR 1.0 gets NO "DSCR >= 1.25" adjustment, while DSCR 1.25 gets +0.500 adjustment
+- API returns 6 programs for DSCR 1.0: No PPP, 12MO, 24MO, 36MO, 48MO, 60MO — all with rates in the 99.5-101.5 price range
+- The `aDSCR %` ML field is a SELECT code (1-6), not a ratio value. Code 3 = 1.00-1.149 tier.
+- grossRent and presentHousingExpense are supplementary SOAP fields; the DSCR tier code is what controls ML pricing
+
+## Commands
+```bash
+# Dev server
+npm run dev
+
+# Deploy
+git add -A && git commit -m "msg" && git push origin master && npx vercel --prod --yes
+
+# Test API (DSCR 1.0)
+curl -s -X POST "https://openpricev5.vercel.app/api/get-pricing" \
+  -H "Content-Type: application/json" \
+  -d '{"loanAmount":600000,"propertyValue":800000,"creditScore":740,"propertyZip":"90210","propertyState":"CA","propertyCounty":"Los Angeles","occupancyType":"investment","propertyType":"sfr","loanPurpose":"purchase","documentationType":"dscr","loanType":"nonqm","dscrRatio":"1.00-1.149","dscrValue":1.0,"dscrManualInput":"1.0","lockPeriod":"30","prepayPeriod":"36mo","dti":"36","ltv":75,"grossRent":5000,"presentHousingExpense":5000,"impoundType":"escrowed","loanTerm":"30","amortization":"fixed"}'
+```
+
+## Technical Notes
+- `mapDSCRRatio()` now has 3-param fallback: (dscrRatio, dscrValue, dscrManualInput)
+- When dscrRatio string is missing/invalid, API auto-computes from numeric dscrValue or dscrManualInput
+- SOAP fields for DSCR: `aDSCR %` (tier code), `sSpGrossRentPe` (rent), `sPresOHExpPe` (expense), `aOccupancyRate` (100%)
+- Frontend `calculatedDSCR` is computed every render from `formData.dscrManualInput` — no stale state issue
+- Price filter: `filterRateOptionsByPrice` keeps rates with price (100 - points) between 99.5 and 101.5
+- `matchesPrepayPeriod` function highlights the selected prepay program but does NOT filter others from display
+- User's "out of scope" message could come from: (1) `validateFormBeforeSubmit` for small-balance loans <$100K, (2) `mlMessage: 'Searching National Pricing'` when API returns success:false or sanitize returns null
+- `handleInputChange` for dscrManualInput auto-computes grossRent = DSCR * 5000, presentHousingExpense = 5000
+
+## Recent Commits
+```
+5b034ea Fix grossRent/presentHousingExpense comma stripping in SOAP builder
+963bb22 Fix DSCR % passthrough for values 1.0/1.00/1.000
+```
+
+## Uncommitted Changes
+```
+None — all committed
+```
