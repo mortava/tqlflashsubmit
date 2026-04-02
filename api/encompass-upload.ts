@@ -139,6 +139,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
+    // Validate file size (Vercel has 4.5MB body limit; base64 adds ~33% overhead)
+    const approxSizeBytes = Math.ceil(fileBase64.length * 0.75)
+    if (approxSizeBytes > 3 * 1024 * 1024) {
+      return res.status(413).json({
+        success: false,
+        error: `File too large (${(approxSizeBytes / 1024 / 1024).toFixed(1)}MB). Maximum 3MB per upload. Please upload larger files directly in Encompass.`,
+      })
+    }
+
     const fileBuffer = new Uint8Array(Buffer.from(fileBase64, 'base64'))
     const mimeType = contentType || 'application/pdf'
 
