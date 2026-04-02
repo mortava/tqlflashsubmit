@@ -8,8 +8,7 @@
       "maxDuration": 30
     },
     "api/encompass-upload.ts": {
-      "maxDuration": 60,
-      "memory": 3008
+      "maxDuration": 60
     },
     "api/get-ob-pricing.ts": {
       "maxDuration": 30
