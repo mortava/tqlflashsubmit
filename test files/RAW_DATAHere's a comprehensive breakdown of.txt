@@ -1,0 +1,126 @@
+Environment & Credentials Setup:API_BASE_URL = https://api.elliemae.com
+  CLIENT_ID = <your API client ID>
+  CLIENT_SECRET = <your API client secret>
+  INSTANCE_ID = <your Encompass instance ID, e.g. BE1234567>
+  USERNAME = <encompass_username>@encompass:<INSTANCE_ID>
+  PASSWORD = <encompass_user_password>
+  TARGET_FOLDER = "My Pipeline"   # or exact name of your Standard General folder, Step 1 — Authentication: Obtain Bearer Token
+  Endpoint: POST https://api.elliemae.com/oauth2/v1/token
+  Implementation: [Pasted text #1 +37 lines]Body: Raw XML content of the MISMO 3.4 file (read as string/bytes from user upload)
+  Implementation:[Pasted text #2 +38 lines] Body: The entire JSON object returned from Step 2
+  Implementation:def create_loan(access_token, v3_loan_contract, folder_name="My Pipeline"):
+      headers = {
+          "Authorization": f"Bearer {access_token}",
+          "Content-Type": "application/json"
+      }
+      params = {
+          "loanFolder": folder_name,
+          "view": "id"
+      }
+      response = requests.post(
+          "https://api.elliemae.com/encompass/v3/loans",
+          headers=headers,
+          params=params,
+          json=v3_loan_contract
+      )
+      response.raise_for_status()
+      # Response 201 — loanId returned in response body when view=id
+      result = response.json()
+      loan_id = result.get("loanId") or result.get("id")
+      return loan_id,Response 201: Loan created successfully. The loanId (GUID) is returned. This is a 32-character UUID, e.g.
+  547x8xx1-15xx-4fbx-8x23-x033121x1402
+  Possible errors: 400 (bad request), 401 (unauthorized), 403 (forbidden), 409 (conflict), 500 (server error), Step 4 — Retrieve
+  Loan Number (Human-Readable)
+  The loanId from Step 3 is the GUID. To get the human-readable Loan Number (field 2), fetch the loan:
+  Endpoint: GET https://api.elliemae.com/encompass/v3/loans/{loanId}[Pasted text #1 +28 lines], {
+    "title": "Document Title Here",
+    "fileName": "filename.pdf",
+    "contentType": "application/pdf",
+    "size": 123456
+  }, def get_attachment_upload_url(access_token, loan_id, file_name, file_size, content_type="application/pdf"):
+      headers = {
+          "Authorization": f"Bearer {access_token}",
+          "Content-Type": "application/json"
+      }
+      payload = {
+          "title": file_name,
+          "fileName": file_name,
+          "contentType": content_type,
+          "size": file_size
+      }
+      response = requests.post(
+          f"https://api.elliemae.com/encompass/v3/loans/{loan_id}/attachmentUploadUrl",
+          headers=headers,
+          json=payload
+      )
+      response.raise_for_status()
+      return response.json()
+      # Returns: { "uploadUrl": "...", "authorizationHeader": "...", "attachmentId": "..." }
+      # For files > 60MB, returns multiChunk with chunkList of upload URLs, Step 5b — Upload File to the Upload URL
+  Use the uploadUrl and authorizationHeader from Step 5a. This is a direct PUT to the URL — not to the Encompass API server., def
+  upload_file_to_url(upload_url, authorization_header, file_bytes, content_type="application/pdf"):
+      """
+      For files <= 60MB (single upload)
+      """
+      headers = {
+          "Authorization": authorization_header,  # from step 5a response
+          "Content-Type": content_type
+      }
+      response = requests.put(
+          upload_url,
+          headers=headers,
+          data=file_bytes
+      )
+      response.raise_for_status()
+      # Returns 200 on success; attachment ID is in response Location header
+      attachment_id = response.headers.get("Location", "").split("/")[-1]
+      return attachment_id, For files > 60MB: The response from Step 5a will include a multiChunk object with a chunkList (each
+  chunk max 20MB) and a commitUrl. Split the file, upload each chunk in parallel to its respective URL, then POST to the commitUrl
+  to finalize., Step 6 — Create a Document Container in the eFolder (Optional but Recommended)
+  This creates a named document slot in the eFolder for the uploaded attachment.
+  Endpoint: POST https://api.elliemae.com/encompass/v1/loans/{loanId}/documents, def create_efolder_document(access_token, loan_id,
+  document_title, application_id="All"):
+      headers = {
+          "Authorization": f"Bearer {access_token}",
+          "Content-Type": "application/json"
+      }
+      params = {"view": "id"}
+      payload = {
+          "title": document_title,
+          "applicationId": application_id  # "All" or specific borrower pair
+      }
+      response = requests.post(
+          f"https://api.elliemae.com/encompass/v1/loans/{loan_id}/documents",
+          headers=headers,
+          params=params,
+          json=payload
+      )
+      response.raise_for_status()
+      # Document ID is in the response Location header
+      document_id = response.headers.get("Location", "").split("/")[-1]
+      return document_id, Step 7 — Assign Attachment to Document
+  Endpoint: PATCH https://api.elliemae.com/encompass/v3/loans/{loanId}/documents/{documentId}/attachments, def
+  assign_attachment_to_document(access_token, loan_id, document_id, attachment_id):
+      headers = {
+          "Authorization": f"Bearer {access_token}",
+          "Content-Type": "application/json"
+      }
+      params = {"action": "add"}
+      payload = {
+          "entityId": attachment_id,
+          "entityType": "attachment"
+      }
+      response = requests.patch(
+          f"https://api.elliemae.com/encompass/v3/loans/{loan_id}/documents/{document_id}/attachments",
+          headers=headers,
+          params=params,
+          json=payload
+      )
+      response.raise_for_status()
+      # Returns 204 No Content on success, Complete Orchestration Function, [Pasted text #2 +43 lines], Key API Reference Table
+  ActionMethodEndpointGet TokenPOSThttps://api.elliemae.com/oauth2/v1/tokenConvert MISMO 3.4POST/encompass/v3/converter/loansCreate
+  Loan (V3)POST/encompass/v3/loans?loanFolder=<name>Get Loan (V3)GET/encompass/v3/loans/{loanId}List Loan Folders
+  (V1)GET/encompass/v1/loanfoldersMove Loan to FolderPATCH/encompass/v1/loanfolders/{folderName}/loans?action=addGet Upload URL
+  (V3)POST/encompass/v3/loans/{loanId}/attachmentUploadUrlCreate eFolder Doc (V1)POST/encompass/v1/loans/{loanId}/documentsAssign
+  Doc Attachment (V3)PATCH/encompass/v3/loans/{loanId}/documents/{documentId}/attachments?action=addList Attachments
+  (V3)GET/encompass/v3/loans/{loanId}/attachments, [Pasted text #3 +9 lines]
