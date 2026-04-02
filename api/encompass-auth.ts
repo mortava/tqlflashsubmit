@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getEncompassToken } from './_lib/encompass-token'
+import { getEncompassToken } from './_lib/encompass-token.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

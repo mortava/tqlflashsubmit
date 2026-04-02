@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getEncompassToken } from './_lib/encompass-token'
+import { getEncompassToken } from './_lib/encompass-token.js'
 
 const API_BASE = process.env.API_BASE_URL || 'https://api.elliemae.com'
 
@@ -41,7 +41,7 @@ async function getUploadUrl(
 async function uploadFileToPresignedUrl(
   uploadUrl: string,
   authHeader: string,
-  fileBuffer: Buffer,
+  fileBuffer: Uint8Array,
   contentType: string
 ): Promise<void> {
   const res = await fetch(uploadUrl, {
@@ -139,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    const fileBuffer = Buffer.from(fileBase64, 'base64')
+    const fileBuffer = new Uint8Array(Buffer.from(fileBase64, 'base64'))
     const mimeType = contentType || 'application/pdf'
 
     const token = await getEncompassToken()

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getEncompassToken } from './_lib/encompass-token'
+import { getEncompassToken } from './_lib/encompass-token.js'
 
 const API_BASE = process.env.API_BASE_URL || 'https://api.elliemae.com'
 
