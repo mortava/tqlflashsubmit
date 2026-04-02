@@ -50,7 +50,7 @@ async function uploadFileToPresignedUrl(
       'Authorization': authHeader,
       'Content-Type': contentType,
     },
-    body: fileBuffer,
+    body: fileBuffer as unknown as BodyInit,
   })
 
   if (!res.ok) {
