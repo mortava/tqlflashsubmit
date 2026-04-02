@@ -1,5 +1,14 @@
 {
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/encompass-submit.ts": {
+      "maxDuration": 30
+    },
+    "api/encompass-upload.ts": {
+      "maxDuration": 60
+    }
+  }
 }

@@ -10,6 +10,7 @@ import { formatCurrency, formatPercent } from '@/lib/utils'
 import { validateFormBeforeSubmit } from '@/lib/PricingLogic'
 import { ChatAdminPanel } from '@/components/chat-admin-panel'
 const UserChatPage = lazy(() => import('@/pages/UserChatPage'))
+const SubmitLoanPage = lazy(() => import('@/pages/SubmitLoanPage'))
 
 /* ── Sidebar SVG Icons (currentColor for theme adaptability) ── */
 const IconNewScenario = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -411,7 +412,7 @@ function DraggablePanel({ children, onClose, title, defaultX, defaultY, width, h
 
 export default function App() {
   const { user, profile, isPartner, signOut } = useAuth()
-  const [currentView, setCurrentView] = useState<'pricing' | 'login' | 'signup'>('pricing')
+  const [currentView, setCurrentView] = useState<'pricing' | 'login' | 'signup' | 'submit'>('pricing')
   // Help Desk state
   const [showHelpDesk, setShowHelpDesk] = useState(false)
   const [helpDeskFields, setHelpDeskFields] = useState({ name: '', email: '', topic: '', message: '' })
@@ -1255,12 +1256,19 @@ export default function App() {
 
   const targetPricing: TargetPricingOption | null = result ? getTargetPricing() : null
 
-  // View routing: Login / SignUp pages render full-screen (no sidebar)
+  // View routing: Login / SignUp / Submit pages render full-screen (no sidebar)
   if (currentView === 'login') {
     return <LoginPage onBack={() => setCurrentView('pricing')} onSignUp={() => setCurrentView('signup')} />
   }
   if (currentView === 'signup') {
     return <SignUpPage onBack={() => setCurrentView('pricing')} onLogin={() => setCurrentView('login')} />
+  }
+  if (currentView === 'submit') {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">Loading...</div>}>
+        <SubmitLoanPage onBack={() => setCurrentView('pricing')} />
+      </Suspense>
+    )
   }
 
   // Auto-fill help desk fields from partner profile
@@ -1277,8 +1285,8 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <IconAtom className="w-8 h-8 text-black" />
             <div className="leading-tight">
-              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Open</span><span className="text-blue-600">Price</span></span>
-              <div className="text-[9px] text-slate-400 tracking-wide mt-0.5">Powered by DEFY TPO</div>
+              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="text-blue-600">Flash</span></span>
+              <div className="text-[9px] text-slate-400 tracking-wide mt-0.5">Total Quality Lending</div>
             </div>
           </div>
         </div>
@@ -1295,11 +1303,11 @@ export default function App() {
           </button>
           {/* Chat with a Human — HIDDEN */}
           {/* TRINITY AI DEAL DESK — HIDDEN */}
-          {/* Submit a Loan */}
-          <a href="https://defysub.defywholesale.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-900">
+          {/* Submit a Loan — Encompass Flash Submit */}
+          <button type="button" onClick={() => setCurrentView('submit')} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900">
             <IconSubmitLoan className="w-[18px] h-[18px] shrink-0" />
-            <span className="text-[13px] truncate">Submit a Loan</span>
-          </a>
+            <span className="text-[13px] truncate">Flash Submit</span>
+          </button>
           {/* Rent AVM — HIDDEN */}
           {/* Help Desk — partner only */}
           {isPartner && (
@@ -1341,8 +1349,8 @@ export default function App() {
         <div className="flex items-center gap-2">
           <IconAtom className="w-6 h-6 text-black" />
           <div className="leading-tight">
-            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Open</span><span className="text-blue-600">Price</span></span>
-            <div className="text-[8px] text-slate-400 tracking-wide">Powered by DEFY TPO</div>
+            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="text-blue-600">Flash</span></span>
+            <div className="text-[8px] text-slate-400 tracking-wide">Total Quality Lending</div>
           </div>
         </div>
         <div className="w-8" />
@@ -1376,11 +1384,11 @@ export default function App() {
               </button>
               {/* Chat with a Human — HIDDEN */}
               {/* TRINITY AI DEAL DESK — HIDDEN */}
-              {/* Submit a Loan */}
-              <a href="https://defysub.defywholesale.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-900" onClick={() => setMobileMenuOpen(false)}>
+              {/* Submit a Loan — Encompass Flash Submit */}
+              <button type="button" onClick={() => { setMobileMenuOpen(false); setCurrentView('submit') }} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900">
                 <IconSubmitLoan className="w-[18px] h-[18px] shrink-0" />
-                <span className="text-[13px]">Submit a Loan</span>
-              </a>
+                <span className="text-[13px]">Flash Submit</span>
+              </button>
               {/* Rent AVM — HIDDEN */}
               {/* Help Desk — partner only */}
               {isPartner && (

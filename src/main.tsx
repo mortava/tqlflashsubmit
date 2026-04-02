@@ -6,6 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 
 const AdminChatPage = lazy(() => import('@/pages/AdminChatPage'))
 const UserChatPage = lazy(() => import('@/pages/UserChatPage'))
+const SubmitLoanPage = lazy(() => import('@/pages/SubmitLoanPage'))
 
 function Router() {
   const path = window.location.pathname
@@ -22,6 +23,14 @@ function Router() {
     return (
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">Loading...</div>}>
         <UserChatPage />
+      </Suspense>
+    )
+  }
+
+  if (path === '/submit') {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">Loading...</div>}>
+        <SubmitLoanPage onBack={() => { window.location.href = '/' }} />
       </Suspense>
     )
   }
