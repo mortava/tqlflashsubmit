@@ -1,0 +1,353 @@
+{
+  "formName": "FLASH SUBMIT",
+  "formId": "FLASH SUBMIT WITH TQL TPO",
+  "entryTypeName": "Forms.Flash.Submit",
+  "header": {
+    "title": "FLASH SUBMIT",
+    "description": "Loan Setup & Disclosures Request",
+    "layout": "column",
+    "alignment": "left",
+    "visible": true
+  },
+  "fields": {
+    "ConfirmTheLoanID": {
+      "name": "ConfirmTheLoanID",
+      "label": "Confirm the Loan ID #",
+      "type": "String",
+      "required": true,
+      "placeholder": "Loan Number that was Just Issued"
+    },
+    "TransactionContacts": {
+      "name": "TransactionContacts",
+      "label": "Transaction Contacts",
+      "type": "Section",
+      "typeName": "Forms.Flash.Submit",
+      "fields": {
+        "BrokerMLO": {
+          "name": "BrokerMLO",
+          "label": "Broker MLO",
+          "type": "Name",
+          "required": true,
+          "description": "Loan officer for the company",
+          "subFields": {
+            "First": { "label": "First", "type": "String" },
+            "Last": { "label": "Last", "type": "String" }
+          }
+        },
+        "MLONMLS": {
+          "name": "MLONMLS",
+          "label": "MLO NMLS#",
+          "type": "String",
+          "required": false,
+          "placeholder": "(if available)."
+        },
+        "LOIsThePOC": {
+          "name": "LOIsThePOC",
+          "label": "LO is the POC",
+          "type": "Boolean",
+          "required": false,
+          "defaultValue": true,
+          "inputType": "RadioGroup"
+        },
+        "MLOEmail": {
+          "name": "MLOEmail",
+          "label": "MLO Email",
+          "type": "String",
+          "required": true,
+          "description": "Used for confirmations/correspondence."
+        },
+        "LOMobile": {
+          "name": "LOMobile",
+          "label": "LO Mobile #",
+          "type": "String",
+          "required": false,
+          "description": "(for 2-Factor Auth)"
+        },
+        "PrimaryContact": {
+          "name": "PrimaryContact",
+          "label": "Primary Contact",
+          "type": "String",
+          "required": true,
+          "conditionalRequired": "PrimaryContact_IsRequired",
+          "description": "(if different from LO)"
+        },
+        "PrimaryContactPhone": {
+          "name": "PrimaryContactPhone",
+          "label": "Primary Contact Phone",
+          "type": "String",
+          "required": true,
+          "description": "(for 2-Factor Auth)",
+          "conditionalVisibility": "PrimaryContactPhone_Visible"
+        },
+        "PrimaryContactEmail": {
+          "name": "PrimaryContactEmail",
+          "label": "Primary Contact Email",
+          "type": "String",
+          "required": false,
+          "conditionalVisibility": "PrimaryContactEmail_Visible"
+        },
+        "ConfirmBorrowerInformation": {
+          "name": "ConfirmBorrowerInformation",
+          "label": "Confirm Borrower Information",
+          "type": "Section",
+          "typeName": "Forms.FormEntry.DEFY1.FLASHSUBMIT.TransactionContacts.ConfirmBorrowerInformation",
+          "fields": {
+            "Borrower": {
+              "name": "Borrower",
+              "label": "Borrower",
+              "type": "Name",
+              "required": true,
+              "subFields": {
+                "First": { "label": "First", "type": "String" },
+                "Last": { "label": "Last", "type": "String" }
+              }
+            },
+            "ConfirmBorrowersEmail": {
+              "name": "ConfirmBorrowersEmail",
+              "label": "Confirm Borrowers Email",
+              "type": "String",
+              "required": true
+            },
+            "AddCoBorrower": {
+              "name": "AddCoBorrower",
+              "label": "Add Co-Borrower",
+              "type": "Boolean",
+              "required": false,
+              "inputType": "Checkbox"
+            },
+            "CoBorrower": {
+              "name": "CoBorrower",
+              "label": "Co-Borrower",
+              "type": "Name",
+              "required": false,
+              "conditionalVisibility": "CoBorrower_Visible",
+              "subFields": {
+                "First": { "label": "First", "type": "String" },
+                "Last": { "label": "Last", "type": "String" }
+              }
+            },
+            "CoBorrowerEmail": {
+              "name": "CoBorrowerEmail",
+              "label": "Co-Borrower Email",
+              "type": "String",
+              "required": false,
+              "conditionalVisibility": "CoBorrowerEmail_Visible"
+            },
+            "AddMore": {
+              "name": "AddMore",
+              "label": "+Add More",
+              "type": "Boolean",
+              "required": false,
+              "inputType": "Checkbox"
+            }
+          }
+        },
+        "LoanTargetDetails": {
+          "name": "LoanTargetDetails",
+          "label": "Loan Target Details",
+          "type": "Section",
+          "typeName": "Forms.FormEntry.DEFY1.FLASHSUBMIT.TransactionContacts.LoanTargetDetails",
+          "fields": {
+            "TransactionType": {
+              "name": "TransactionType",
+              "label": "Transaction Type",
+              "type": "String",
+              "required": true,
+              "inputType": "Choice",
+              "choices": ["Purchase", "Cash-Out", "Rate/Term"]
+            },
+            "LoanAmount": {
+              "name": "LoanAmount",
+              "label": "Loan Amount",
+              "type": "Number",
+              "required": true
+            },
+            "IncomeType": {
+              "name": "IncomeType",
+              "label": "Income Type",
+              "type": "String",
+              "required": true,
+              "inputType": "Choice",
+              "choices": ["DSCR", "12 Months Bank Statements", "2yr Full Doc", "1yr Full Doc", "1099 / W2 Only", "P&L Only"]
+            },
+            "LTVCLTV": {
+              "name": "LTVCLTV",
+              "label": "LTV/CLTV",
+              "type": "String",
+              "required": false
+            },
+            "TargetRate": {
+              "name": "TargetRate",
+              "label": "Target Rate",
+              "type": "String",
+              "required": true
+            },
+            "InvestmentPropertyPrepayPeriod": {
+              "name": "InvestmentPropertyPrepayPeriod",
+              "label": "Investment Property (Prepay Period)",
+              "type": "String",
+              "required": false,
+              "inputType": "Choice",
+              "choices": [
+                "36 Months (Standard)",
+                "48 Months",
+                "60 Months (Best Priced Period)",
+                "24 Months",
+                "12 Months (Rebate Not Eligible)",
+                "0 Months (Min Final Price 99.500)"
+              ]
+            },
+            "OccupancyType": {
+              "name": "OccupancyType",
+              "label": "Occupancy Type",
+              "type": "String",
+              "required": true,
+              "inputType": "Choice",
+              "choices": ["Investment", "Primary", "Second Home"]
+            }
+          }
+        },
+        "ConfirmBrokerFeeDetails": {
+          "name": "ConfirmBrokerFeeDetails",
+          "label": "Confirm Broker Fee Details",
+          "type": "Section",
+          "typeName": "Forms.FormEntry.DEFY1.FLASHSUBMIT.TransactionContacts.ConfirmBrokerFeeDetails",
+          "fields": {
+            "CompType": {
+              "name": "CompType",
+              "label": "Comp Type",
+              "type": "String",
+              "required": true,
+              "inputType": "Choice",
+              "choices": ["BPC (all DSCR)", "LPC"]
+            },
+            "BrokerOriginationFee": {
+              "name": "BrokerOriginationFee",
+              "label": "Broker Origination Fee",
+              "type": "String",
+              "required": true,
+              "conditionalRequired": "BrokerOriginationFee_IsRequired",
+              "conditionalVisibility": "BrokerOriginationFee_Visible"
+            },
+            "BrokerYSPRebate": {
+              "name": "BrokerYSPRebate",
+              "label": "*Broker YSP/Rebate",
+              "type": "String",
+              "required": false,
+              "conditionalVisibility": "BrokerYSPRebate_Visible"
+            },
+            "LPCPLAN2": {
+              "name": "LPCPLAN2",
+              "label": "LPC PLAN %",
+              "type": "String",
+              "required": true,
+              "conditionalRequired": "LPCPLAN2_IsRequired",
+              "conditionalVisibility": "LPCPLAN2_Visible"
+            },
+            "BrokerProcessingFee": {
+              "name": "BrokerProcessingFee",
+              "label": "Broker Processing Fee",
+              "type": "Boolean",
+              "required": false,
+              "conditionalVisibility": "BrokerProcessingFee_Visible"
+            },
+            "_3rdPartyProcessingFee": {
+              "name": "_3rdPartyProcessingFee",
+              "label": "3rd Party Processing Fee",
+              "type": "Number",
+              "required": false,
+              "conditionalVisibility": "_3rdPartyProcessingFee_Visible"
+            },
+            "_3rdPartyProcessingName": {
+              "name": "_3rdPartyProcessingName",
+              "label": "3rd Party Processing - Name",
+              "type": "String",
+              "required": true,
+              "conditionalRequired": "_3rdPartyProcessingName_IsRequired",
+              "conditionalVisibility": "_3rdPartyProcessingName_Visible"
+            },
+            "_3rdPartyProcessingNMLS": {
+              "name": "_3rdPartyProcessingNMLS",
+              "label": "3rd Party Processing NMLS#",
+              "type": "String",
+              "required": true,
+              "conditionalRequired": "_3rdPartyProcessingNMLS_IsRequired",
+              "conditionalVisibility": "_3rdPartyProcessingNMLS_Visible"
+            },
+            "BrokerCreditReportFee2": {
+              "name": "BrokerCreditReportFee2",
+              "label": "Broker Credit Report Fee",
+              "type": "String",
+              "required": false
+            },
+            "YouHaveAFeeSheetFromTitleEscrow": {
+              "name": "YouHaveAFeeSheetFromTitleEscrow",
+              "label": "You have a Fee Sheet from Title/Escrow",
+              "type": "Boolean",
+              "required": false
+            },
+            "AuthorizeUsToPullSMARTFEES": {
+              "name": "AuthorizeUsToPullSMARTFEES",
+              "label": "Authorize us to Pull SMART FEES",
+              "type": "Boolean",
+              "required": false,
+              "conditionalVisibility": "AuthorizeUsToPullSMARTFEES_Visible"
+            },
+            "CreditVendorCompanyName": {
+              "name": "CreditVendorCompanyName",
+              "label": "Credit Vendor Company Name",
+              "type": "String",
+              "required": false,
+              "conditionalVisibility": "CreditVendorCompanyName_Visible"
+            },
+            "ReIssueMyCreditReport": {
+              "name": "ReIssueMyCreditReport",
+              "label": "Re-Issue my Credit Report",
+              "type": "Boolean",
+              "required": true
+            },
+            "CreditVendorIDAccountNumber": {
+              "name": "CreditVendorIDAccountNumber",
+              "label": "Credit Vendor ID / Account Number",
+              "type": "String",
+              "required": false,
+              "conditionalVisibility": "CreditVendorIDAccountNumber_Visible"
+            },
+            "CreditVendorReissueUsername": {
+              "name": "CreditVendorReissueUsername",
+              "label": "Credit Vendor Reissue Username",
+              "type": "String",
+              "required": false,
+              "conditionalVisibility": "CreditVendorReissueUsername_Visible"
+            },
+            "VendorLoginpsw": {
+              "name": "VendorLoginpsw",
+              "label": "Vendor Login (psw)",
+              "type": "String",
+              "required": true,
+              "conditionalRequired": "VendorLoginpsw_IsRequired",
+              "conditionalVisibility": "VendorLoginpsw_Visible"
+            },
+            "NotesToLoanSetupDepartment": {
+              "name": "NotesToLoanSetupDepartment",
+              "label": "Notes to: Loan Setup Department",
+              "type": "String",
+              "required": false
+            },
+            "IAcknowledgeAndAgreeToTheCertificationAttestationAbove": {
+              "name": "IAcknowledgeAndAgreeToTheCertificationAttestationAbove",
+              "label": "I acknowledge and agree to the Certification & Attestation above",
+              "type": "Boolean",
+              "required": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "actions": {
+    "submit": {
+      "buttonText": "SUBMIT LOAN",
+      "type": "submit"
+  }
+}
