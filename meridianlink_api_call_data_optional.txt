@@ -1,0 +1,128 @@
+//oAuth Config - Meridian Link PML Quick Pricer API
+
+MERIDIANLINK_CLIENT_ID=29decad0-4fd3-48d5-a13f-2760ed4f721a
+MERIDIANLINK_CLIENT_SECRET=/96p+fThE1vK4uTbIQ6faRPX6vfdqXdkgBdHQrl6Qj9+a3Gz/mulxLoF7JU5zWHR
+BEARER_TOKEN={"access_token":"abS1L/11uLxCU0UXgIXgWAYFkdsznkja2z64YfsHb9RuwGhhVTGM9C+VbPeB8se84cHFXzwMiXMBzh0rNzEncoiL8kf0//3EBrobLSe48pgNTJLw7sTThposoSqUUIb3MzL39re0O3LkliE+IrrR2Rw+QYdmkil3ZQ8d52jx5ag=","token_type":"Bearer","expires_in":14400}
+
+
+//XML POST API
+<LOXmlFormat version="1.0">
+  <loan>
+    <field id="sSpCity">string</field>
+    <field id="sSpStatePe">enum_text</field>
+    <field id="sSpZip">string</field>
+    <field id="sSpCounty">string</field>
+    <field id="sOccTPe">enum_int</field>
+    <field id="sProdSpT">enum_int</field>
+    <field id="sProdSpStructureT">enum_int</field>
+    <field id="sProdIsSpInRuralArea">boolean</field>
+    <field id="sIsNewConstruction">boolean</field>
+    <field id="sLPurposeTPe">enum_int</field>
+    <field id="sHouseValPe">money</field>
+    <field id="sEquityPe">money</field>
+    <field id="sDownPmtPcPe">percent</field>
+    <field id="sLAmtCalcPe">money</field>
+    <field id="sIsRenovationLoan">boolean</field>
+    <field id="sTotalRenovationCosts">money</field>
+    <field id="sProdImpound">boolean</field>
+    <field id="sProdRLckdDays">int</field>
+    <field id="sProd3rdPartyUwResultT">enum_int</field>
+    <field id="sProdConvMIOptionT">enum_int</field>
+    <field id="sCreditScoreEstimatePe">int</field>
+    <field id="aBTotalScoreIsFthbQP">boolean</field>
+    <field id="aBHasHousingHistQP">boolean</field>
+    <field id="sHasNonOccupantCoborrowerPe">boolean</field>
+    <field id="sCustomPMLField1">string</field>
+    <field id="sCustomPMLField2">string</field>
+    <field id="sProdIncludeNormalProc">boolean</field>
+    <field id="sProdIncludeFHATotalProc">boolean</field>
+    <field id="sProdIncludeVAProc">boolean</field>
+    <field id="sProdIncludeUSDARuralProc">boolean</field>
+    <field id="sProdIncludeMyCommunityProc">boolean</field>
+    <field id="sProdIncludeHomePossibleProc">boolean</field>
+    <field id="sProdFilterDue10Yrs">boolean</field>
+    <field id="sProdFilterDue15Yrs">boolean</field>
+    <field id="sProdFilterDue20Yrs">boolean</field>
+    <field id="sProdFilterDue25Yrs">boolean</field>
+    <field id="sProdFilterDue30Yrs">boolean</field>
+    <field id="sProdFilterDueOther">boolean</field>
+    <field id="sProdFilterFinMethFixed">boolean</field>
+    <field id="sProdFilterFinMeth3YrsArm">boolean</field>
+    <field id="sProdFilterFinMeth5YrsArm">boolean</field>
+    <field id="sProdFilterFinMeth7YrsArm">boolean</field>
+    <field id="sProdFilterFinMeth10YrsArm">boolean</field>
+    <field id="sProdFilterFinMethOther">boolean</field>
+    <field id="sProdFilterPmtTPI">boolean</field>
+    <field id="sProdFilterPmtTIOnly">boolean</field>
+    <field id="SnapshotReleaseVersion">datetime</field>
+    <field id="SnapshotDataLastModifiedD">datetime</field>
+    <field id="LenderOverlayId">guid</field>
+    <field id="FeeServiceRevisionId">int</field>
+    <field id="lLpTemplateId">guid</field>
+    <field id="noteRate">decimal</field>
+    <field id="disableTitleQuotes">boolean</field>
+    <field id="ForcePriceGroupId">guid</field>
+    <field id="FeeServiceRunType">int</field>
+  </loan>
+</LOXmlFormat>
+
+//returns -Sucess
+<LOXmlFormat version="1.0">
+  <result status="OK">
+    <loan isQuickPricer="boolean">
+      <field id="sLId">guid</field>
+      <field id="PricingResults">
+                  &lt;PricingResults Status="OK"
+                    sOriginatorCompensationPercent="percent"
+                    sOriginatorCompensationPaymentSourceT="int(E_sOriginatorCompensationPaymentSourceT)"
+                    sOriginatorCompensationTotalAmount="money"
+                    sOriginatorCompensationMinAmount="money"
+                    sOriginatorCompensationMaxAmount="money"
+                    sOriginatorCompensationFixedAmount="money"
+                    sOriginatorCompensationEffectiveD="empty|date"&gt;
+
+                    &lt;Program Name="string" Status="enum(E_EvalStatus)" Term="int" Due="int" RAdj1stCapMon="int" ProductType="string" FinMethT="enum(E_sFinMethT)" RateSheetDownloadEndD="datetime" ARMIndex="percent" ARMIndexName="string" RAdj1stCapR="decimal" ParRate="decimal" RAdjCapMon="int"&gt;
+                      &lt;RateOption LenderPaidOriginatorComp="decimal" LenderPaidOriginatorCompAmount="money" Rate="decimal" Payment="money" MortgageInsuranceMonthlyPayment="money" TotalClosingCost="money" PrepaidClosingCost="money" NonPrepaidClosingCost="money" BestPrice="money" Point="decimal" APR="decimal" Margin="decimal" DTI="decimal" Description="string" lLpTemplateId="guid" lLpInvestorNm="string" BreakEven="string" Reserves="string"&gt;
+                        &lt;ClosingCostList&gt;
+                          &lt;ClosingCost ClosingCostFeeTypeId="guid" Line="int" Description="string" Amount="money" Source="enum(E_ClosingFeeSource)"/&gt;
+                        &lt;/ClosingCostList&gt;
+                      &lt;/RateOption&gt;
+                    &lt;/Program&gt;
+
+                    &lt;AdjustmentsTable&gt;
+                      &lt;Adjustment lLpTemplateId="guid"&gt;
+                        &lt;AdjustmentItem Rate="string" Point="string" Margin="string" Description="string" /&gt;
+                        &lt;!-- ... &lt;AdjustmentItem ... /&gt; ... --&gt;
+                      &lt;/Adjustment&gt;
+                      &lt;!-- ... &lt;Adjustment ... /&gt; ... --&gt;
+                    &lt;/AdjustmentsTable&gt;
+
+                    &lt;ConditionsTable&gt;
+                      &lt;Conditions lLpTemplateId="guid"&gt;
+                        &lt;ConditionItem Category="string"&gt;string&lt;/ConditionItem&gt;
+                        &lt;!-- ... &lt;ConditionItem ... /&gt; ... --&gt;
+                      &lt;/Conditions&gt;
+                      &lt;!-- ... &lt;Conditions ... /&gt; ... --&gt;
+                    &lt;/ConditionsTable&gt;
+                  &lt;/PricingResults&gt;
+                  <!-- or -->
+                  &lt;PricingResults Status="Error"&gt;
+                    &lt;Error Message="string" /&gt;
+                  &lt;/PricingResults&gt;
+                </field>
+      <collection id="sSelectedProductCodeFilter">
+        <record index="int">
+          <field id="ProductCodeName">string</field>
+          <field id="IsVisible">boolean</field>
+        </record>
+      </collection>
+      <collection id="sAvailableProductCodeFilter">
+        <record index="int">
+          <field id="ProductCodeName">string</field>
+          <field id="IsVisible">boolean</field>
+        </record>
+      </collection>
+    </loan>
+  </result>
+</LOXmlFormat>
+

@@ -433,6 +433,8 @@ export default function App() {
   const [lpResult, setLpResult] = useState<any>(null)
   const [lpLoading, setLpLoading] = useState(false)
   const [lpUnlocked] = useState(false)
+  const [obResult, setObResult] = useState<any>(null)
+  const [obLoading, setObLoading] = useState(false)
   // ChatCom & User Chat lightbox overlays
   const [showChatCom, setShowChatCom] = useState(false)
   const [showUserChat, setShowUserChat] = useState(false)
@@ -1017,7 +1019,7 @@ export default function App() {
       return
     }
 
-    setIsLoading(true); setError(null); setResult(null); setLpResult(null); setLpLoading(true)
+    setIsLoading(true); setError(null); setResult(null); setLpResult(null); setLpLoading(true); setObResult(null); setObLoading(true)
     const isDSCR = formData.documentationType === 'dscr'
     const requestBody = {
       ...formData,
@@ -1070,6 +1072,36 @@ export default function App() {
         setLpResult({ rateOptions: [], error: 'LP pricing unavailable' })
       })
       .finally(() => setLpLoading(false))
+
+    // OB fires in parallel
+    fetch('/api/get-ob-pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: bodyJson,
+    })
+      .then(r => r.json())
+      .then(obData => {
+        if (obData.success && obData.data) {
+          setObResult(obData.data)
+          // If ML returned empty, use OB as primary result
+          setResult(prev => {
+            if (!prev || !prev.programs || prev.programs.length === 0) {
+              const obPrograms = obData.data.programs || []
+              if (obPrograms.length > 0) {
+                return sanitizePricingResult({ ...obData.data, source: 'Optimal Blue' }) || prev
+              }
+            }
+            return prev
+          })
+        } else {
+          setObResult({ programs: [], error: obData.error || 'No OB rates returned' })
+        }
+      })
+      .catch(err => {
+        console.error('[OB] Error:', err)
+        setObResult({ programs: [], error: 'OB pricing unavailable' })
+      })
+      .finally(() => setObLoading(false))
 
     // ML fires in parallel
     try {
@@ -1959,8 +1991,8 @@ export default function App() {
             {result && (
               <motion.div key="results" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
 
-                {/* mlMessage / Out of scope state */}
-                {(result as any).mlMessage && (!Array.isArray(result.programs) || result.programs.length === 0) ? (
+                {/* mlMessage / Out of scope state — only show if OB also has no results */}
+                {(result as any).mlMessage && (!Array.isArray(result.programs) || result.programs.length === 0) && !obLoading && (!obResult?.programs || obResult.programs.length === 0) ? (
                   formData.isCrossCollateralized ? (
                     <div className="bg-white border border-slate-200 rounded-xl p-5">
                       <div className="flex items-center gap-3 mb-3">
@@ -1995,6 +2027,15 @@ export default function App() {
                       </div>
                     </div>
                   )
+                ) : (result as any).mlMessage && obLoading ? (
+                  /* OB still loading, ML returned empty — show loading instead of Out of Scope */
+                  <div className="bg-white border border-slate-200 rounded-xl p-6 flex items-center gap-4">
+                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">Searching Additional Pricing Engines...</div>
+                      <p className="text-xs text-slate-500 mt-0.5">Checking Optimal Blue for available rates.</p>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     {/* ===== HERO PRICING CARD ===== */}
