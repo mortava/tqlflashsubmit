@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Plus, Trash2, ArrowLeft, ClipboardList, ChevronDown } from 'lucide-react'
 
-type SubmitStep = 'form' | 'upload-mismo' | 'submitting' | 'loan-created' | 'upload-docs' | 'complete'
+type SubmitStep = 'upload-mismo' | 'submitting' | 'loan-created' | 'form' | 'upload-docs' | 'complete'
 
 interface UploadedDoc {
   fileName: string
@@ -117,7 +117,7 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 }
 
 export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
-  const [step, setStep] = useState<SubmitStep>('form')
+  const [step, setStep] = useState<SubmitStep>('upload-mismo')
   const [f, setF] = useState<FlashSubmitForm>(DEFAULT_FORM)
   const [mismoFile, setMismoFile] = useState<File | null>(null)
   const [mismoXml, setMismoXml] = useState<string>('')
@@ -154,7 +154,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
       return
     }
     setError(null)
-    setStep('upload-mismo')
+    setStep('loan-created')
   }, [f])
 
   const handleMismoFile = useCallback(async (file: File) => {
@@ -184,7 +184,9 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
       let data: { success: boolean; loanId?: string; loanNumber?: string; error?: string }
       try { data = JSON.parse(text) } catch { throw new Error(`Server error (${res.status}): ${text.slice(0, 200)}`) }
       if (!data.success) throw new Error(data.error || 'Submission failed')
-      setLoanId(data.loanId || ''); setLoanNumber(data.loanNumber || ''); setStep('loan-created')
+      setLoanId(data.loanId || ''); setLoanNumber(data.loanNumber || '')
+      setF(prev => ({ ...prev, confirmLoanId: data.loanNumber || data.loanId || '' }))
+      setStep('form')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Submission failed'); setStep('upload-mismo')
     }
@@ -223,8 +225,8 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
     setIsUploading(false); setStep('complete')
   }, [docs, loanId])
 
-  const STEPS = ['Loan Details', 'MISMO Upload', 'Create Loan', 'Attach Docs', 'Complete']
-  const STEP_KEYS: SubmitStep[] = ['form', 'upload-mismo', 'submitting', 'loan-created', 'complete']
+  const STEPS = ['MISMO Upload', 'Create Loan', 'Loan Setup Form', 'Attach Docs', 'Complete']
+  const STEP_KEYS: SubmitStep[] = ['upload-mismo', 'submitting', 'form', 'upload-docs', 'complete']
   const showBpcFields = f.compType === 'BPC (all DSCR)'
   const showLpcFields = f.compType === 'LPC'
   const showCreditVendorFields = f.reIssueCreditReport
@@ -269,11 +271,21 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
         {/* ══════ STEP 1: FLASH SUBMIT FORM ══════ */}
         {step === 'form' && (
           <div className="space-y-5">
+            {/* Loan Created Success */}
+            {loanNumber && (
+              <div className="p-5 rounded-xl bg-green-50 border border-green-200 flex items-start gap-3 mb-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-sm font-bold text-green-900">Loan #{loanNumber} Created in Encompass</div>
+                  <div className="text-xs text-green-700 font-mono mt-0.5">{loanId}</div>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center"><ClipboardList className="w-5 h-5 text-slate-600" /></div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Flash Submit</h2>
-                <p className="text-sm text-slate-500">Loan Setup & Disclosures Request</p>
+                <h2 className="text-xl font-bold text-slate-900">Loan Setup & Disclosures</h2>
+                <p className="text-sm text-slate-500">Complete the form below to finalize your submission.</p>
               </div>
             </div>
 
@@ -447,26 +459,17 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
             </div>
 
             <button type="button" onClick={handleFormSubmit} className="w-full py-3.5 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 transition-all active:scale-[0.99]">
-              Continue to MISMO Upload
+              Continue to Attach Documents
             </button>
           </div>
         )}
 
-        {/* ══════ STEP 2: MISMO UPLOAD ══════ */}
+        {/* ══════ STEP 1: MISMO UPLOAD ══════ */}
         {step === 'upload-mismo' && (
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">Upload MISMO 3.4 File</h2>
               <p className="text-sm text-slate-500">Upload your MISMO 3.4 XML file to create a new loan in Encompass.</p>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-              <div className="font-semibold text-slate-900 mb-1">Submission Summary</div>
-              <div><span className="text-slate-400">Loan ID:</span> {f.confirmLoanId}</div>
-              <div><span className="text-slate-400">MLO:</span> {f.brokerMloFirst} {f.brokerMloLast} ({f.mloEmail})</div>
-              <div><span className="text-slate-400">Borrower:</span> {f.borrowerFirst} {f.borrowerLast}</div>
-              <div><span className="text-slate-400">Loan:</span> {f.loanAmount} — {f.transactionType} — {f.incomeType}</div>
-              <div><span className="text-slate-400">Target Rate:</span> {f.targetRate} | <span className="text-slate-400">Occupancy:</span> {f.occupancyType}</div>
-              <button type="button" onClick={() => setStep('form')} className="text-blue-600 hover:underline font-medium mt-1">Edit Details</button>
             </div>
             <div
               onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
@@ -489,10 +492,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
                 </div>
               )}
             </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setStep('form')} className="flex-1 py-3 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50">Back</button>
-              <button type="button" onClick={handleSubmitMismo} disabled={!mismoFile} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Submit to Encompass</button>
-            </div>
+            <button type="button" onClick={handleSubmitMismo} disabled={!mismoFile} className="w-full py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Submit to Encompass</button>
           </div>
         )}
 
@@ -583,7 +583,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
               </div>
             )}
             <div className="flex gap-3 mt-4">
-              <button type="button" onClick={() => { setStep('form'); setF(DEFAULT_FORM); setMismoFile(null); setMismoXml(''); setLoanId(''); setLoanNumber(''); setDocs([]); setUploadedDocs([]); setError(null) }} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800">Submit Another</button>
+              <button type="button" onClick={() => { setStep('upload-mismo'); setF(DEFAULT_FORM); setMismoFile(null); setMismoXml(''); setLoanId(''); setLoanNumber(''); setDocs([]); setUploadedDocs([]); setError(null) }} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800">Submit Another</button>
               <button type="button" onClick={onBack} className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50">Back to Dashboard</button>
             </div>
           </div>
