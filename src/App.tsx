@@ -1049,84 +1049,34 @@ export default function App() {
       })
     }
 
-    // Fire ML + LP in PARALLEL (LP takes ~20-30s via headless browser)
+    // Fire OB pricing only
     const bodyJson = JSON.stringify(requestBody)
 
-    // LP fires immediately — no waiting for ML
-    fetch('/api/get-lp-pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: bodyJson,
-    })
-      .then(r => r.json())
-      .then(lpData => {
-        console.log('[LP] rates:', lpData.data?.rateOptions?.length || 0)
-        if (lpData.success && lpData.data) {
-          setLpResult(lpData.data)
-        } else {
-          setLpResult({ rateOptions: [], error: lpData.error || 'No rates returned' })
-        }
-      })
-      .catch(err => {
-        console.error('[LP] Error:', err)
-        setLpResult({ rateOptions: [], error: 'LP pricing unavailable' })
-      })
-      .finally(() => setLpLoading(false))
-
-    // OB fires in parallel
-    fetch('/api/get-ob-pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: bodyJson,
-    })
-      .then(r => r.json())
-      .then(obData => {
-        if (obData.success && obData.data) {
-          setObResult(obData.data)
-          // If ML returned empty, use OB as primary result
-          setResult(prev => {
-            if (!prev || !prev.programs || prev.programs.length === 0) {
-              const obPrograms = obData.data.programs || []
-              if (obPrograms.length > 0) {
-                return sanitizePricingResult({ ...obData.data, source: 'Optimal Blue' }) || prev
-              }
-            }
-            return prev
-          })
-        } else {
-          setObResult({ programs: [], error: obData.error || 'No OB rates returned' })
-        }
-      })
-      .catch(err => {
-        console.error('[OB] Error:', err)
-        setObResult({ programs: [], error: 'OB pricing unavailable' })
-      })
-      .finally(() => setObLoading(false))
-
-    // ML fires in parallel
     try {
-      const mlResponse = await fetch('/api/get-pricing', {
+      const obResponse = await fetch('/api/get-ob-pricing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: bodyJson,
       })
-      const mlData = await mlResponse.json()
+      const obData = await obResponse.json()
 
-      if (mlData.success) {
-        const sanitizedResult = sanitizePricingResult(mlData.data)
-        if (sanitizedResult) {
+      if (obData.success && obData.data) {
+        setObResult(obData.data)
+        const sanitizedResult = sanitizePricingResult({ ...obData.data, source: 'Optimal Blue' })
+        if (sanitizedResult && sanitizedResult.programs && sanitizedResult.programs.length > 0) {
           setResult(sanitizedResult)
         } else {
-          setResult({ programs: [], mlMessage: 'Searching National Pricing' } as any)
+          setResult({ programs: [], mlMessage: 'No eligible programs found' } as any)
         }
       } else {
-        // ML couldn't price this scenario — show info message, don't block LP results
-        setResult({ programs: [], mlMessage: 'Searching National Pricing' } as any)
+        setResult({ programs: [], mlMessage: obData.error || 'No rates returned' } as any)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get pricing')
     } finally {
       setIsLoading(false)
+      setObLoading(false)
+      setLpLoading(false)
     }
   }
 
