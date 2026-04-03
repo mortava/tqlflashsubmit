@@ -283,58 +283,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
               <input type="text" value={f.confirmLoanId} onChange={e => set('confirmLoanId', e.target.value)} placeholder="Loan Number that was Just Issued" className={I} />
             </div>
 
-            {/* Transaction Contacts */}
-            <Section title="Transaction Contacts">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><label className={L}>Broker MLO First Name *</label><input type="text" value={f.brokerMloFirst} onChange={e => set('brokerMloFirst', e.target.value)} className={I} /></div>
-                <div><label className={L}>Broker MLO Last Name *</label><input type="text" value={f.brokerMloLast} onChange={e => set('brokerMloLast', e.target.value)} className={I} /></div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><label className={L}>MLO NMLS#</label><input type="text" value={f.mloNmls} onChange={e => set('mloNmls', e.target.value)} placeholder="(if available)" className={I} /></div>
-                <div>
-                  <label className={L}>LO is the POC</label>
-                  <div className="flex gap-4 mt-1.5">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" checked={f.loIsThePoc} onChange={() => set('loIsThePoc', true)} className="accent-black" />Yes</label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" checked={!f.loIsThePoc} onChange={() => set('loIsThePoc', false)} className="accent-black" />No</label>
-                  </div>
-                </div>
-              </div>
-              <div><label className={L}>MLO Email *</label><input type="email" value={f.mloEmail} onChange={e => set('mloEmail', e.target.value)} placeholder="Used for confirmations/correspondence" className={I} /></div>
-              <div><label className={L}>LO Mobile # <span className="font-normal text-slate-400">(for 2-Factor Auth)</span></label><input type="tel" value={f.loMobile} onChange={e => set('loMobile', e.target.value)} className={I} /></div>
-              {!f.loIsThePoc && (
-                <>
-                  <div><label className={L}>Primary Contact * <span className="font-normal text-slate-400">(if different from LO)</span></label><input type="text" value={f.primaryContact} onChange={e => set('primaryContact', e.target.value)} className={I} /></div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div><label className={L}>Primary Contact Phone *</label><input type="tel" value={f.primaryContactPhone} onChange={e => set('primaryContactPhone', e.target.value)} className={I} /></div>
-                    <div><label className={L}>Primary Contact Email</label><input type="email" value={f.primaryContactEmail} onChange={e => set('primaryContactEmail', e.target.value)} className={I} /></div>
-                  </div>
-                </>
-              )}
-            </Section>
-
-            {/* Borrower Information */}
-            <Section title="Confirm Borrower Information">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><label className={L}>Borrower First Name *</label><input type="text" value={f.borrowerFirst} onChange={e => set('borrowerFirst', e.target.value)} className={I} /></div>
-                <div><label className={L}>Borrower Last Name *</label><input type="text" value={f.borrowerLast} onChange={e => set('borrowerLast', e.target.value)} className={I} /></div>
-              </div>
-              <div><label className={L}>Confirm Borrower's Email *</label><input type="email" value={f.borrowerEmail} onChange={e => set('borrowerEmail', e.target.value)} className={I} /></div>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={f.addCoBorrower} onChange={e => set('addCoBorrower', e.target.checked)} className="accent-black w-4 h-4 rounded" />
-                Add Co-Borrower
-              </label>
-              {f.addCoBorrower && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div><label className={L}>Co-Borrower First</label><input type="text" value={f.coBorrowerFirst} onChange={e => set('coBorrowerFirst', e.target.value)} className={I} /></div>
-                    <div><label className={L}>Co-Borrower Last</label><input type="text" value={f.coBorrowerLast} onChange={e => set('coBorrowerLast', e.target.value)} className={I} /></div>
-                  </div>
-                  <div><label className={L}>Co-Borrower Email</label><input type="email" value={f.coBorrowerEmail} onChange={e => set('coBorrowerEmail', e.target.value)} className={I} /></div>
-                </>
-              )}
-            </Section>
-
-            {/* Loan Target Details */}
+            {/* 1. Loan Target Details — FIRST */}
             <Section title="Loan Target Details">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -376,7 +325,58 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
               )}
             </Section>
 
-            {/* Broker Fee Details */}
+            {/* 2. Transaction Contacts */}
+            <Section title="Transaction Contacts">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label className={L}>Broker MLO First Name *</label><input type="text" value={f.brokerMloFirst} onChange={e => set('brokerMloFirst', e.target.value)} className={I} /></div>
+                <div><label className={L}>Broker MLO Last Name *</label><input type="text" value={f.brokerMloLast} onChange={e => set('brokerMloLast', e.target.value)} className={I} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label className={L}>MLO NMLS#</label><input type="text" value={f.mloNmls} onChange={e => set('mloNmls', e.target.value)} placeholder="(if available)" className={I} /></div>
+                <div>
+                  <label className={L}>LO is the POC</label>
+                  <div className="flex gap-4 mt-1.5">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" checked={f.loIsThePoc} onChange={() => set('loIsThePoc', true)} className="accent-black" />Yes</label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" checked={!f.loIsThePoc} onChange={() => set('loIsThePoc', false)} className="accent-black" />No</label>
+                  </div>
+                </div>
+              </div>
+              <div><label className={L}>MLO Email *</label><input type="email" value={f.mloEmail} onChange={e => set('mloEmail', e.target.value)} placeholder="Used for confirmations/correspondence" className={I} /></div>
+              <div><label className={L}>LO Mobile # <span className="font-normal text-slate-400">(for 2-Factor Auth)</span></label><input type="tel" value={f.loMobile} onChange={e => set('loMobile', e.target.value)} className={I} /></div>
+              {!f.loIsThePoc && (
+                <>
+                  <div><label className={L}>Primary Contact * <span className="font-normal text-slate-400">(if different from LO)</span></label><input type="text" value={f.primaryContact} onChange={e => set('primaryContact', e.target.value)} className={I} /></div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div><label className={L}>Primary Contact Phone *</label><input type="tel" value={f.primaryContactPhone} onChange={e => set('primaryContactPhone', e.target.value)} className={I} /></div>
+                    <div><label className={L}>Primary Contact Email</label><input type="email" value={f.primaryContactEmail} onChange={e => set('primaryContactEmail', e.target.value)} className={I} /></div>
+                  </div>
+                </>
+              )}
+            </Section>
+
+            {/* 3. Confirm Borrower Information */}
+            <Section title="Confirm Borrower Information">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label className={L}>Borrower First Name *</label><input type="text" value={f.borrowerFirst} onChange={e => set('borrowerFirst', e.target.value)} className={I} /></div>
+                <div><label className={L}>Borrower Last Name *</label><input type="text" value={f.borrowerLast} onChange={e => set('borrowerLast', e.target.value)} className={I} /></div>
+              </div>
+              <div><label className={L}>Confirm Borrower's Email *</label><input type="email" value={f.borrowerEmail} onChange={e => set('borrowerEmail', e.target.value)} className={I} /></div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={f.addCoBorrower} onChange={e => set('addCoBorrower', e.target.checked)} className="accent-black w-4 h-4 rounded" />
+                Add Co-Borrower
+              </label>
+              {f.addCoBorrower && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div><label className={L}>Co-Borrower First</label><input type="text" value={f.coBorrowerFirst} onChange={e => set('coBorrowerFirst', e.target.value)} className={I} /></div>
+                    <div><label className={L}>Co-Borrower Last</label><input type="text" value={f.coBorrowerLast} onChange={e => set('coBorrowerLast', e.target.value)} className={I} /></div>
+                  </div>
+                  <div><label className={L}>Co-Borrower Email</label><input type="email" value={f.coBorrowerEmail} onChange={e => set('coBorrowerEmail', e.target.value)} className={I} /></div>
+                </>
+              )}
+            </Section>
+
+            {/* 4. Broker Fee Details */}
             <Section title="Confirm Broker Fee Details">
               <div>
                 <label className={L}>Comp Type *</label>
