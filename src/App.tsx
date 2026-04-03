@@ -208,21 +208,21 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
 
   const raw = data as Record<string, unknown>
 
-  // Sanitize programs array
+  // Sanitize programs array — map both ML and OB field names
   let programs: Program[] | undefined
   if (Array.isArray(raw.programs)) {
     programs = raw.programs
       .filter((p): p is Record<string, unknown> => p && typeof p === 'object')
       .map(p => ({
         name: String(p.name || 'Unknown Program'),
-        parRate: safeNumber(p.parRate),
-        parPoints: safeNumber(p.parPoints),
+        parRate: safeNumber(p.parRate || p.rate),
+        parPoints: safeNumber(p.parPoints || p.price),
         rateOptions: Array.isArray(p.rateOptions)
           ? p.rateOptions
               .filter((o): o is Record<string, unknown> => o && typeof o === 'object')
               .map(o => ({
                 rate: safeNumber(o.rate),
-                points: safeNumber(o.points),
+                points: safeNumber(o.points || o.price),
                 apr: safeNumber(o.apr),
                 description: String(o.description || ''),
                 payment: safeNumber(o.payment),
@@ -236,17 +236,40 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
       }))
   }
 
+  // Derive best rate from programs (OB doesn't return top-level rate/apr)
+  let bestRate = safeNumber(raw.rate, 0)
+  let bestApr = safeNumber(raw.apr, 0)
+  let bestPayment = safeNumber(raw.monthlyPayment || raw.payment, 0)
+  let bestPoints = safeNumber(raw.points, 0)
+
+  if (programs && programs.length > 0 && bestRate === 0) {
+    let closestDist = Infinity
+    for (const prog of programs) {
+      for (const opt of prog.rateOptions) {
+        const price = 100 - safeNumber(opt.points)
+        const dist = Math.abs(price - 100)
+        if (dist < closestDist && opt.rate > 0) {
+          closestDist = dist
+          bestRate = opt.rate
+          bestApr = opt.apr || opt.rate
+          bestPayment = opt.payment || 0
+          bestPoints = opt.points || 0
+        }
+      }
+    }
+  }
+
   return {
-    rate: safeNumber(raw.rate, 0),
-    apr: safeNumber(raw.apr, 0),
-    monthlyPayment: safeNumber(raw.monthlyPayment, 0),
-    points: safeNumber(raw.points, 0),
+    rate: bestRate,
+    apr: bestApr,
+    monthlyPayment: bestPayment,
+    points: bestPoints,
     closingCosts: safeNumber(raw.closingCosts, 0),
-    ltvRatio: safeNumber(raw.ltvRatio, 0),
+    ltvRatio: safeNumber(raw.ltv || raw.ltvRatio, 0),
     source: typeof raw.source === 'string' ? raw.source : undefined,
     programs,
     apiError: typeof raw.apiError === 'string' ? raw.apiError : undefined,
-    totalPrograms: typeof raw.totalPrograms === 'number' ? raw.totalPrograms : undefined,
+    totalPrograms: typeof raw.totalPrograms === 'number' ? raw.totalPrograms : (programs?.length || undefined),
     filterApplied: typeof raw.filterApplied === 'string' ? raw.filterApplied : undefined
   }
 }
@@ -1115,15 +1138,19 @@ export default function App() {
   const matchesPrepayPeriod = (desc: string, prepayPeriod: string): boolean => {
     const upper = desc.toUpperCase()
     switch (prepayPeriod) {
-      case '60mo': return upper.includes('60MO PPP') || upper.includes('5 YR PPP') || upper.includes('5YR PPP')
-      case '48mo': return upper.includes('48MO PPP') || upper.includes('4 YR PPP') || upper.includes('4YR PPP')
-      case '36mo': return upper.includes('36MO PPP') || upper.includes('3 YR PPP') || upper.includes('3YR PPP')
-      case '24mo': return upper.includes('24MO PPP') || upper.includes('2 YR PPP') || upper.includes('2YR PPP')
-      case '12mo': return upper.includes('12MO PPP') || upper.includes('1 YR PPP') || upper.includes('1YR PPP')
+      case '60mo': return upper.includes('60MO PPP') || upper.includes('5 YR PPP') || upper.includes('5YR PPP') || upper.includes('5%') && upper.includes('PPP')
+      case '48mo': return upper.includes('48MO PPP') || upper.includes('4 YR PPP') || upper.includes('4YR PPP') || upper.includes('4%') && upper.includes('PPP')
+      case '36mo': return upper.includes('36MO PPP') || upper.includes('3 YR PPP') || upper.includes('3YR PPP') || upper.includes('3%') && upper.includes('PPP')
+      case '24mo': return upper.includes('24MO PPP') || upper.includes('2 YR PPP') || upper.includes('2YR PPP') || upper.includes('2%') && upper.includes('PPP')
+      case '12mo': return upper.includes('12MO PPP') || upper.includes('1 YR PPP') || upper.includes('1YR PPP') || upper.includes('1%') && upper.includes('PPP')
       case '0mo': case 'none': case '':
-        // Match programs WITHOUT actual PPP (0MO/0YR are "no penalty" so also match)
         return !hasPPPInName(upper)
-      default: return upper.includes('60MO PPP') || upper.includes('5 YR PPP') || upper.includes('5YR PPP')
+      case '5pct': return upper.includes('5%') && upper.includes('PPP') || upper.includes('60MO PPP') || upper.includes('5 YR PPP')
+      case '4pct': return upper.includes('4%') && upper.includes('PPP') || upper.includes('48MO PPP')
+      case '3pct': return upper.includes('3%') && upper.includes('PPP') || upper.includes('36MO PPP') || upper.includes('3 YR PPP')
+      default:
+        // Fallback: match any PPP program
+        return hasPPPInName(upper)
     }
   }
 
@@ -1147,7 +1174,7 @@ export default function App() {
 
       program.rateOptions.forEach(opt => {
         if (!opt) return
-        const desc = (opt.description || programName).toUpperCase()
+        const desc = (programName || opt.description || '').toUpperCase()
         const hasPPP = hasPPPInName(desc)
 
         // For Primary/Secondary homes: SKIP any PPP programs entirely
@@ -1181,7 +1208,7 @@ export default function App() {
               apr: safeNumber(opt.apr),
               price: price,
               payment: safeNumber(opt.payment),
-              programName: opt.description || programName,
+              programName: programName || opt.description,
               adjustments: opt.adjustments || []
             }
           }
@@ -1224,7 +1251,7 @@ export default function App() {
                 apr: safeNumber(opt.apr),
                 price: price,
                 payment: safeNumber(opt.payment),
-                programName: opt.description || programName,
+                programName: programName || opt.description,
                 adjustments: opt.adjustments || []
               }
             }
