@@ -57,7 +57,7 @@ async function sendNotificationEmail(loanNumber: string, loanId: string): Promis
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'TQL Flash Submit <tpoops@tqltpo.com>',
+      from: 'TQL Flash Submit <TPOSub@tqltpo.com>',
       to: ['tposupport@tqlend.com'],
       subject: `New Loan Submitted via Flash Submit — Loan #${loanNumber}`,
       html: `

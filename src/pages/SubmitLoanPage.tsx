@@ -222,8 +222,37 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
         setUploadedDocs(prev => prev.map((d, idx) => idx === i ? { ...d, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' } : d))
       }
     }
-    setIsUploading(false); setStep('complete')
-  }, [docs, loanId])
+    setIsUploading(false)
+
+    // Send notification email to TPO Support
+    const successDocs = docs.filter((_, i) => {
+      const r = results[i]
+      return r && r.status !== 'error'
+    })
+    if (successDocs.length > 0 || docs.length > 0) {
+      fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: 'tposupport@tqlend.com',
+          subject: `Flash Submit — Loan #${loanNumber} — ${docs.length} Document${docs.length !== 1 ? 's' : ''} Uploaded`,
+          html: `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+            <h2 style="margin:0 0 16px;color:#0D3B66;">Documents Submitted via Flash Submit</h2>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+              <tr><td style="padding:8px 0;color:#666;font-size:13px;">Loan Number</td><td style="padding:8px 0;font-weight:600;color:#111;">${loanNumber}</td></tr>
+              <tr><td style="padding:8px 0;color:#666;font-size:13px;">Loan ID</td><td style="padding:8px 0;font-family:monospace;font-size:12px;color:#333;">${loanId}</td></tr>
+              <tr><td style="padding:8px 0;color:#666;font-size:13px;">MLO</td><td style="padding:8px 0;color:#333;">${f.brokerMloFirst} ${f.brokerMloLast} (${f.mloEmail})</td></tr>
+              <tr><td style="padding:8px 0;color:#666;font-size:13px;">Borrower</td><td style="padding:8px 0;color:#333;">${f.borrowerFirst} ${f.borrowerLast}</td></tr>
+              <tr><td style="padding:8px 0;color:#666;font-size:13px;">Documents</td><td style="padding:8px 0;color:#333;">${docs.map(d => d.file.name + ' (' + d.docType + ')').join('<br/>')}</td></tr>
+            </table>
+            <p style="color:#999;font-size:11px;margin-top:24px;">Automated notification from TQL Flash Submit</p>
+          </div>`,
+        }),
+      }).catch(() => {})
+    }
+
+    setStep('complete')
+  }, [docs, loanId, loanNumber, f])
 
   const STEPS = ['MISMO Upload', 'Create Loan', 'Loan Setup Form', 'Attach Docs', 'Complete']
   const STEP_KEYS: SubmitStep[] = ['upload-mismo', 'submitting', 'form', 'upload-docs', 'complete']
@@ -492,7 +521,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
                 </div>
               )}
             </div>
-            <button type="button" onClick={handleSubmitMismo} disabled={!mismoFile} className="w-full py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Submit to Encompass</button>
+            <button type="button" onClick={handleSubmitMismo} disabled={!mismoFile} className="w-full py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Submit &amp; Create a Loan Number</button>
           </div>
         )}
 
@@ -537,9 +566,12 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
               <button type="button" onClick={() => docInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 text-sm text-slate-600 hover:bg-slate-50 w-full justify-center"><Plus className="w-4 h-4" />Add Documents</button>
               <input ref={docInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.doc,.docx" className="hidden" onChange={e => handleAddDocFiles(e.target.files)} />
             </div>
+            {docs.length > 0 && (
+              <p className="text-center text-sm text-slate-600 font-medium">{docs.length} document{docs.length !== 1 ? 's' : ''} ready to upload</p>
+            )}
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep('complete')} className="flex-1 py-3 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50">Skip</button>
-              <button type="button" onClick={handleUploadDocs} disabled={docs.length === 0} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Upload {docs.length} Doc{docs.length !== 1 ? 's' : ''}</button>
+              <button type="button" onClick={handleUploadDocs} disabled={docs.length === 0} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Submit to Loan Setup</button>
             </div>
           </div>
         )}
@@ -569,21 +601,14 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
           <div className="flex flex-col items-center py-16 gap-6">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-8 h-8 text-green-600" /></div>
             <div className="text-center">
-              <h2 className="text-xl font-bold text-slate-900">Submission Complete</h2>
-              <p className="text-sm text-slate-500 mt-2">Loan <span className="font-bold text-slate-900">#{loanNumber}</span> created in Encompass{uploadedDocs.filter(d => d.status === 'done').length > 0 && <> with {uploadedDocs.filter(d => d.status === 'done').length} doc{uploadedDocs.filter(d => d.status === 'done').length !== 1 ? 's' : ''}</>}.</p>
+              <h2 className="text-xl font-bold text-slate-900">Setup Requested</h2>
+              <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
+                Your Business is important to us, if you have any questions or need help please email{' '}
+                <a href="mailto:TPOSupport@tqltpo.com" className="text-slate-900 font-semibold hover:underline">TPOSupport@tqltpo.com</a>
+              </p>
             </div>
-            {uploadedDocs.length > 0 && (
-              <div className="w-full max-w-md space-y-2">
-                {uploadedDocs.map((doc, i) => (
-                  <div key={`${doc.fileName}-${i}`} className="flex items-center gap-2 text-sm">
-                    {doc.status === 'done' ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
-                    <span className={doc.status === 'done' ? 'text-slate-700' : 'text-red-600'}>{doc.fileName}</span>
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="flex gap-3 mt-4">
-              <button type="button" onClick={() => { setStep('upload-mismo'); setF(DEFAULT_FORM); setMismoFile(null); setMismoXml(''); setLoanId(''); setLoanNumber(''); setDocs([]); setUploadedDocs([]); setError(null) }} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800">Submit Another</button>
+              <button type="button" onClick={() => { setStep('upload-mismo'); setF(DEFAULT_FORM); setMismoFile(null); setMismoXml(''); setLoanId(''); setLoanNumber(''); setDocs([]); setUploadedDocs([]); setError(null) }} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800">Submit Another Loan</button>
               <button type="button" onClick={onBack} className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50">Back to Dashboard</button>
             </div>
           </div>

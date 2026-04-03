@@ -1411,7 +1411,9 @@ export default function App() {
 
         {/* ===== DESKTOP TOP HEADER BAR ===== */}
         <div className="hidden lg:block shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-end gap-2.5">
+          <div className="flex items-center justify-between gap-2.5">
+            <img src="/monarch_tql.svg" alt="TQL" className="h-8" />
+            <div className="flex items-center gap-2.5">
             {isPartner && profile ? (
               <>
                 <span className="text-[12px] font-medium text-slate-500 mr-1">{profile.first_name} {profile.last_name}</span>
@@ -1445,6 +1447,7 @@ export default function App() {
                 </a>
               </>
             )}
+            </div>
           </div>
         </div>
 
@@ -1545,7 +1548,7 @@ export default function App() {
                   </div>
                   <div className="space-y-1.5">
                     <label htmlFor="cltv" className="block text-sm font-medium text-slate-900">CLTV</label>
-                    <div id="cltv" className="h-8 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-xs font-medium text-slate-400 flex items-center">{formData.lienPosition !== '1st' ? 'Enter 2nd' : '—'}</div>
+                    <div id="cltv" className="h-8 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-xs font-medium text-slate-600 flex items-center">{formData.ltv ? `${formData.ltv}%` : '—'}</div>
                   </div>
                   {/* Row 2: Term, Amortization, Payment, Impound Type, Lock Period, Cashout Amount */}
                   <div className="space-y-1.5">
