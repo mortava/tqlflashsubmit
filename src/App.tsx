@@ -246,7 +246,8 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
     let closestDist = Infinity
     for (const prog of programs) {
       for (const opt of prog.rateOptions) {
-        const price = 100 - safeNumber(opt.points)
+        const pts = safeNumber(opt.points)
+        const price = pts > 50 ? pts : 100 - pts
         const dist = Math.abs(price - 100)
         if (dist < closestDist && opt.rate > 0) {
           closestDist = dist
@@ -1092,7 +1093,7 @@ export default function App() {
           setResult({ programs: [], mlMessage: 'No eligible programs found' } as any)
         }
       } else {
-        setResult({ programs: [], mlMessage: obData.error || 'No rates returned' } as any)
+        setResult({ programs: [], mlMessage: typeof obData.error === 'string' ? obData.error : 'No rates returned' } as any)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get pricing')
@@ -1106,10 +1107,15 @@ export default function App() {
   const hasError = (field: keyof LoanData) => !!validationErrors[field]
   const showInvestorDetails = formData.occupancyType === 'investment'
 
+  // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
+  const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
+
   // Filter rate options to only show prices between 99.500 and 101.500
   const filterRateOptionsByPrice = (rateOptions: RateOption[]) => {
     return rateOptions.filter(opt => {
-      const price = 100 - safeNumber(opt.points)
+      const pts = safeNumber(opt.points)
+      // OB sends price directly (e.g., 100.408); ML sends points offset (e.g., -0.408)
+      const price = pts > 50 ? pts : 100 - pts
       return price >= 99.5 && price <= 101.5
     })
   }
@@ -1186,7 +1192,7 @@ export default function App() {
         }
 
         const points = safeNumber(opt.points)
-        const price = 100 - points
+        const price = pointsToPrice(points)
 
         // Investment DSCR prepay-based price caps
         const isInvDSCR = formData.occupancyType === 'investment' && formData.documentationType === 'dscr'
@@ -2133,8 +2139,8 @@ export default function App() {
 
                           const programName = program.name || `Program ${idx + 1}`
                           const bestRate = filteredRateOptions.reduce((best, opt) => {
-                            const price = 100 - safeNumber(opt.points)
-                            const bestPrice = best ? 100 - safeNumber(best.points) : Infinity
+                            const price = pointsToPrice(safeNumber(opt.points))
+                            const bestPrice = best ? pointsToPrice(safeNumber(best.points)) : Infinity
                             return Math.abs(price - 100) < Math.abs(bestPrice - 100) ? opt : best
                           }, filteredRateOptions[0])
                           const bestPayment = bestRate ? safeNumber(bestRate.payment) : 0
@@ -2214,7 +2220,7 @@ export default function App() {
                                         {filteredRateOptions.map((opt, optIdx) => {
                                           if (!opt || typeof opt !== 'object') return null
                                           const points = safeNumber(opt.points)
-                                          const price = safeNumber(opt.price) || (100 - points)
+                                          const price = safeNumber(opt.price) || pointsToPrice(points)
                                           const pointsDisplay = points >= 0 ? `(${points.toFixed(3)})` : `+${Math.abs(points).toFixed(3)}`
                                           const isClosestTo100 = bestRate === opt
                                           const payment = safeNumber(opt.payment)
@@ -2368,7 +2374,7 @@ export default function App() {
                                     {filteredRateOptions.map((opt, optIdx) => {
                                       if (!opt || typeof opt !== 'object') return null
                                       const points = safeNumber(opt.points)
-                                      const price = safeNumber(opt.price) || (100 - points)
+                                      const price = safeNumber(opt.price) || pointsToPrice(points)
                                       const isClosestTo100 = bestRate === opt
                                       const payment = safeNumber(opt.payment)
                                       return (
