@@ -26,6 +26,20 @@
   --color-gray-900: #000000;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* TQL 2026 Brand Tokens */
+  --tql-bg: #FAFAF8;
+  --tql-text: #0B1220;
+  --tql-navy: #0F172A;
+  --tql-teal: #245F73;
+  --tql-teal-hover: #1C4A5A;
+  --tql-link: #2180CF;
+  --tql-sky: #38BDF8;
+  --tql-card: #F8FAFC;
+  --tql-steel: #CBD5E1;
+  --tql-slate: #334155;
+  --tql-muted: #4D4D4D;
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -124,4 +138,25 @@
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ── TQL 2026 Brand Utility Classes ── */
+.tql-font-display { font-family: var(--font-display); }
+.tql-text-primary { color: var(--tql-text); }
+.tql-text-slate { color: var(--tql-slate); }
+.tql-text-muted { color: var(--tql-muted); }
+.tql-bg-canvas { background-color: var(--tql-bg); }
+.tql-bg-card { background-color: var(--tql-card); }
+.tql-bg-navy { background-color: var(--tql-navy); }
+.tql-bg-teal { background-color: var(--tql-teal); }
+.tql-bg-teal:hover { background-color: var(--tql-teal-hover); }
+.tql-text-teal { color: var(--tql-teal); }
+.tql-text-link { color: var(--tql-link); }
+.tql-border-steel { border-color: var(--tql-steel); }
+.tql-ring-teal:focus { box-shadow: 0 0 0 2px var(--tql-teal); outline: none; }
+
+/* Safe-area insets for iOS PWA */
+@supports (padding: env(safe-area-inset-top)) {
+  .tql-safe-top    { padding-top: env(safe-area-inset-top); }
+  .tql-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
