@@ -1321,7 +1321,7 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <IconAtom className="w-8 h-8 text-black" />
             <div className="leading-tight">
-              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="text-blue-600">Flash</span></span>
+              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="tql-text-link">Flash</span></span>
               <div className="text-[9px] text-slate-400 tracking-wide mt-0.5">Total Quality Lending</div>
             </div>
           </div>
@@ -1385,7 +1385,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <IconAtom className="w-6 h-6 text-black" />
           <div className="leading-tight">
-            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="text-blue-600">Flash</span></span>
+            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="tql-text-link">Flash</span></span>
             <div className="text-[8px] text-slate-400 tracking-wide">Total Quality Lending</div>
           </div>
         </div>
@@ -1401,7 +1401,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <IconAtom className="w-6 h-6 text-black" />
                 <div className="leading-tight">
-                  <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Open</span><span className="text-blue-600">Price</span></span>
+                  <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Open</span><span className="tql-text-link">Price</span></span>
                   <div className="text-[8px] text-slate-400 tracking-wide">Powered by DEFY TPO</div>
                 </div>
               </div>
@@ -1512,7 +1512,7 @@ export default function App() {
               style={{ transform: stickyBarVisible ? 'translateY(0)' : 'translateY(-100%)', opacity: stickyBarVisible ? 1 : 0 }}
             >
               <div className="max-w-6xl mx-auto flex items-center gap-4 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-[4px] shrink-0">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium tql-text-link bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-[4px] shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />Live
                 </span>
                 <div className="flex items-center gap-4 flex-wrap text-sm">
@@ -1899,7 +1899,7 @@ export default function App() {
                         <div className="space-y-1.5">
                           <label className="block text-sm font-medium text-slate-900">Range</label>
                           <div className="h-8 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-medium flex items-center justify-between">
-                            <span className={`${calculatedDSCR.ratio >= 1.0 ? 'text-blue-600' : calculatedDSCR.ratio >= 0.75 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
+                            <span className={`${calculatedDSCR.ratio >= 1.0 ? 'tql-text-link' : calculatedDSCR.ratio >= 0.75 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
                               {calculatedDSCR.display}
                             </span>
                             <span className="text-[10px] text-slate-400 ml-2">
@@ -2009,7 +2009,7 @@ export default function App() {
                         <div className="text-sm font-semibold text-slate-900">Pass to National Rate Card</div>
                       </div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium tql-text-link bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
                           <ShieldCheck className="w-3 h-3" />Verified
                         </span>
                         <span className="text-xs text-slate-500">Cross-Collateralized</span>
@@ -2037,7 +2037,7 @@ export default function App() {
                 ) : (result as any).mlMessage && obLoading ? (
                   /* OB still loading, ML returned empty — show loading instead of Out of Scope */
                   <div className="bg-white border border-slate-200 rounded-xl p-6 flex items-center gap-4">
-                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin shrink-0" />
+                    <Loader2 className="w-6 h-6 tql-text-link animate-spin shrink-0" />
                     <div>
                       <div className="text-sm font-semibold text-slate-900">Searching Additional Pricing Engines...</div>
                       <p className="text-xs text-slate-500 mt-0.5">Checking Optimal Blue for available rates.</p>
@@ -2049,7 +2049,7 @@ export default function App() {
                     <div className="bg-white border border-slate-200 rounded-xl p-6">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-base font-semibold tracking-wide text-slate-800">Best Available Rate</span>
-                        <span className="bg-blue-50 text-blue-600 border border-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-[4px] flex items-center gap-1.5">
+                        <span className="bg-blue-50 tql-text-link border border-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-[4px] flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />Live
                         </span>
                       </div>
@@ -2100,7 +2100,7 @@ export default function App() {
                                   <span className="text-xs text-slate-400 tabular-nums w-14 shrink-0">{rateDisplay.toFixed(3)}%</span>
                                   <span className="text-xs text-slate-900 truncate">{adj.description}</span>
                                 </div>
-                                <span className={`text-xs font-semibold tabular-nums ml-3 ${priceDisplay > 0 ? 'text-blue-600' : priceDisplay < 0 ? 'text-[#EF4444]' : 'text-slate-400'}`}>
+                                <span className={`text-xs font-semibold tabular-nums ml-3 ${priceDisplay > 0 ? 'tql-text-link' : priceDisplay < 0 ? 'text-[#EF4444]' : 'text-slate-400'}`}>
                                   {priceDisplay > 0 ? '+' : ''}{priceDisplay.toFixed(3)}
                                 </span>
                               </div>
@@ -2130,7 +2130,7 @@ export default function App() {
                             type="button"
                             onClick={handleSendEmail}
                             disabled={emailSending || !emailTo}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-slate-900 rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white tql-bg-teal rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {emailSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : emailStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
                             {emailSending ? 'Sending...' : emailStatus === 'success' ? 'Sent!' : 'Send'}
@@ -2328,13 +2328,13 @@ export default function App() {
                                               </td>
                                               <td className="py-2 pr-2 text-left"><div className="font-medium text-[10px] text-slate-900 whitespace-nowrap" title={opt.description || ''}>{opt.description || programName}</div></td>
                                               <td className="py-2 px-2 text-right font-semibold text-slate-900 tabular-nums">{safeNumber(opt.rate).toFixed(3)}%</td>
-                                              <td className={`py-2 px-2 text-right tabular-nums ${price >= 100 ? 'text-blue-600 font-medium' : 'text-slate-900'}`}>{price.toFixed(3)}</td>
-                                              <td className={`py-2 px-2 text-right tabular-nums ${points < 0 ? 'text-blue-600' : 'text-slate-500'}`}>{pointsDisplay}</td>
+                                              <td className={`py-2 px-2 text-right tabular-nums ${price >= 100 ? 'tql-text-link font-medium' : 'text-slate-900'}`}>{price.toFixed(3)}</td>
+                                              <td className={`py-2 px-2 text-right tabular-nums ${points < 0 ? 'tql-text-link' : 'text-slate-500'}`}>{pointsDisplay}</td>
                                               <td className="py-2 px-2 text-right tabular-nums text-slate-900">{safeNumber(opt.apr).toFixed(3)}%</td>
                                               <td className="py-2 px-2 text-right font-medium tabular-nums text-slate-900">{payment > 0 ? formatCurrency(payment) : '-'}</td>
                                               <td className="py-2 pl-2 text-right tabular-nums">
                                                 {adjustments.length > 0 ? (
-                                                  <span className={totalAdjustment >= 0 ? 'text-blue-600' : 'text-[#EF4444]'}>
+                                                  <span className={totalAdjustment >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}>
                                                     {totalAdjustment >= 0 ? '+' : ''}{totalAdjustment.toFixed(3)}
                                                   </span>
                                                 ) : '-'}
@@ -2369,16 +2369,16 @@ export default function App() {
                                             Confirm you would like to reserve this Rate &amp; Pricing. This quote expires after 48 hours unless a full file is submitted.
                                           </p>
                                           <label className="flex items-start gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={rowReserveFields.confirmed} onChange={(e) => setRowReserveFields(prev => ({ ...prev, confirmed: e.target.checked }))} className="mt-0.5 w-4 h-4 rounded border-[#D1D5DB] text-slate-900 focus:ring-[#000000]" />
+                                            <input type="checkbox" checked={rowReserveFields.confirmed} onChange={(e) => setRowReserveFields(prev => ({ ...prev, confirmed: e.target.checked }))} className="mt-0.5 w-4 h-4 rounded border-[#D1D5DB] text-slate-900 focus:ring-[#245F73]" />
                                             <span className="text-xs text-slate-900 leading-relaxed">I confirm and understand the 48-hour expiration policy</span>
                                           </label>
                                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            <input type="text" placeholder="Your Name *" value={rowReserveFields.name} onChange={(e) => setRowReserveFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
-                                            <input type="email" placeholder="Email *" value={rowReserveFields.email} onChange={(e) => setRowReserveFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
-                                            <input type="text" placeholder="Scenario Name" value={rowReserveFields.scenarioName} onChange={(e) => setRowReserveFields(prev => ({ ...prev, scenarioName: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
+                                            <input type="text" placeholder="Your Name *" value={rowReserveFields.name} onChange={(e) => setRowReserveFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                                            <input type="email" placeholder="Email *" value={rowReserveFields.email} onChange={(e) => setRowReserveFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                                            <input type="text" placeholder="Scenario Name" value={rowReserveFields.scenarioName} onChange={(e) => setRowReserveFields(prev => ({ ...prev, scenarioName: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                                           </div>
                                           <div className="flex items-center gap-3">
-                                            <button type="button" onClick={handleRowReserve} disabled={rowSending || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white bg-slate-900 rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button type="button" onClick={handleRowReserve} disabled={rowSending || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white tql-bg-teal rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                               {rowSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : rowStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
                                               {rowSending ? 'Sending...' : rowStatus === 'success' ? 'Sent!' : 'Send Reservation'}
                                             </button>
@@ -2388,12 +2388,12 @@ export default function App() {
                                       ) : (
                                         <div className="space-y-3">
                                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            <input type="text" placeholder="Your Name *" value={rowLockFields.name} onChange={(e) => setRowLockFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
-                                            <input type="email" placeholder="Email *" value={rowLockFields.email} onChange={(e) => setRowLockFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
-                                            <input type="text" placeholder="TQL Loan Number *" value={rowLockFields.loanNumber} onChange={(e) => setRowLockFields(prev => ({ ...prev, loanNumber: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
+                                            <input type="text" placeholder="Your Name *" value={rowLockFields.name} onChange={(e) => setRowLockFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                                            <input type="email" placeholder="Email *" value={rowLockFields.email} onChange={(e) => setRowLockFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                                            <input type="text" placeholder="TQL Loan Number *" value={rowLockFields.loanNumber} onChange={(e) => setRowLockFields(prev => ({ ...prev, loanNumber: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                                           </div>
                                           <div className="flex items-center gap-3">
-                                            <button type="button" onClick={handleRowLock} disabled={rowSending || !rowLockFields.name || !rowLockFields.email || !rowLockFields.loanNumber} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white bg-slate-900 rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <button type="button" onClick={handleRowLock} disabled={rowSending || !rowLockFields.name || !rowLockFields.email || !rowLockFields.loanNumber} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white tql-bg-teal rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                               {rowSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : rowStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
                                               {rowSending ? 'Sending...' : rowStatus === 'success' ? 'Sent!' : 'Send Lock Request'}
                                             </button>
@@ -2421,7 +2421,7 @@ export default function App() {
                                               <div className="text-[9px] text-slate-400 uppercase">Rate</div>
                                             </div>
                                             <div>
-                                              <div className={`text-[13px] font-bold tabular-nums ${price >= 100 ? 'text-blue-600' : 'text-slate-900'}`}>{price.toFixed(3)}</div>
+                                              <div className={`text-[13px] font-bold tabular-nums ${price >= 100 ? 'tql-text-link' : 'text-slate-900'}`}>{price.toFixed(3)}</div>
                                               <div className="text-[9px] text-slate-400 uppercase">Price</div>
                                             </div>
                                             <div>
@@ -2664,7 +2664,7 @@ export default function App() {
                                 <div className="text-base font-semibold text-slate-900 tracking-tight">National Wholesale Rate Results{prepayLabel}</div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1.5 text-[11px] text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-[4px] font-medium">
+                                <div className="flex items-center gap-1.5 text-[11px] tql-text-link bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-[4px] font-medium">
                                   <ShieldCheck className="w-3 h-3" />Verified
                                 </div>
                                 <span className="text-[11px] font-mono text-slate-400">{filteredLpRates.length} rates</span>
@@ -2693,11 +2693,11 @@ export default function App() {
                                       return (
                                         <tr key={idx} className={`border-t border-slate-100 transition-colors duration-150 ${isClosest ? 'bg-slate-50' : 'hover:bg-slate-50'}`}>
                                           <td className="py-2.5 px-4 text-right font-semibold text-slate-900 font-mono">{safeNumber(opt.rate).toFixed(3)}%</td>
-                                          <td className={`py-2.5 px-4 text-right font-mono ${opt.price >= 100 ? 'text-blue-600 font-semibold' : 'text-slate-900'}`}>{safeNumber(opt.price).toFixed(3)}</td>
+                                          <td className={`py-2.5 px-4 text-right font-mono ${opt.price >= 100 ? 'tql-text-link font-semibold' : 'text-slate-900'}`}>{safeNumber(opt.price).toFixed(3)}</td>
                                           <td className="py-2.5 px-4 text-right text-slate-900 font-mono">{opt.payment > 0 ? formatCurrency(safeNumber(opt.payment)) : '-'}</td>
                                           <td className="py-2.5 px-4 text-right font-mono">
                                             {opt.totalAdjustments !== 0 ? (
-                                              <span className={opt.totalAdjustments > 0 ? 'text-blue-600' : 'text-[#EF4444]'}>
+                                              <span className={opt.totalAdjustments > 0 ? 'tql-text-link' : 'text-[#EF4444]'}>
                                                 {opt.totalAdjustments > 0 ? '+' : ''}{safeNumber(opt.totalAdjustments).toFixed(3)}
                                               </span>
                                             ) : <span className="text-slate-400">-</span>}
@@ -2761,15 +2761,15 @@ export default function App() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Name *</label>
-                  <input type="text" value={helpDeskFields.name} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, name: e.target.value }))} placeholder="Your name" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
+                  <input type="text" value={helpDeskFields.name} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, name: e.target.value }))} placeholder="Your name" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Email *</label>
-                  <input type="email" value={helpDeskFields.email} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, email: e.target.value }))} placeholder="you@company.com" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent" />
+                  <input type="email" value={helpDeskFields.email} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, email: e.target.value }))} placeholder="you@company.com" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Help Topic *</label>
-                  <select value={helpDeskFields.topic} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, topic: e.target.value }))} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent">
+                  <select value={helpDeskFields.topic} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, topic: e.target.value }))} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent">
                     <option value="">Select a topic...</option>
                     <option value="Pricing">Pricing</option>
                     <option value="Lock Desk">Lock Desk</option>
@@ -2780,9 +2780,9 @@ export default function App() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Message</label>
-                  <textarea value={helpDeskFields.message} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, message: e.target.value }))} placeholder="Describe your issue or question..." rows={3} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent resize-none" />
+                  <textarea value={helpDeskFields.message} onChange={(e) => setHelpDeskFields(prev => ({ ...prev, message: e.target.value }))} placeholder="Describe your issue or question..." rows={3} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent resize-none" />
                 </div>
-                <button type="button" onClick={handleHelpDeskSubmit} disabled={helpDeskSending || !helpDeskFields.name || !helpDeskFields.email || !helpDeskFields.topic} className="w-full py-3 bg-slate-900 hover:opacity-85 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-opacity duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="button" onClick={handleHelpDeskSubmit} disabled={helpDeskSending || !helpDeskFields.name || !helpDeskFields.email || !helpDeskFields.topic} className="w-full py-3 tql-bg-teal hover:opacity-85 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-opacity duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
                   {helpDeskSending ? <Loader2 className="w-4 h-4 animate-spin" /> : helpDeskStatus === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                   {helpDeskSending ? 'Sending...' : helpDeskStatus === 'success' ? 'Sent!' : 'Submit Request'}
                 </button>

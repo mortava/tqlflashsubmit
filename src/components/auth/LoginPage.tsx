@@ -36,7 +36,7 @@ export function LoginPage({ onBack, onSignUp }: LoginPageProps) {
           <div className="text-center mb-6">
             <h1 className="font-['Montserrat'] text-2xl sm:text-3xl font-extrabold tracking-tight">
               <span className="text-slate-900">DEFY </span>
-              <span className="text-blue-600">CLOUD</span>
+              <span className="tql-text-link">CLOUD</span>
             </h1>
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.25em] mt-1">Portal Access</p>
             <p className="text-sm text-slate-500 mt-3 italic">Dare to Defy. Brokers Close Harder.</p>
@@ -95,7 +95,7 @@ export function LoginPage({ onBack, onSignUp }: LoginPageProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] disabled:opacity-60"
+              className="w-full py-3 tql-bg-teal hover:bg-black text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] disabled:opacity-60"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sign In <ArrowRight className="w-4 h-4" /></>}
             </button>

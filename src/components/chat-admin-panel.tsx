@@ -66,7 +66,7 @@ function UserAvatar({ src, name, size = 36 }: { src?: string | null; name: strin
   }
   return (
     <div
-      className="flex items-center justify-center rounded-full bg-slate-900 text-white font-semibold shrink-0"
+      className="flex items-center justify-center rounded-full tql-bg-teal text-white font-semibold shrink-0"
       style={{ width: size, height: size, fontSize: size * 0.35 }}
     >
       {name.charAt(0).toUpperCase()}
@@ -93,9 +93,9 @@ function CopyButton({ text }: { text: string }) {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch {}
   }
   return (
-    <button onClick={handleCopy} className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-blue-600 transition-colors" title="Copy message">
+    <button onClick={handleCopy} className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:tql-text-link transition-colors" title="Copy message">
       <Copy className="w-3 h-3" />
-      {copied && <span className="text-blue-600">Copied</span>}
+      {copied && <span className="tql-text-link">Copied</span>}
     </button>
   )
 }
@@ -132,7 +132,7 @@ function ChatLoginScreen({ onLogin, loading, error, onClose }: {
     <div className="flex flex-col bg-white min-h-full">
       {/* Back link top-left */}
       <div className="px-6 pt-5">
-        <button type="button" onClick={onClose} className="text-sm text-blue-600 hover:text-blue-700 transition-colors">Back to OpenPrice</button>
+        <button type="button" onClick={onClose} className="text-sm tql-text-link hover:text-blue-700 transition-colors">Back to OpenPrice</button>
       </div>
 
       <div className="flex-1 flex items-center justify-center">
@@ -163,7 +163,7 @@ function ChatLoginScreen({ onLogin, loading, error, onClose }: {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-semibold text-slate-700">Password</label>
-                <button type="button" className="text-sm text-blue-600 hover:text-blue-700 transition-colors">Forgot Password</button>
+                <button type="button" className="text-sm tql-text-link hover:text-blue-700 transition-colors">Forgot Password</button>
               </div>
               <input
                 type="password"
@@ -178,7 +178,7 @@ function ChatLoginScreen({ onLogin, loading, error, onClose }: {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+              className="w-full h-12 tql-bg-teal text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -227,7 +227,7 @@ function ChatAdminMain({ user, onClose, onLogout }: {
       {/* Top Bar — ChatCom branding */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-3">
-          <MessageCircle className="w-5 h-5 text-blue-600" />
+          <MessageCircle className="w-5 h-5 tql-text-link" />
           <h2 className="text-base font-semibold text-slate-900 tracking-[-0.02em]">ChatCom</h2>
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleBadgeColor}`}>{roleLabel}</span>
         </div>
@@ -267,7 +267,7 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-        active ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'
+        active ? 'tql-bg-teal text-white' : 'text-slate-500 hover:bg-slate-50'
       )}
     >
       {icon}
@@ -498,7 +498,7 @@ function ChatsView({ user, isSalesManager }: { user: ChatSystemUser; canViewAllC
                 </button>
                 <a href="https://dealr.defywholesale.com" target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors" title="Ask TRINITY Agent">
-                  <span>Ask <span className="text-blue-600 font-semibold">TRINITY</span> Agent</span>
+                  <span>Ask <span className="tql-text-link font-semibold">TRINITY</span> Agent</span>
                 </a>
                 <button onClick={() => handleCloseConversation(selected.id)}
                   className="text-xs text-slate-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">End Chat</button>
@@ -514,7 +514,7 @@ function ChatsView({ user, isSalesManager }: { user: ChatSystemUser; canViewAllC
               )}
               {messages.map((msg) => (
                 <div key={msg.id} className={cn('mb-4 flex flex-col', msg.sender_role === 'agent' ? 'items-end' : 'items-start')}>
-                  <div className={cn('max-w-[65%] rounded-xl px-4 py-2.5 text-sm', msg.sender_role === 'agent' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900 border border-slate-200')}>
+                  <div className={cn('max-w-[65%] rounded-xl px-4 py-2.5 text-sm', msg.sender_role === 'agent' ? 'tql-bg-teal text-white' : 'bg-slate-50 text-slate-900 border border-slate-200')}>
                     <p className={cn('mb-1 text-xs font-medium', msg.sender_role === 'agent' ? 'text-slate-400' : 'text-slate-500')}>{msg.sender_name}</p>
                     {msg.image_url && (
                       <img src={msg.image_url} alt="Shared" className="max-w-[280px] w-full rounded-lg mb-1.5 cursor-pointer hover:opacity-90" onClick={() => setLightboxUrl(msg.image_url!)} />
@@ -535,7 +535,7 @@ function ChatsView({ user, isSalesManager }: { user: ChatSystemUser; canViewAllC
               {imagePreview && (
                 <div className="mb-2 relative inline-block">
                   <img src={imagePreview} alt="Preview" className="h-16 rounded-lg border border-slate-200" />
-                  <button onClick={clearImage} className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white"><X className="h-3 w-3" /></button>
+                  <button onClick={clearImage} className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full tql-bg-teal text-white"><X className="h-3 w-3" /></button>
                 </div>
               )}
               <div className="flex items-center gap-2">
@@ -548,7 +548,7 @@ function ChatsView({ user, isSalesManager }: { user: ChatSystemUser; canViewAllC
                   placeholder={selectedImage ? 'Add a caption...' : `Reply as ${user.display_name}...`}
                   className="flex-1 rounded-lg bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border border-slate-300" />
                 <button onClick={handleSend} disabled={!input.trim() && !selectedImage}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white hover:opacity-85 disabled:opacity-50" title="Send">
+                  className="flex h-10 w-10 items-center justify-center rounded-lg tql-bg-teal text-white hover:opacity-85 disabled:opacity-50" title="Send">
                   <Send className="h-4 w-4" />
                 </button>
               </div>
@@ -653,7 +653,7 @@ function UsersView({ user }: { user: ChatSystemUser }) {
             <p className="text-sm text-slate-400">{users.length} users</p>
           </div>
           <button onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-black transition-colors">
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium tql-bg-teal text-white hover:bg-black transition-colors">
             <UserPlus className="w-3.5 h-3.5" />
             Add User
           </button>
@@ -687,13 +687,13 @@ function UsersView({ user }: { user: ChatSystemUser }) {
               </div>
             </div>
 
-            {statusMsg && <p className={cn('text-sm', statusMsg.type === 'error' ? 'text-red-500' : 'text-blue-600')}>{statusMsg.text}</p>}
+            {statusMsg && <p className={cn('text-sm', statusMsg.type === 'error' ? 'text-red-500' : 'tql-text-link')}>{statusMsg.text}</p>}
 
             {/* Avatar Upload + Preview Row */}
             <div className="flex items-end gap-6 pt-2">
               <div className="flex items-center gap-3">
                 <button type="submit" disabled={creating}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-black disabled:opacity-50">
+                  className="px-4 py-2 rounded-lg text-sm font-medium tql-bg-teal text-white hover:bg-black disabled:opacity-50">
                   {creating ? 'Creating...' : 'Create User'}
                 </button>
                 <button type="button" onClick={() => { setShowAddForm(false); setAvatarFile(null); if (avatarPreview) URL.revokeObjectURL(avatarPreview); setAvatarPreview(null) }}
@@ -743,7 +743,7 @@ function UsersView({ user }: { user: ChatSystemUser }) {
                   </span>
                   {u.email !== user.email && (
                     <button onClick={() => toggleUserActive(u.id, u.is_active)}
-                      className={cn('text-[10px] px-2 py-1 rounded', u.is_active ? 'text-red-500 hover:bg-red-50' : 'text-blue-600 hover:bg-blue-50')}>
+                      className={cn('text-[10px] px-2 py-1 rounded', u.is_active ? 'text-red-500 hover:bg-red-50' : 'tql-text-link hover:bg-blue-50')}>
                       {u.is_active ? 'Deactivate' : 'Activate'}
                     </button>
                   )}
@@ -842,9 +842,9 @@ function AssignmentsView({ user }: { user: ChatSystemUser }) {
               </select>
             </div>
           </div>
-          {statusMsg && <p className={cn('text-sm mb-3', statusMsg.type === 'error' ? 'text-red-500' : 'text-blue-600')}>{statusMsg.text}</p>}
+          {statusMsg && <p className={cn('text-sm mb-3', statusMsg.type === 'error' ? 'text-red-500' : 'tql-text-link')}>{statusMsg.text}</p>}
           <button onClick={handleAssign} disabled={creating || !selectedManager || !selectedClient}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-black disabled:opacity-50">
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium tql-bg-teal text-white hover:bg-black disabled:opacity-50">
             <Link2 className="w-3.5 h-3.5" />
             {creating ? 'Assigning...' : 'Create Assignment'}
           </button>

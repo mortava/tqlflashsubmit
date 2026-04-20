@@ -309,10 +309,11 @@ function parseOBResponse(data: any): any {
     }
   }
 
-  const programs: any[] = []
+  // Group products by program name so each program surfaces its full rate ladder
+  // (OB v4 returns one "product" per rate/price combo; multiple products share the same productName).
+  const programsMap: Record<string, any> = {}
 
   for (const p of products) {
-    // Each product IS a single rate/price result in OB v4
     const programName = p.productName || p.productCode || 'OB Program'
     const investor = p.investor || ''
     const status = p.priceStatus || 'Available'
@@ -330,49 +331,110 @@ function parseOBResponse(data: any): any {
     const rebate = p.rebate || 0
     const discount = p.discount || 0
 
-    programs.push({
-      name: programName,
-      programName,
-      status,
-      investor,
-      investorName: investor,
-      investorId: p.investorId || 0,
-      productId: p.productId || 0,
-      productCode: p.productCode || '',
-      productType,
-      loanType,
-      loanTerm,
-      amortType,
-      lockPeriod,
+    // ── Extract LLPAs (pricing adjustments) from OB v4 response ──
+    // OB returns adjustments under several possible field names depending on product family.
+    const rawAdjustments =
+      p.adjustments ||
+      p.priceAdjustments ||
+      p.pricingAdjustments ||
+      p.priceAdjustmentDetails ||
+      p.loanLevelPriceAdjustments ||
+      []
+    const adjustments = Array.isArray(rawAdjustments)
+      ? rawAdjustments
+          .map((a: any) => ({
+            description: a.description || a.name || a.adjustmentType || a.code || 'Adjustment',
+            amount:
+              typeof a.priceAdjustment === 'number'
+                ? a.priceAdjustment
+                : typeof a.amount === 'number'
+                ? a.amount
+                : typeof a.price === 'number'
+                ? a.price
+                : typeof a.adjustmentValue === 'number'
+                ? a.adjustmentValue
+                : 0,
+            rateAdj:
+              typeof a.rateAdjustment === 'number'
+                ? a.rateAdjustment
+                : typeof a.rate === 'number'
+                ? a.rate
+                : 0,
+            percentage: typeof a.percentage === 'number' ? a.percentage : 0,
+          }))
+          .filter((a: any) => a.amount !== 0 || a.rateAdj !== 0)
+      : []
+
+    // Points offset convention: points = 100 - price (OB sends actual par price like 100.408)
+    const pointsOffset = 100 - price
+
+    // Seed the program bucket the first time we see it
+    if (!programsMap[programName]) {
+      programsMap[programName] = {
+        name: programName,
+        programName,
+        status,
+        investor,
+        investorName: investor,
+        investorId: p.investorId || 0,
+        productId: p.productId || 0,
+        productCode: p.productCode || '',
+        productType,
+        loanType,
+        loanTerm,
+        amortType,
+        lockPeriod,
+        highBalance: p.highBalance || 'No',
+        qmStatus: p.qmStatus || '',
+        // "Best" top-level summary fields — updated below when we find a closer-to-par option
+        rate,
+        price,
+        apr,
+        payment,
+        monthlyMI,
+        closingCost,
+        rebate,
+        discount,
+        totalPayment: p.totalPayment || 0,
+        adjustments,
+        rateOptions: [],
+      }
+    }
+
+    const bucket = programsMap[programName]
+    // Keep the rate/price closest to par (100) at the program level for the card summary
+    if (Math.abs(price - 100) < Math.abs((bucket.price || 0) - 100)) {
+      bucket.rate = rate
+      bucket.price = price
+      bucket.apr = apr
+      bucket.payment = payment
+      bucket.monthlyMI = monthlyMI
+      bucket.closingCost = closingCost
+      bucket.rebate = rebate
+      bucket.discount = discount
+      bucket.adjustments = adjustments
+    }
+
+    bucket.rateOptions.push({
       rate,
+      points: pointsOffset,
       price,
       apr,
       payment,
+      description: `${rate.toFixed(3)}% / ${price.toFixed(3)}`,
+      status,
+      totalClosingCost: closingCost,
       monthlyMI,
-      totalPayment: p.totalPayment || 0,
-      closingCost,
       rebate,
       discount,
-      highBalance: p.highBalance || 'No',
-      qmStatus: p.qmStatus || '',
-      // Single rate option per product (OB v4 format)
-      rateOptions: [{
-        rate,
-        points: price,
-        apr,
-        payment,
-        description: `${rate.toFixed(3)}% / ${price.toFixed(3)}`,
-        status,
-        totalClosingCost: closingCost,
-        monthlyMI,
-        rebate,
-        discount,
-        programName,
-        investorName: investor,
-        lockPeriod,
-      }],
+      programName,
+      investorName: investor,
+      lockPeriod,
+      adjustments,
     })
   }
+
+  const programs: any[] = Object.values(programsMap)
 
   // Sort: Available first, then by rate ascending
   programs.sort((a, b) => {
@@ -382,24 +444,13 @@ function parseOBResponse(data: any): any {
     return a.rate - b.rate
   })
 
-  // Flatten for simplified rate table view
-  const allRateOptions = programs.map(p => ({
-    rate: p.rate,
-    points: p.price,
-    apr: p.apr,
-    payment: p.payment,
-    description: `${p.rate.toFixed(3)}% / ${p.price.toFixed(3)}`,
-    status: p.status,
-    totalClosingCost: p.closingCost,
-    monthlyMI: p.monthlyMI,
-    rebate: p.rebate,
-    discount: p.discount,
-    programName: p.programName,
-    investorName: p.investorName,
-    lockPeriod: p.lockPeriod,
-    productType: p.productType,
-    loanType: p.loanType,
-  }))
+  // Sort each program's rateOptions by rate ascending for stable ladder display
+  for (const prog of programs) {
+    prog.rateOptions.sort((a: any, b: any) => a.rate - b.rate || a.price - b.price)
+  }
+
+  // Flatten for simplified rate table view (all rate options across programs)
+  const allRateOptions = programs.flatMap(p => p.rateOptions)
 
   return {
     rateOptions: allRateOptions,

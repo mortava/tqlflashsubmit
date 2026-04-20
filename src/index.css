@@ -48,7 +48,20 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-focus: 0 0 0 2px #000000;
+  --shadow-focus: 0 0 0 2px var(--tql-teal);
+
+  /* ── TQL 2026 slate palette override (close to Tailwind defaults, nudged toward brand) ── */
+  --color-slate-50:  #F8FAFC;  /* TQL card */
+  --color-slate-100: #F1F5F9;
+  --color-slate-200: #CBD5E1;  /* TQL steel */
+  --color-slate-300: #CBD5E1;
+  --color-slate-400: #64748B;
+  --color-slate-500: #334155;  /* TQL slate */
+  --color-slate-700: #1E293B;
+  --color-slate-800: #0F172A;  /* TQL navy */
+  --color-slate-900: #0B1220;  /* TQL primary text */
+  --color-blue-600:  #2180CF;  /* TQL link */
+  --color-blue-500:  #2180CF;
 }
 
 @layer base {
@@ -57,10 +70,20 @@
   }
 
   html, body {
-    @apply bg-white text-gray-900 antialiased m-0 h-full overflow-hidden;
+    @apply antialiased m-0 h-full overflow-hidden;
+    background-color: var(--tql-bg);
+    color: var(--tql-text);
     font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
   }
+
+  /* Display font for headings & titles */
+  h1, h2, h3, h4 { font-family: var(--font-display); }
+  h1 { font-weight: 800; }
+  h2, h3 { font-weight: 700; }
+
+  /* Root scroll container on brand canvas */
+  #root > div { background-color: var(--tql-bg); }
 
   ::selection {
     @apply bg-primary-light text-primary;

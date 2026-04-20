@@ -309,7 +309,7 @@ export function AdminChatPanel({ onClose }: { onClose: () => void }) {
       {/* Top Bar */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <MessageCircle className="w-5 h-5 text-blue-600" />
+          <MessageCircle className="w-5 h-5 tql-text-link" />
           <h2 className="text-base font-semibold text-slate-900 tracking-[-0.02em]">OpenBroker Chat</h2>
           <span className="text-xs text-slate-400 font-medium">
             {conversations.length} open {conversations.length === 1 ? 'conversation' : 'conversations'}
@@ -350,7 +350,7 @@ export function AdminChatPanel({ onClose }: { onClose: () => void }) {
                   selected?.id === convo.id ? 'bg-slate-50' : 'hover:bg-slate-50/60'
                 )}
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-semibold shrink-0 mt-0.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full tql-bg-teal text-white text-xs font-semibold shrink-0 mt-0.5">
                   {convo.user_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -394,7 +394,7 @@ export function AdminChatPanel({ onClose }: { onClose: () => void }) {
                   >
                     <ArrowLeft className="w-4 h-4 text-slate-900" />
                   </button>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-semibold">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full tql-bg-teal text-white text-xs font-semibold">
                     {selected.user_name.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -428,7 +428,7 @@ export function AdminChatPanel({ onClose }: { onClose: () => void }) {
                     <div
                       className={cn(
                         'max-w-[65%] rounded-xl px-4 py-2.5 text-sm',
-                        msg.sender_role === 'agent' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900 border border-slate-200'
+                        msg.sender_role === 'agent' ? 'tql-bg-teal text-white' : 'bg-slate-50 text-slate-900 border border-slate-200'
                       )}
                     >
                       {msg.sender_role === 'user' && (
@@ -456,7 +456,7 @@ export function AdminChatPanel({ onClose }: { onClose: () => void }) {
                   <div className="mb-2 relative inline-block">
                     <img src={imagePreview} alt="Preview" className="h-16 rounded-lg border border-slate-200" />
                     <button onClick={clearImage}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white"
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full tql-bg-teal text-white"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -484,7 +484,7 @@ export function AdminChatPanel({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={handleSend}
                     disabled={!input.trim() && !selectedImage}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white transition-all duration-150 hover:opacity-85 disabled:opacity-50"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg tql-bg-teal text-white transition-all duration-150 hover:opacity-85 disabled:opacity-50"
                     title="Send reply"
                   >
                     <Send className="h-4 w-4" />

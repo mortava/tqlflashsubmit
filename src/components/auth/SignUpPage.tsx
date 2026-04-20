@@ -60,7 +60,7 @@ export function SignUpPage({ onBack, onLogin }: SignUpPageProps) {
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-900 mb-2">Account Created</h2>
           <p className="text-sm text-slate-500 mb-6">Check your email to confirm your account, then sign in.</p>
-          <button onClick={onLogin} className="w-full py-3 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors">
+          <button onClick={onLogin} className="w-full py-3 tql-bg-teal text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors">
             Go to Sign In
           </button>
         </div>
@@ -75,7 +75,7 @@ export function SignUpPage({ onBack, onLogin }: SignUpPageProps) {
           {/* Header */}
           <div className="text-center mb-4">
             <h1 className="font-['Montserrat'] text-2xl sm:text-3xl font-extrabold tracking-tight">
-              <span className="text-slate-900">DEFY </span><span className="text-blue-600">CLOUD</span>
+              <span className="text-slate-900">DEFY </span><span className="tql-text-link">CLOUD</span>
             </h1>
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.25em] mt-1">Partner Registration</p>
           </div>
@@ -83,7 +83,7 @@ export function SignUpPage({ onBack, onLogin }: SignUpPageProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Company Info */}
             <div>
-              <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+              <div className="text-[10px] font-bold tql-text-link uppercase tracking-widest mb-2 flex items-center gap-2">
                 <div className="h-px flex-1 bg-blue-100" />Company Information<div className="h-px flex-1 bg-blue-100" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -104,7 +104,7 @@ export function SignUpPage({ onBack, onLogin }: SignUpPageProps) {
 
             {/* MLO/Processor Info */}
             <div>
-              <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+              <div className="text-[10px] font-bold tql-text-link uppercase tracking-widest mb-2 flex items-center gap-2">
                 <div className="h-px flex-1 bg-blue-100" />MLO / Processor<div className="h-px flex-1 bg-blue-100" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -156,7 +156,7 @@ export function SignUpPage({ onBack, onLogin }: SignUpPageProps) {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+            <button type="submit" disabled={loading} className="w-full py-3 tql-bg-teal hover:bg-black text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Create Account <ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>

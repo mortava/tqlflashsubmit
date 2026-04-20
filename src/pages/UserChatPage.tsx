@@ -105,7 +105,7 @@ export default function UserChatPage() {
               <h3 className="text-base font-semibold tracking-[-0.02em]">
                 {conversation
                   ? 'Support'
-                  : <><span className="text-slate-900">Open</span><span className="text-blue-600">Price</span></>}
+                  : <><span className="text-slate-900">Open</span><span className="tql-text-link">Price</span></>}
               </h3>
               <p className="text-sm text-slate-500">
                 {conversation ? (
@@ -125,7 +125,7 @@ export default function UserChatPage() {
           {!conversation ? (
             <div className="flex flex-1 flex-col items-center justify-center px-6">
               <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-                <User className="h-7 w-7 text-blue-600" />
+                <User className="h-7 w-7 tql-text-link" />
               </div>
               <h4 className="mb-1 text-base font-semibold text-slate-900 tracking-[-0.02em]">Chat with a Human</h4>
               <p className="mb-6 text-center text-sm text-slate-400">Get help from our support team in real-time.</p>
@@ -133,7 +133,7 @@ export default function UserChatPage() {
                 className="flex w-full items-center gap-4 rounded-xl bg-white px-5 py-4 text-left transition-all duration-200 hover:bg-slate-50 border border-slate-200"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
-                  <User className="h-5 w-5 text-blue-600" />
+                  <User className="h-5 w-5 tql-text-link" />
                 </div>
                 <div>
                   <span className="text-sm font-medium text-slate-900">Support</span>
@@ -153,7 +153,7 @@ export default function UserChatPage() {
                 )}
                 {messages.map((msg) => (
                   <div key={msg.id} className={cn('mb-3 flex flex-col', msg.sender_role === 'user' ? 'items-end' : 'items-start')}>
-                    <div className={cn('max-w-[80%] rounded-xl px-4 py-2.5 text-sm', msg.sender_role === 'user' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900 border border-slate-200')}
+                    <div className={cn('max-w-[80%] rounded-xl px-4 py-2.5 text-sm', msg.sender_role === 'user' ? 'tql-bg-teal text-white' : 'bg-slate-50 text-slate-900 border border-slate-200')}
                     >
                       {msg.sender_role === 'agent' && (
                         <p className="mb-1 text-xs font-medium text-slate-500">{msg.sender_name}</p>
@@ -180,7 +180,7 @@ export default function UserChatPage() {
                   <div className="mb-2 relative inline-block">
                     <img src={imagePreview} alt="Preview" className="h-16 rounded-lg border border-slate-200" />
                     <button onClick={clearImage}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white"
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full tql-bg-teal text-white"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -204,7 +204,7 @@ export default function UserChatPage() {
                     className="flex-1 rounded-lg bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-150 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border border-slate-300"
                   />
                   <button onClick={handleSend} disabled={!input.trim() && !selectedImage}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white transition-all duration-150 hover:bg-black disabled:opacity-50"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg tql-bg-teal text-white transition-all duration-150 hover:bg-black disabled:opacity-50"
                     title="Send message"
                   >
                     <Send className="h-4 w-4" />
