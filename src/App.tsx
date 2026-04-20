@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -501,6 +501,8 @@ export default function App() {
   const [lockedProgram, setLockedProgram] = useState<string | null>(null) // program whose passcode prompt is open
   const [lockedPasscodeInput, setLockedPasscodeInput] = useState('')
   const [lockedPasscodeError, setLockedPasscodeError] = useState(false)
+  // Inline per-row adjustments expansion (LLPA breakdown)
+  const [expandedAdjRow, setExpandedAdjRow] = useState<string | null>(null)
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [stickyBarVisible, setStickyBarVisible] = useState(true)
@@ -2147,7 +2149,7 @@ export default function App() {
                     {Array.isArray(result.programs) && result.programs.length > 0 ? (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-slate-900">Available Programs</h3>
+                          <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">Available Programs</h3>
                           <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                             {result.programs.filter(p => p && Array.isArray(p.rateOptions) && filterRateOptionsByPrice(p.rateOptions).length > 0).length} found
                           </span>
@@ -2174,7 +2176,7 @@ export default function App() {
                                 <div className="flex items-center justify-between mb-2.5">
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
-                                      <div className="font-semibold text-[12px] text-slate-900">{programName}</div>
+                                      <div className="font-bold text-[13px] tql-text-primary tql-font-display tracking-tight">{programName}</div>
                                       {isSelectedPrepay && (
                                         <span className="shrink-0 text-[9px] font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">Selected Prepay</span>
                                       )}
@@ -2254,7 +2256,8 @@ export default function App() {
                                           const totalAdjustment = adjustments.reduce((sum, adj) => sum + (adj.amount || 0), 0)
                                           const isActiveRow = activeRowAction?.programName === programName && activeRowAction?.optIdx === optIdx
                                           return (
-                                            <tr key={optIdx} className={`border-t border-slate-200 ${isClosestTo100 ? 'bg-slate-50' : ''} ${isActiveRow ? 'bg-yellow-50/50' : ''}`}>
+                                          <Fragment key={optIdx}>
+                                            <tr className={`border-t border-slate-200 ${isClosestTo100 ? 'bg-slate-50' : ''} ${isActiveRow ? 'bg-yellow-50/50' : ''}`}>
                                               <td className="py-2 pr-2 text-left">
                                                 <button
                                                   type="button"
@@ -2334,12 +2337,39 @@ export default function App() {
                                               <td className="py-2 px-2 text-right font-medium tabular-nums text-slate-900">{payment > 0 ? formatCurrency(payment) : '-'}</td>
                                               <td className="py-2 pl-2 text-right tabular-nums">
                                                 {adjustments.length > 0 ? (
-                                                  <span className={totalAdjustment >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); setExpandedAdjRow(expandedAdjRow === `${programName}-${optIdx}` ? null : `${programName}-${optIdx}`) }}
+                                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums border tql-border-steel ${totalAdjustment >= 0 ? 'tql-text-link' : 'text-[#EF4444]'} hover:bg-slate-50`}
+                                                    title="View itemized LLPAs"
+                                                  >
                                                     {totalAdjustment >= 0 ? '+' : ''}{totalAdjustment.toFixed(3)}
-                                                  </span>
-                                                ) : '-'}
+                                                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedAdjRow === `${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
+                                                  </button>
+                                                ) : <span className="text-slate-400">–</span>}
                                               </td>
                                             </tr>
+                                            {expandedAdjRow === `${programName}-${optIdx}` && adjustments.length > 0 && (
+                                              <tr className="bg-[color:var(--tql-bg)]">
+                                                <td colSpan={8} className="px-4 py-3 border-t tql-border-steel">
+                                                  <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest tql-text-teal">Loan-Level Pricing Adjustments · {safeNumber(opt.rate).toFixed(3)}% @ {price.toFixed(3)}</div>
+                                                    <div className={`text-[11px] font-bold tabular-nums ${totalAdjustment >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>Net {totalAdjustment >= 0 ? '+' : ''}{totalAdjustment.toFixed(3)}</div>
+                                                  </div>
+                                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                                                    {adjustments.map((adj: Adjustment, i: number) => (
+                                                      <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-white border tql-border-steel">
+                                                        <span className="text-[11px] tql-text-primary truncate" title={adj.description}>{adj.description}</span>
+                                                        <span className={`text-[11px] font-semibold tabular-nums ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
+                                                          {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
+                                                        </span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            )}
+                                          </Fragment>
                                           )
                                         })}
                                       </tbody>

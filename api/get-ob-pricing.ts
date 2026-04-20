@@ -295,6 +295,27 @@ function buildOBRequest(f: any): any {
 function parseOBResponse(data: any): any {
   const products = data.products || []
 
+  // ── Debug: log which adjustment-shaped fields the first OB product carries ──
+  if (Array.isArray(products) && products.length > 0) {
+    const sample = products[0]
+    const keys = Object.keys(sample || {})
+    const adjKeys = keys.filter(k => /adjust|llpa|addon|price\w*adj|rate\w*adj/i.test(k))
+    console.log('[OB] sample product top-level keys:', keys.join(','))
+    console.log('[OB] adjustment-shaped keys on product:', adjKeys.join(',') || '(none)')
+    if (adjKeys.length > 0) {
+      for (const k of adjKeys) {
+        console.log(`[OB] ${k} preview:`, JSON.stringify(sample[k]).substring(0, 500))
+      }
+    }
+    console.log('[OB] total products returned:', products.length)
+    const byName: Record<string, number> = {}
+    for (const p of products) {
+      const n = p.productName || p.productCode || 'unknown'
+      byName[n] = (byName[n] || 0) + 1
+    }
+    console.log('[OB] products per program:', JSON.stringify(byName))
+  }
+
   if (!Array.isArray(products) || products.length === 0) {
     // Check for messages/errors
     const msgs = data.messages || []
