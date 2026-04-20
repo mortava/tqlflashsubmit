@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { createPortal } from 'react-dom'
 import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
@@ -482,6 +483,18 @@ export default function App() {
   const [rowSending, setRowSending] = useState(false)
   const [rowStatus, setRowStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null) // "programName-optIdx"
+  // Anchor rect for the portal-rendered Actions dropdown (escapes overflow-hidden parents)
+  const [actionDropdownRect, setActionDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
+  useEffect(() => {
+    if (!openActionDropdown) { setActionDropdownRect(null); return }
+    const onScrollOrResize = () => setOpenActionDropdown(null)
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true)
+      window.removeEventListener('resize', onScrollOrResize)
+    }
+  }, [openActionDropdown])
   // Locked Options passcode gate — reveals full LLPA ladder (99.000–101.750) beyond the best rate
   const LOCKED_OPTIONS_PASSCODE = 'faith'
   const [lockedUnlocked, setLockedUnlocked] = useState(false)
@@ -2243,66 +2256,75 @@ export default function App() {
                                           return (
                                             <tr key={optIdx} className={`border-t border-slate-200 ${isClosestTo100 ? 'bg-slate-50' : ''} ${isActiveRow ? 'bg-yellow-50/50' : ''}`}>
                                               <td className="py-2 pr-2 text-left">
-                                                <div className="relative">
-                                                  <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation()
-                                                      const key = `${programName}-${optIdx}`
-                                                      setOpenActionDropdown(openActionDropdown === key ? null : key)
-                                                    }}
-                                                    className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold text-white tql-bg-teal rounded hover:opacity-85 transition-colors whitespace-nowrap"
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    const key = `${programName}-${optIdx}`
+                                                    if (openActionDropdown === key) {
+                                                      setOpenActionDropdown(null)
+                                                    } else {
+                                                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                                                      setActionDropdownRect({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+                                                      setOpenActionDropdown(key)
+                                                    }
+                                                  }}
+                                                  className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold text-white tql-bg-teal rounded hover:opacity-85 transition-colors whitespace-nowrap"
+                                                >
+                                                  Actions <ChevronDown className={`w-3 h-3 transition-transform ${openActionDropdown === `${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                {openActionDropdown === `${programName}-${optIdx}` && actionDropdownRect && createPortal(
+                                                  <div
+                                                    style={{ position: 'fixed', top: actionDropdownRect.top, left: actionDropdownRect.left, zIndex: 9999 }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="bg-white rounded-lg shadow-[0_8px_24px_rgba(15,23,42,0.12)] border tql-border-steel py-1 min-w-[200px]"
                                                   >
-                                                    Actions <ChevronDown className={`w-3 h-3 transition-transform ${openActionDropdown === `${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
-                                                  </button>
-                                                  {openActionDropdown === `${programName}-${optIdx}` && (
-                                                    <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-slate-200 py-1 min-w-[180px]">
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setActiveRowAction(isActiveRow && activeRowAction?.type === 'reserve' ? null : {
+                                                          type: 'reserve', programName, optIdx,
+                                                          rate: safeNumber(opt.rate), price, payment,
+                                                          apr: safeNumber(opt.apr), description: opt.description || programName
+                                                        })
+                                                        setRowReserveFields({ name: '', email: '', scenarioName: '', confirmed: false })
+                                                        setRowStatus('idle')
+                                                        setOpenActionDropdown(null)
+                                                      }}
+                                                      className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
+                                                    >
+                                                      Reserve Pricing
+                                                    </button>
+                                                    {isPartner && (
                                                       <button
                                                         type="button"
                                                         onClick={(e) => {
                                                           e.stopPropagation()
-                                                          setActiveRowAction(isActiveRow && activeRowAction?.type === 'reserve' ? null : {
-                                                            type: 'reserve', programName, optIdx,
+                                                          setActiveRowAction(isActiveRow && activeRowAction?.type === 'lock' ? null : {
+                                                            type: 'lock', programName, optIdx,
                                                             rate: safeNumber(opt.rate), price, payment,
                                                             apr: safeNumber(opt.apr), description: opt.description || programName
                                                           })
-                                                          setRowReserveFields({ name: '', email: '', scenarioName: '', confirmed: false })
+                                                          setRowLockFields({ name: '', email: '', loanNumber: '' })
                                                           setRowStatus('idle')
                                                           setOpenActionDropdown(null)
                                                         }}
-                                                        className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                                                        className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
                                                       >
-                                                        Reserve Pricing
+                                                        Request Lock
                                                       </button>
-                                                      {isPartner && (
-                                                        <button
-                                                          type="button"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setActiveRowAction(isActiveRow && activeRowAction?.type === 'lock' ? null : {
-                                                              type: 'lock', programName, optIdx,
-                                                              rate: safeNumber(opt.rate), price, payment,
-                                                              apr: safeNumber(opt.apr), description: opt.description || programName
-                                                            })
-                                                            setRowLockFields({ name: '', email: '', loanNumber: '' })
-                                                            setRowStatus('idle')
-                                                            setOpenActionDropdown(null)
-                                                          }}
-                                                          className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
-                                                        >
-                                                          Request Lock
-                                                        </button>
-                                                      )}
-                                                      <button
-                                                        type="button"
-                                                        onClick={(e) => { e.stopPropagation(); setOpenActionDropdown(null); setCurrentView('submit') }}
-                                                        className="block w-full text-left px-3 py-2 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
-                                                      >
-                                                        Flash Submit to Encompass
-                                                      </button>
-                                                    </div>
-                                                  )}
-                                                </div>
+                                                    )}
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => { e.stopPropagation(); setOpenActionDropdown(null); setCurrentView('submit') }}
+                                                      className="block w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-link hover:bg-blue-50 transition-colors"
+                                                    >
+                                                      Flash Submit to Encompass
+                                                    </button>
+                                                  </div>,
+                                                  document.body
+                                                )}
                                               </td>
                                               <td className="py-2 pr-2 text-left"><div className="font-medium text-[10px] text-slate-900 whitespace-nowrap" title={opt.description || ''}>{opt.description || programName}</div></td>
                                               <td className="py-2 px-2 text-right font-semibold text-slate-900 tabular-nums">{safeNumber(opt.rate).toFixed(3)}%</td>
@@ -2411,19 +2433,30 @@ export default function App() {
                                               <div className="text-[9px] text-slate-400 uppercase">Pmt</div>
                                             </div>
                                           </div>
-                                          <div className="relative mt-2">
+                                          <div className="mt-2">
                                             <button
                                               type="button"
-                                              onClick={() => {
+                                              onClick={(e) => {
+                                                e.stopPropagation()
                                                 const key = `m-${programName}-${optIdx}`
-                                                setOpenActionDropdown(openActionDropdown === key ? null : key)
+                                                if (openActionDropdown === key) {
+                                                  setOpenActionDropdown(null)
+                                                } else {
+                                                  const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                                                  setActionDropdownRect({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+                                                  setOpenActionDropdown(key)
+                                                }
                                               }}
                                               className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold text-white tql-bg-teal rounded hover:opacity-85 transition-colors"
                                             >
                                               Actions <ChevronDown className={`w-3 h-3 transition-transform ${openActionDropdown === `m-${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
                                             </button>
-                                            {openActionDropdown === `m-${programName}-${optIdx}` && (
-                                              <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-slate-200 py-1 min-w-[180px]">
+                                            {openActionDropdown === `m-${programName}-${optIdx}` && actionDropdownRect && createPortal(
+                                              <div
+                                                style={{ position: 'fixed', top: actionDropdownRect.top, left: actionDropdownRect.left, zIndex: 9999 }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="bg-white rounded-lg shadow-[0_8px_24px_rgba(15,23,42,0.12)] border tql-border-steel py-1 min-w-[200px]"
+                                              >
                                                 <button
                                                   type="button"
                                                   onClick={() => {
@@ -2436,7 +2469,7 @@ export default function App() {
                                                     setRowStatus('idle')
                                                     setOpenActionDropdown(null)
                                                   }}
-                                                  className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                                                  className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
                                                 >
                                                   Reserve Pricing
                                                 </button>
@@ -2453,7 +2486,7 @@ export default function App() {
                                                       setRowStatus('idle')
                                                       setOpenActionDropdown(null)
                                                     }}
-                                                    className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                                                    className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
                                                   >
                                                     Request Lock
                                                   </button>
@@ -2461,11 +2494,12 @@ export default function App() {
                                                 <button
                                                   type="button"
                                                   onClick={() => { setOpenActionDropdown(null); setCurrentView('submit') }}
-                                                  className="block w-full text-left px-3 py-2 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                                                  className="block w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-link hover:bg-blue-50 transition-colors"
                                                 >
                                                   Flash Submit to Encompass
                                                 </button>
-                                              </div>
+                                              </div>,
+                                              document.body
                                             )}
                                           </div>
                                         </div>
