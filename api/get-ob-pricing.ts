@@ -291,21 +291,94 @@ function buildOBRequest(f: any): any {
   }
 }
 
+// ================= Recursive adjustment extractor =================
+// OB has shipped LLPAs under many shapes across schema revisions: priceAdjustments,
+// priceAdjustmentDetails, loanLevelPriceAdjustments, adjustments, llpas, addOns,
+// plus nested under .pricing / .detail / .pricingDetails. Walk the product object
+// and collect anything that looks like an array of {description, amount} records.
+function extractAdjustments(product: any): any[] {
+  const out: any[] = []
+  const seenPaths = new Set<string>()
+  const ADJ_KEY = /(adjust|llpa|addon|pricingdetail|priceadjustment|rateadjustment)/i
+
+  const looksLikeAdj = (item: any): boolean => {
+    if (!item || typeof item !== 'object') return false
+    const keys = Object.keys(item).map(k => k.toLowerCase())
+    const hasLabel = keys.some(k => k.includes('desc') || k.includes('name') || k.includes('code') || k.includes('type'))
+    const hasValue = keys.some(k => k.includes('amount') || k.includes('price') || k.includes('rate') || k.includes('adj') || k.includes('value'))
+    return hasLabel && hasValue
+  }
+
+  const normalize = (a: any) => ({
+    description: a.description || a.name || a.adjustmentType || a.adjustmentName || a.code || a.label || a.type || 'Adjustment',
+    amount:
+      typeof a.priceAdjustment === 'number' ? a.priceAdjustment :
+      typeof a.priceAdjustmentAmount === 'number' ? a.priceAdjustmentAmount :
+      typeof a.amount === 'number' ? a.amount :
+      typeof a.price === 'number' ? a.price :
+      typeof a.adjustmentValue === 'number' ? a.adjustmentValue :
+      typeof a.value === 'number' ? a.value :
+      typeof a.totalAdjustment === 'number' ? a.totalAdjustment :
+      0,
+    rateAdj:
+      typeof a.rateAdjustment === 'number' ? a.rateAdjustment :
+      typeof a.rate === 'number' ? a.rate :
+      0,
+    percentage: typeof a.percentage === 'number' ? a.percentage : 0,
+  })
+
+  const walk = (node: any, path: string, depth: number) => {
+    if (!node || depth > 5) return
+    if (Array.isArray(node)) {
+      if (node.length > 0 && looksLikeAdj(node[0]) && ADJ_KEY.test(path)) {
+        if (!seenPaths.has(path)) {
+          seenPaths.add(path)
+          for (const item of node) out.push(normalize(item))
+        }
+      } else {
+        for (let i = 0; i < Math.min(node.length, 3); i++) walk(node[i], `${path}[${i}]`, depth + 1)
+      }
+      return
+    }
+    if (typeof node === 'object') {
+      for (const [k, v] of Object.entries(node)) {
+        walk(v, path ? `${path}.${k}` : k, depth + 1)
+      }
+    }
+  }
+
+  walk(product, '', 0)
+  return out
+}
+
 // ================= Parse OB v4 QMPricingResponse =================
 function parseOBResponse(data: any): any {
   const products = data.products || []
 
-  // ── Debug: log which adjustment-shaped fields the first OB product carries ──
+  // ── Debug: dump the first product's full key tree so we can see where OB is hiding LLPAs ──
   if (Array.isArray(products) && products.length > 0) {
     const sample = products[0]
-    const keys = Object.keys(sample || {})
-    const adjKeys = keys.filter(k => /adjust|llpa|addon|price\w*adj|rate\w*adj/i.test(k))
-    console.log('[OB] sample product top-level keys:', keys.join(','))
-    console.log('[OB] adjustment-shaped keys on product:', adjKeys.join(',') || '(none)')
-    if (adjKeys.length > 0) {
-      for (const k of adjKeys) {
-        console.log(`[OB] ${k} preview:`, JSON.stringify(sample[k]).substring(0, 500))
+    const dumpKeys = (obj: any, prefix = '', depth = 0, max = 4): string[] => {
+      if (depth > max || !obj || typeof obj !== 'object') return []
+      const out: string[] = []
+      for (const [k, v] of Object.entries(obj)) {
+        const path = prefix ? `${prefix}.${k}` : k
+        out.push(path)
+        if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') {
+          out.push(...dumpKeys(v[0], `${path}[0]`, depth + 1, max))
+        } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+          out.push(...dumpKeys(v, path, depth + 1, max))
+        }
       }
+      return out
+    }
+    const allPaths = dumpKeys(sample)
+    const adjPaths = allPaths.filter(p => /(adjust|llpa|addon|pricingdetail)/i.test(p))
+    console.log('[OB] sample product all key paths:', allPaths.slice(0, 120).join(','))
+    console.log('[OB] sample product adjustment-shaped paths:', adjPaths.join(',') || '(none)')
+    if (adjPaths.length > 0) {
+      console.log('[OB] sample product adjustment preview:',
+        JSON.stringify(extractAdjustments(sample)).substring(0, 800))
     }
     console.log('[OB] total products returned:', products.length)
     const byName: Record<string, number> = {}
@@ -353,38 +426,8 @@ function parseOBResponse(data: any): any {
     const discount = p.discount || 0
 
     // ── Extract LLPAs (pricing adjustments) from OB v4 response ──
-    // OB returns adjustments under several possible field names depending on product family.
-    const rawAdjustments =
-      p.adjustments ||
-      p.priceAdjustments ||
-      p.pricingAdjustments ||
-      p.priceAdjustmentDetails ||
-      p.loanLevelPriceAdjustments ||
-      []
-    const adjustments = Array.isArray(rawAdjustments)
-      ? rawAdjustments
-          .map((a: any) => ({
-            description: a.description || a.name || a.adjustmentType || a.code || 'Adjustment',
-            amount:
-              typeof a.priceAdjustment === 'number'
-                ? a.priceAdjustment
-                : typeof a.amount === 'number'
-                ? a.amount
-                : typeof a.price === 'number'
-                ? a.price
-                : typeof a.adjustmentValue === 'number'
-                ? a.adjustmentValue
-                : 0,
-            rateAdj:
-              typeof a.rateAdjustment === 'number'
-                ? a.rateAdjustment
-                : typeof a.rate === 'number'
-                ? a.rate
-                : 0,
-            percentage: typeof a.percentage === 'number' ? a.percentage : 0,
-          }))
-          .filter((a: any) => a.amount !== 0 || a.rateAdj !== 0)
-      : []
+    // Use recursive extractor to handle OB's many possible adjustment shapes/locations.
+    const adjustments = extractAdjustments(p)
 
     // Points offset convention: points = 100 - price (OB sends actual par price like 100.408)
     const pointsOffset = 100 - price

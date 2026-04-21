@@ -2041,68 +2041,33 @@ export default function App() {
                   </div>
                 ) : (
                   <>
-                    {/* ===== HERO PRICING CARD ===== */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-base font-semibold tracking-wide text-slate-800">Best Available Rate</span>
-                        <span className="bg-blue-50 tql-text-link border border-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-[4px] flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />Live
+                    {/* Selected criteria strip — sits above the programs so brokers see the scenario at a glance */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {formData.loanTerm && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-white border tql-border-steel px-2 py-0.5 rounded">
+                          Term <span className="tql-text-teal">{formData.loanTerm}yr</span>
                         </span>
-                      </div>
-                      {/* Selected criteria pills — always visible so the broker sees what they priced */}
-                      <div className="flex flex-wrap items-center gap-1.5 mb-4">
-                        {formData.loanTerm && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
-                            Term <span className="tql-text-teal">{formData.loanTerm}yr</span>
-                          </span>
-                        )}
-                        {formData.amortization && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
-                            Amort <span className="tql-text-teal">{formData.amortization === 'fixed' ? 'Fixed' : formData.amortization.startsWith('arm') ? formData.amortization.replace('arm', 'ARM ').replace(/(\d)(\d)/, '$1/$2') : formData.amortization}</span>
-                          </span>
-                        )}
-                        {formData.occupancyType === 'investment' && formData.prepayPeriod && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
-                            Prepay <span className="tql-text-teal">{formData.prepayPeriod === 'none' || formData.prepayPeriod === '0mo' ? 'None' : formData.prepayPeriod.replace('mo', ' mo').replace('yr', ' yr')}</span>
-                          </span>
-                        )}
-                        {formData.lockPeriod && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
-                            Lock <span className="tql-text-teal">{formData.lockPeriod} days</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-5xl font-bold text-slate-900 tabular-nums mb-1">
-                        {targetPricing ? formatPercent(targetPricing.rate) : formatPercent(safeNumber(result.rate))}
-                      </div>
-                      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-5">Interest Rate</div>
-                      {result.apiError && (
-                        <div className="inline-flex items-center gap-1 text-[11px] font-medium text-[#EF4444] bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] px-2 py-0.5 rounded-[4px] mb-3">
-                          <AlertCircle className="w-3 h-3" />Error
-                        </div>
                       )}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-y-3 gap-x-0 border-t border-slate-200 pt-4">
-                        <div>
-                          <div className="text-base font-semibold text-slate-900 tabular-nums">{targetPricing ? targetPricing.price.toFixed(3) : '100.000'}</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Price</div>
-                        </div>
-                        <div className="border-l border-slate-200 pl-3">
-                          <div className="text-base font-semibold text-slate-900 tabular-nums">{targetPricing ? formatPercent(targetPricing.apr) : formatPercent(safeNumber(result.apr))}</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">APR</div>
-                        </div>
-                        <div className="border-l border-slate-200 pl-3">
-                          <div className="text-base font-semibold text-slate-900 tabular-nums">{targetPricing && targetPricing.payment > 0 ? formatCurrency(targetPricing.payment) : formatCurrency(safeNumber(result.monthlyPayment))}</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Payment</div>
-                        </div>
-                        <div className="border-l border-slate-200 pl-3">
-                          <div className="text-base font-semibold text-slate-900 tabular-nums">{targetPricing ? targetPricing.points.toFixed(3) : safeNumber(result.points).toFixed(3)}</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Points</div>
-                        </div>
-                        <div className="border-l border-slate-200 pl-3">
-                          <div className="text-base font-semibold text-slate-900 tabular-nums">{safeNumber(result.ltvRatio).toFixed(1)}%</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">LTV</div>
-                        </div>
-                      </div>
+                      {formData.amortization && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-white border tql-border-steel px-2 py-0.5 rounded">
+                          Amort <span className="tql-text-teal">{formData.amortization === 'fixed' ? 'Fixed' : formData.amortization.startsWith('arm') ? formData.amortization.replace('arm', 'ARM ').replace(/(\d)(\d)/, '$1/$2') : formData.amortization}</span>
+                        </span>
+                      )}
+                      {formData.occupancyType === 'investment' && formData.prepayPeriod && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-white border tql-border-steel px-2 py-0.5 rounded">
+                          Prepay <span className="tql-text-teal">{formData.prepayPeriod === 'none' || formData.prepayPeriod === '0mo' ? 'None' : formData.prepayPeriod.replace('mo', ' mo').replace('yr', ' yr')}</span>
+                        </span>
+                      )}
+                      {formData.lockPeriod && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-white border tql-border-steel px-2 py-0.5 rounded">
+                          Lock <span className="tql-text-teal">{formData.lockPeriod} days</span>
+                        </span>
+                      )}
+                      {result.apiError && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#EF4444] bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] px-2 py-0.5 rounded">
+                          <AlertCircle className="w-3 h-3" />Error
+                        </span>
+                      )}
                     </div>
 
                     {/* ===== PRICING ADJUSTMENTS SCREEN ===== */}
