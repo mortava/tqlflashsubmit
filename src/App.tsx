@@ -2049,6 +2049,29 @@ export default function App() {
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />Live
                         </span>
                       </div>
+                      {/* Selected criteria pills — always visible so the broker sees what they priced */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                        {formData.loanTerm && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
+                            Term <span className="tql-text-teal">{formData.loanTerm}yr</span>
+                          </span>
+                        )}
+                        {formData.amortization && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
+                            Amort <span className="tql-text-teal">{formData.amortization === 'fixed' ? 'Fixed' : formData.amortization.startsWith('arm') ? formData.amortization.replace('arm', 'ARM ').replace(/(\d)(\d)/, '$1/$2') : formData.amortization}</span>
+                          </span>
+                        )}
+                        {formData.occupancyType === 'investment' && formData.prepayPeriod && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
+                            Prepay <span className="tql-text-teal">{formData.prepayPeriod === 'none' || formData.prepayPeriod === '0mo' ? 'None' : formData.prepayPeriod.replace('mo', ' mo').replace('yr', ' yr')}</span>
+                          </span>
+                        )}
+                        {formData.lockPeriod && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-slate-100 border tql-border-steel px-2 py-0.5 rounded">
+                            Lock <span className="tql-text-teal">{formData.lockPeriod} days</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="text-5xl font-bold text-slate-900 tabular-nums mb-1">
                         {targetPricing ? formatPercent(targetPricing.rate) : formatPercent(safeNumber(result.rate))}
                       </div>
@@ -2082,27 +2105,45 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* ===== ADJUSTMENTS CARD ===== */}
-                    {targetPricing && targetPricing.adjustments && targetPricing.adjustments.length > 0 && (
+                    {/* ===== PRICING ADJUSTMENTS SCREEN ===== */}
+                    {targetPricing && (
                       <div className="bg-white border border-slate-200 rounded-xl p-5">
-                        <div className="text-base font-semibold tracking-wide text-slate-800 mb-3">Adjustments</div>
-                        <div className="space-y-1">
-                          {targetPricing.adjustments.map((adj, idx) => {
-                            const rateDisplay = adj.rateAdj !== undefined ? adj.rateAdj : (adj.percentage !== undefined ? adj.percentage : 0)
-                            const priceDisplay = adj.amount || 0
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div className="text-base font-semibold tracking-wide text-slate-800">Pricing Adjustments</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              {targetPricing.programName} · {formatPercent(targetPricing.rate)} @ {targetPricing.price.toFixed(3)}
+                            </div>
+                          </div>
+                          {targetPricing.adjustments && targetPricing.adjustments.length > 0 && (() => {
+                            const net = targetPricing.adjustments.reduce((s, a) => s + (a.amount || 0), 0)
                             return (
-                              <div key={idx} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors">
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <span className="text-xs text-slate-400 tabular-nums w-14 shrink-0">{rateDisplay.toFixed(3)}%</span>
-                                  <span className="text-xs text-slate-900 truncate">{adj.description}</span>
-                                </div>
-                                <span className={`text-xs font-semibold tabular-nums ml-3 ${priceDisplay > 0 ? 'tql-text-link' : priceDisplay < 0 ? 'text-[#EF4444]' : 'text-slate-400'}`}>
-                                  {priceDisplay > 0 ? '+' : ''}{priceDisplay.toFixed(3)}
-                                </span>
+                              <div className="text-right">
+                                <div className={`text-base font-bold tabular-nums ${net >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>Net {net >= 0 ? '+' : ''}{net.toFixed(3)}</div>
+                                <div className="text-[10px] text-slate-400 uppercase tracking-wider">{targetPricing.adjustments.length} LLPA{targetPricing.adjustments.length !== 1 ? 's' : ''}</div>
                               </div>
                             )
-                          })}
+                          })()}
                         </div>
+                        {targetPricing.adjustments && targetPricing.adjustments.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                            {targetPricing.adjustments.map((adj, idx) => {
+                              const priceDisplay = adj.amount || 0
+                              return (
+                                <div key={idx} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-[color:var(--tql-bg)] border tql-border-steel">
+                                  <span className="text-[11px] tql-text-primary truncate" title={adj.description}>{adj.description}</span>
+                                  <span className={`text-[11px] font-semibold tabular-nums shrink-0 ${priceDisplay > 0 ? 'tql-text-link' : priceDisplay < 0 ? 'text-[#EF4444]' : 'text-slate-400'}`}>
+                                    {priceDisplay > 0 ? '+' : ''}{priceDisplay.toFixed(3)}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-slate-500 bg-[color:var(--tql-bg)] border tql-border-steel rounded-md px-3 py-2">
+                            No itemized LLPAs returned from Optimal Blue for this rate/price combination. The price shown already reflects any applicable adjustments.
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2222,17 +2263,16 @@ export default function App() {
                                 <div className="border-t tql-border-steel">
                                   {/* Desktop table — overflow-visible so Actions dropdown is NOT clipped */}
                                   <div className="hidden sm:block px-4 py-2 overflow-visible">
-                                    <table className="w-full text-xs">
+                                    <table className="w-full text-xs table-auto">
                                       <thead>
                                         <tr className="text-slate-400 border-b tql-border-steel text-[10px] uppercase tracking-wider">
                                           <th className="text-left py-2 pr-2 font-medium">Actions</th>
                                           <th className="text-left py-2 pr-2 font-medium">Program/PPP</th>
                                           <th className="text-right py-2 px-2 font-medium">Rate</th>
                                           <th className="text-right py-2 px-2 font-medium">Price</th>
-                                          <th className="text-right py-2 px-2 font-medium">Points</th>
                                           <th className="text-right py-2 px-2 font-medium">APR</th>
                                           <th className="text-right py-2 px-2 font-medium">Payment</th>
-                                          <th className="text-right py-2 pl-2 font-medium">Adj</th>
+                                          <th className="text-right py-2 pl-2 pr-1 font-medium whitespace-nowrap w-[88px]">Adj</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -2240,7 +2280,6 @@ export default function App() {
                                           if (!opt || typeof opt !== 'object') return null
                                           const points = safeNumber(opt.points)
                                           const price = safeNumber(opt.price) || pointsToPrice(points)
-                                          const pointsDisplay = points >= 0 ? `(${points.toFixed(3)})` : `+${Math.abs(points).toFixed(3)}`
                                           const isClosestTo100 = bestRate === opt
                                           const payment = safeNumber(opt.payment)
                                           const adjustments = opt.adjustments || []
@@ -2323,10 +2362,9 @@ export default function App() {
                                               <td className="py-2 pr-2 text-left"><div className="font-medium text-[10px] text-slate-900 whitespace-nowrap" title={opt.description || ''}>{opt.description || programName}</div></td>
                                               <td className="py-2 px-2 text-right font-semibold text-slate-900 tabular-nums">{safeNumber(opt.rate).toFixed(3)}%</td>
                                               <td className={`py-2 px-2 text-right tabular-nums ${price >= 100 ? 'tql-text-link font-medium' : 'text-slate-900'}`}>{price.toFixed(3)}</td>
-                                              <td className={`py-2 px-2 text-right tabular-nums ${points < 0 ? 'tql-text-link' : 'text-slate-500'}`}>{pointsDisplay}</td>
                                               <td className="py-2 px-2 text-right tabular-nums text-slate-900">{safeNumber(opt.apr).toFixed(3)}%</td>
                                               <td className="py-2 px-2 text-right font-medium tabular-nums text-slate-900">{payment > 0 ? formatCurrency(payment) : '-'}</td>
-                                              <td className="py-2 pl-2 text-right tabular-nums">
+                                              <td className="py-2 pl-2 pr-1 text-right tabular-nums whitespace-nowrap">
                                                 {adjustments.length > 0 ? (
                                                   <button
                                                     type="button"
@@ -2342,7 +2380,7 @@ export default function App() {
                                             </tr>
                                             {expandedAdjRow === `${programName}-${optIdx}` && adjustments.length > 0 && (
                                               <tr className="bg-[color:var(--tql-bg)]">
-                                                <td colSpan={8} className="px-4 py-3 border-t tql-border-steel">
+                                                <td colSpan={7} className="px-4 py-3 border-t tql-border-steel">
                                                   <div className="flex items-center justify-between mb-2">
                                                     <div className="text-[10px] font-bold uppercase tracking-widest tql-text-teal">Loan-Level Pricing Adjustments · {safeNumber(opt.rate).toFixed(3)}% @ {price.toFixed(3)}</div>
                                                     <div className={`text-[11px] font-bold tabular-nums ${totalAdjustment >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>Net {totalAdjustment >= 0 ? '+' : ''}{totalAdjustment.toFixed(3)}</div>
@@ -2545,10 +2583,6 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* Pricing ladder range caption */}
-                                  <div className="px-4 py-2 border-t tql-border-steel tql-bg-card flex items-center justify-between">
-                                    <span className="text-[10px] font-semibold tql-text-teal uppercase tracking-widest">Pricing Ladder · 99.000 – 101.750 · {filteredRateOptions.length} option{filteredRateOptions.length !== 1 ? 's' : ''}</span>
-                                  </div>
                                 </div>
                                 )
                               })()}
