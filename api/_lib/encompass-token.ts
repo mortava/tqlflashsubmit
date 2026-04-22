@@ -11,12 +11,12 @@ export async function getEncompassToken(): Promise<string> {
     return tokenCache.token
   }
 
-  const baseUrl = process.env.API_BASE_URL || 'https://api.elliemae.com'
-  const clientId = process.env.CLIENT_ID
-  const clientSecret = process.env.CLIENT_SECRET
-  const instanceId = process.env.INSTANCE_ID
-  const username = process.env.USERNAME
-  const password = process.env.PASSWORD
+  const baseUrl = process.env.ENCOMPASS_API_BASE_URL || process.env.API_BASE_URL || 'https://api.elliemae.com'
+  const clientId = process.env.ENCOMPASS_CLIENT_ID || process.env.CLIENT_ID
+  const clientSecret = process.env.ENCOMPASS_CLIENT_SECRET || process.env.CLIENT_SECRET
+  const instanceId = process.env.ENCOMPASS_INSTANCE_ID || process.env.INSTANCE_ID
+  const username = process.env.ENCOMPASS_USERNAME || process.env.USERNAME
+  const password = process.env.ENCOMPASS_PASSWORD || process.env.PASSWORD
 
   if (!clientId || !clientSecret || !instanceId || !username || !password) {
     throw new Error('Missing Encompass API credentials in environment variables')

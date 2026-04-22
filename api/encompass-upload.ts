@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getEncompassToken } from './_lib/encompass-token.js'
 
-const API_BASE = process.env.API_BASE_URL || 'https://api.elliemae.com'
+const API_BASE = process.env.ENCOMPASS_API_BASE_URL || process.env.API_BASE_URL || 'https://api.elliemae.com'
 
 interface UploadUrlResponse {
   uploadUrl: string

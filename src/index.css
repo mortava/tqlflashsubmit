@@ -176,7 +176,9 @@
 .tql-text-teal { color: var(--tql-teal); }
 .tql-text-link { color: var(--tql-link); }
 .tql-border-steel { border-color: var(--tql-steel); }
+.tql-border-teal { border-color: var(--tql-teal); }
 .tql-ring-teal:focus { box-shadow: 0 0 0 2px var(--tql-teal); outline: none; }
+.tql-dot-teal { background-color: var(--tql-teal); }
 
 /* Safe-area insets for iOS PWA */
 @supports (padding: env(safe-area-inset-top)) {

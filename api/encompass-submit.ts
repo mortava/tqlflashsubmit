@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getEncompassToken } from './_lib/encompass-token.js'
 
-const API_BASE = process.env.API_BASE_URL || 'https://api.elliemae.com'
+const API_BASE = process.env.ENCOMPASS_API_BASE_URL || process.env.API_BASE_URL || 'https://api.elliemae.com'
 
 async function convertMismoToLoanJson(token: string, mismoXml: string): Promise<Record<string, unknown>> {
   const res = await fetch(`${API_BASE}/encompass/v3/converter/loans`, {
@@ -23,7 +23,7 @@ async function convertMismoToLoanJson(token: string, mismoXml: string): Promise<
 }
 
 async function createLoan(token: string, loanJson: Record<string, unknown>): Promise<{ loanId: string }> {
-  const targetFolder = (process.env.TARGET_FOLDER || 'TPO Pipeline').replace(/"/g, '')
+  const targetFolder = (process.env.ENCOMPASS_TARGET_FOLDER || process.env.TARGET_FOLDER || 'TPO Pipeline').replace(/"/g, '')
 
   const res = await fetch(
     `${API_BASE}/encompass/v3/loans?loanFolder=${encodeURIComponent(targetFolder)}&view=id`,
