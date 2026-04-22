@@ -334,7 +334,7 @@ function normalizeDetailAdjustments(detail: any): any[] {
 // ================= Parse OB v4 QMPricingResponse =================
 // `details` is a map of productId → detail response (quotes[] + adjustments[])
 // returned from /productsearch/{searchId}/products/{productId}.
-function parseOBResponse(data: any, details: Record<string, any> = {}): any {
+function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLockDays = 30): any {
   const products = data.products || []
 
   if (Array.isArray(products) && products.length > 0) {
@@ -381,7 +381,20 @@ function parseOBResponse(data: any, details: Record<string, any> = {}): any {
 
     const detail = details[String(p.productId)] || null
     const detailAdjustments = detail ? normalizeDetailAdjustments(detail) : []
-    const quotes: any[] = Array.isArray(detail?.quotes) ? detail.quotes : []
+    const allQuotes: any[] = Array.isArray(detail?.quotes) ? detail.quotes : []
+
+    // OB returns the same rate at multiple lock periods (30/45/60) each with a
+    // different price. The user picks a single desired lock in the form — keep
+    // only the quotes that match that lock so each rate surfaces exactly once.
+    // If no quotes match the desired lock exactly, fall back to the nearest
+    // available lock period so the program still shows a ladder.
+    let quotes: any[] = allQuotes.filter(q => Number(q.lockPeriod) === desiredLockDays)
+    if (quotes.length === 0 && allQuotes.length > 0) {
+      const availableLocks = [...new Set(allQuotes.map(q => Number(q.lockPeriod)))]
+      const nearestLock = availableLocks.reduce((best, lk) =>
+        Math.abs(lk - desiredLockDays) < Math.abs(best - desiredLockDays) ? lk : best, availableLocks[0])
+      quotes = allQuotes.filter(q => Number(q.lockPeriod) === nearestLock)
+    }
 
     // Build rate options from detail.quotes (full rate/price ladder) if available.
     // Fall back to the single product-search price if detail is missing.
@@ -465,7 +478,8 @@ function parseOBResponse(data: any, details: Record<string, any> = {}): any {
         price: rung.price,
         apr: rung.apr,
         payment: rung.payment,
-        description: `${rung.rate.toFixed(3)}% / ${rung.price.toFixed(3)}`,
+        // Program/PPP column — show program name, not "rate / price"
+        description: programName,
         status,
         totalClosingCost: rung.closingCost,
         monthlyMI: rung.monthlyMI,
@@ -489,8 +503,19 @@ function parseOBResponse(data: any, details: Record<string, any> = {}): any {
     return a.rate - b.rate
   })
 
-  // Sort each program's rateOptions by rate ascending for stable ladder display
+  // Dedupe each program's rateOptions by rate — keep the rung closest to par
+  // when the same rate appears more than once (shouldn't happen after lock-period
+  // filtering, but is defensive).
   for (const prog of programs) {
+    const byRate: Record<string, any> = {}
+    for (const opt of prog.rateOptions) {
+      const key = Number(opt.rate).toFixed(3)
+      const existing = byRate[key]
+      if (!existing || Math.abs(opt.price - 100) < Math.abs(existing.price - 100)) {
+        byRate[key] = opt
+      }
+    }
+    prog.rateOptions = Object.values(byRate)
     prog.rateOptions.sort((a: any, b: any) => a.rate - b.rate || a.price - b.price)
   }
 
@@ -621,7 +646,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('[OB] product detail fetched:', Object.keys(details).length, '/', productIds.length)
     }
 
-    const result = parseOBResponse(responseData, details)
+    const desiredLockDays = Number(obRequest?.loanInformation?.desiredLockPeriod) || 30
+    const result = parseOBResponse(responseData, details, desiredLockDays)
 
     if (result.error && result.programs.length === 0) {
       return res.json({
