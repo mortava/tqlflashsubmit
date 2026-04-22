@@ -291,102 +291,61 @@ function buildOBRequest(f: any): any {
   }
 }
 
-// ================= Recursive adjustment extractor =================
-// OB has shipped LLPAs under many shapes across schema revisions: priceAdjustments,
-// priceAdjustmentDetails, loanLevelPriceAdjustments, adjustments, llpas, addOns,
-// plus nested under .pricing / .detail / .pricingDetails. Walk the product object
-// and collect anything that looks like an array of {description, amount} records.
-function extractAdjustments(product: any): any[] {
-  const out: any[] = []
-  const seenPaths = new Set<string>()
-  const ADJ_KEY = /(adjust|llpa|addon|pricingdetail|priceadjustment|rateadjustment)/i
-
-  const looksLikeAdj = (item: any): boolean => {
-    if (!item || typeof item !== 'object') return false
-    const keys = Object.keys(item).map(k => k.toLowerCase())
-    const hasLabel = keys.some(k => k.includes('desc') || k.includes('name') || k.includes('code') || k.includes('type'))
-    const hasValue = keys.some(k => k.includes('amount') || k.includes('price') || k.includes('rate') || k.includes('adj') || k.includes('value'))
-    return hasLabel && hasValue
-  }
-
-  const normalize = (a: any) => ({
-    description: a.description || a.name || a.adjustmentType || a.adjustmentName || a.code || a.label || a.type || 'Adjustment',
-    amount:
-      typeof a.priceAdjustment === 'number' ? a.priceAdjustment :
-      typeof a.priceAdjustmentAmount === 'number' ? a.priceAdjustmentAmount :
-      typeof a.amount === 'number' ? a.amount :
-      typeof a.price === 'number' ? a.price :
-      typeof a.adjustmentValue === 'number' ? a.adjustmentValue :
-      typeof a.value === 'number' ? a.value :
-      typeof a.totalAdjustment === 'number' ? a.totalAdjustment :
-      0,
-    rateAdj:
-      typeof a.rateAdjustment === 'number' ? a.rateAdjustment :
-      typeof a.rate === 'number' ? a.rate :
-      0,
-    percentage: typeof a.percentage === 'number' ? a.percentage : 0,
+// ================= Fetch OB v4 Product Detail =================
+// Product search returns only one price per product. The per-product detail
+// endpoint returns the full rate/price ladder (quotes[]) AND the itemized
+// LLPAs (adjustments[] with { reason, adjustor, type }).
+async function fetchProductDetail(
+  accessToken: string,
+  searchId: string,
+  productId: number | string,
+): Promise<any> {
+  const url = `${OB_API_BASE_URL}/full/api/businesschannels/${OB_BUSINESS_CHANNEL_ID}/originators/${OB_ORIGINATOR_ID}/productsearch/${searchId}/products/${productId}`
+  const r = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(10000),
   })
-
-  const walk = (node: any, path: string, depth: number) => {
-    if (!node || depth > 5) return
-    if (Array.isArray(node)) {
-      if (node.length > 0 && looksLikeAdj(node[0]) && ADJ_KEY.test(path)) {
-        if (!seenPaths.has(path)) {
-          seenPaths.add(path)
-          for (const item of node) out.push(normalize(item))
-        }
-      } else {
-        for (let i = 0; i < Math.min(node.length, 3); i++) walk(node[i], `${path}[${i}]`, depth + 1)
-      }
-      return
-    }
-    if (typeof node === 'object') {
-      for (const [k, v] of Object.entries(node)) {
-        walk(v, path ? `${path}.${k}` : k, depth + 1)
-      }
-    }
+  if (!r.ok) {
+    console.warn(`[OB] product detail ${productId} → HTTP ${r.status}`)
+    return null
   }
+  return r.json()
+}
 
-  walk(product, '', 0)
-  return out
+function normalizeDetailAdjustments(detail: any): any[] {
+  const raw: any[] = Array.isArray(detail?.adjustments) ? detail.adjustments : []
+  return raw
+    .filter(a => a && typeof a === 'object')
+    .map(a => {
+      const amt = typeof a.adjustor === 'number' ? a.adjustor : parseFloat(a.adjustor) || 0
+      const type = String(a.type || '')
+      return {
+        description: String(a.reason || a.description || 'Adjustment'),
+        amount: /price/i.test(type) ? amt : 0,
+        rateAdj: /rate/i.test(type) ? amt : 0,
+        type,
+      }
+    })
+    // Max Price / Min Price rows are caps/floors, not actual LLPAs — hide from the breakdown.
+    .filter(a => !/max price|min price/i.test(a.type) && (a.amount !== 0 || a.rateAdj !== 0))
 }
 
 // ================= Parse OB v4 QMPricingResponse =================
-function parseOBResponse(data: any): any {
+// `details` is a map of productId → detail response (quotes[] + adjustments[])
+// returned from /productsearch/{searchId}/products/{productId}.
+function parseOBResponse(data: any, details: Record<string, any> = {}): any {
   const products = data.products || []
 
-  // ── Debug: dump the first product's full key tree so we can see where OB is hiding LLPAs ──
   if (Array.isArray(products) && products.length > 0) {
-    const sample = products[0]
-    const dumpKeys = (obj: any, prefix = '', depth = 0, max = 4): string[] => {
-      if (depth > max || !obj || typeof obj !== 'object') return []
-      const out: string[] = []
-      for (const [k, v] of Object.entries(obj)) {
-        const path = prefix ? `${prefix}.${k}` : k
-        out.push(path)
-        if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') {
-          out.push(...dumpKeys(v[0], `${path}[0]`, depth + 1, max))
-        } else if (v && typeof v === 'object' && !Array.isArray(v)) {
-          out.push(...dumpKeys(v, path, depth + 1, max))
-        }
-      }
-      return out
-    }
-    const allPaths = dumpKeys(sample)
-    const adjPaths = allPaths.filter(p => /(adjust|llpa|addon|pricingdetail)/i.test(p))
-    console.log('[OB] sample product all key paths:', allPaths.slice(0, 120).join(','))
-    console.log('[OB] sample product adjustment-shaped paths:', adjPaths.join(',') || '(none)')
-    if (adjPaths.length > 0) {
-      console.log('[OB] sample product adjustment preview:',
-        JSON.stringify(extractAdjustments(sample)).substring(0, 800))
-    }
     console.log('[OB] total products returned:', products.length)
-    const byName: Record<string, number> = {}
-    for (const p of products) {
-      const n = p.productName || p.productCode || 'unknown'
-      byName[n] = (byName[n] || 0) + 1
+    console.log('[OB] details fetched for', Object.keys(details).length, 'products')
+    const sampleId = products[0].productId
+    const sampleDetail = details[String(sampleId)]
+    if (sampleDetail) {
+      console.log('[OB] sample detail adjustments count:', (sampleDetail.adjustments || []).length)
+      console.log('[OB] sample detail quotes count:', (sampleDetail.quotes || []).length)
     }
-    console.log('[OB] products per program:', JSON.stringify(byName))
   }
 
   if (!Array.isArray(products) || products.length === 0) {
@@ -403,37 +362,56 @@ function parseOBResponse(data: any): any {
     }
   }
 
-  // Group products by program name so each program surfaces its full rate ladder
-  // (OB v4 returns one "product" per rate/price combo; multiple products share the same productName).
+  // Group products by program name. For each product we now pull the rate ladder
+  // (quotes[]) and LLPAs (adjustments[]) from the /products/{productId} detail
+  // endpoint — the initial product-search response only contains a single summary
+  // price per product and no adjustment breakdown.
   const programsMap: Record<string, any> = {}
 
   for (const p of products) {
     const programName = p.productName || p.productCode || 'OB Program'
     const investor = p.investor || ''
     const status = p.priceStatus || 'Available'
-    const rate = p.rate || 0
-    const price = p.price || 0
-    const apr = p.apr || 0
-    const payment = p.principalAndInterest || p.totalPayment || 0
     const monthlyMI = p.monthlyMI || 0
-    const closingCost = p.closingCost || 0
     const lockPeriod = p.lockPeriod || 0
     const loanTerm = p.loanTerm || ''
     const amortType = p.amortizationType || ''
     const loanType = p.loanType || ''
     const productType = p.productType || ''
-    const rebate = p.rebate || 0
-    const discount = p.discount || 0
 
-    // ── Extract LLPAs (pricing adjustments) from OB v4 response ──
-    // Use recursive extractor to handle OB's many possible adjustment shapes/locations.
-    const adjustments = extractAdjustments(p)
+    const detail = details[String(p.productId)] || null
+    const detailAdjustments = detail ? normalizeDetailAdjustments(detail) : []
+    const quotes: any[] = Array.isArray(detail?.quotes) ? detail.quotes : []
 
-    // Points offset convention: points = 100 - price (OB sends actual par price like 100.408)
-    const pointsOffset = 100 - price
+    // Build rate options from detail.quotes (full rate/price ladder) if available.
+    // Fall back to the single product-search price if detail is missing.
+    const rateRungs = quotes.length > 0
+      ? quotes.map(q => ({
+          rate: Number(q.rate) || 0,
+          price: Number(q.price) || 0,
+          apr: Number(q.apr) || 0,
+          payment: Number(q.principalAndInterest) || Number(q.totalPayment) || 0,
+          monthlyMI: Number(q.monthlyMi) || 0,
+          closingCost: Number(q.closingCost) || 0,
+          rebate: Number(q.rebateDollar) || 0,
+          discount: Number(q.discountDollar) || 0,
+          lockPeriod: Number(q.lockPeriod) || lockPeriod,
+        }))
+      : [{
+          rate: Number(p.rate) || 0,
+          price: Number(p.price) || 0,
+          apr: Number(p.apr) || 0,
+          payment: Number(p.principalAndInterest) || Number(p.totalPayment) || 0,
+          monthlyMI,
+          closingCost: Number(p.closingCost) || 0,
+          rebate: Number(p.rebate) || 0,
+          discount: Number(p.discount) || 0,
+          lockPeriod,
+        }]
 
     // Seed the program bucket the first time we see it
     if (!programsMap[programName]) {
+      const seed = rateRungs[0]
       programsMap[programName] = {
         name: programName,
         programName,
@@ -450,52 +428,55 @@ function parseOBResponse(data: any): any {
         lockPeriod,
         highBalance: p.highBalance || 'No',
         qmStatus: p.qmStatus || '',
-        // "Best" top-level summary fields — updated below when we find a closer-to-par option
-        rate,
-        price,
-        apr,
-        payment,
-        monthlyMI,
-        closingCost,
-        rebate,
-        discount,
+        rate: seed.rate,
+        price: seed.price,
+        apr: seed.apr,
+        payment: seed.payment,
+        monthlyMI: seed.monthlyMI,
+        closingCost: seed.closingCost,
+        rebate: seed.rebate,
+        discount: seed.discount,
         totalPayment: p.totalPayment || 0,
-        adjustments,
+        adjustments: detailAdjustments,
+        totalRateAdjustment: Number(detail?.totalRateAdjustment) || 0,
+        totalPriceAdjustment: Number(detail?.totalPriceAdjustment) || 0,
+        notesAndAdvisories: Array.isArray(detail?.notesAndAdvisories) ? detail.notesAndAdvisories : [],
         rateOptions: [],
       }
     }
 
     const bucket = programsMap[programName]
-    // Keep the rate/price closest to par (100) at the program level for the card summary
-    if (Math.abs(price - 100) < Math.abs((bucket.price || 0) - 100)) {
-      bucket.rate = rate
-      bucket.price = price
-      bucket.apr = apr
-      bucket.payment = payment
-      bucket.monthlyMI = monthlyMI
-      bucket.closingCost = closingCost
-      bucket.rebate = rebate
-      bucket.discount = discount
-      bucket.adjustments = adjustments
+    for (const rung of rateRungs) {
+      const pointsOffset = 100 - rung.price
+      // Update program-level summary to the rung closest to par.
+      if (Math.abs(rung.price - 100) < Math.abs((bucket.price || 0) - 100)) {
+        bucket.rate = rung.rate
+        bucket.price = rung.price
+        bucket.apr = rung.apr
+        bucket.payment = rung.payment
+        bucket.monthlyMI = rung.monthlyMI
+        bucket.closingCost = rung.closingCost
+        bucket.rebate = rung.rebate
+        bucket.discount = rung.discount
+      }
+      bucket.rateOptions.push({
+        rate: rung.rate,
+        points: pointsOffset,
+        price: rung.price,
+        apr: rung.apr,
+        payment: rung.payment,
+        description: `${rung.rate.toFixed(3)}% / ${rung.price.toFixed(3)}`,
+        status,
+        totalClosingCost: rung.closingCost,
+        monthlyMI: rung.monthlyMI,
+        rebate: rung.rebate,
+        discount: rung.discount,
+        programName,
+        investorName: investor,
+        lockPeriod: rung.lockPeriod,
+        adjustments: detailAdjustments,
+      })
     }
-
-    bucket.rateOptions.push({
-      rate,
-      points: pointsOffset,
-      price,
-      apr,
-      payment,
-      description: `${rate.toFixed(3)}% / ${price.toFixed(3)}`,
-      status,
-      totalClosingCost: closingCost,
-      monthlyMI,
-      rebate,
-      discount,
-      programName,
-      investorName: investor,
-      lockPeriod,
-      adjustments,
-    })
   }
 
   const programs: any[] = Object.values(programsMap)
@@ -615,7 +596,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    const result = parseOBResponse(responseData)
+    // ── Fetch per-product detail (quotes ladder + LLPA adjustments) in parallel ──
+    // OB's product search returns only a single summary price per product and
+    // omits LLPAs. The detail endpoint is required to get the full rate ladder
+    // and itemized adjustments.
+    const searchId = responseData.searchId
+    const productIds: Array<number | string> = Array.isArray(responseData.products)
+      ? responseData.products.map((p: any) => p.productId).filter(Boolean)
+      : []
+
+    const details: Record<string, any> = {}
+    if (searchId && productIds.length > 0) {
+      const detailResults = await Promise.all(
+        productIds.map(pid =>
+          fetchProductDetail(accessToken, searchId, pid).catch(err => {
+            console.warn(`[OB] detail fetch failed for ${pid}:`, err instanceof Error ? err.message : err)
+            return null
+          })
+        )
+      )
+      productIds.forEach((pid, i) => {
+        if (detailResults[i]) details[String(pid)] = detailResults[i]
+      })
+      console.log('[OB] product detail fetched:', Object.keys(details).length, '/', productIds.length)
+    }
+
+    const result = parseOBResponse(responseData, details)
 
     if (result.error && result.programs.length === 0) {
       return res.json({
