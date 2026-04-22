@@ -195,9 +195,32 @@ function buildOBRequest(f: any): any {
   }
 
   // expandedGuidelines (inside loanInformation)
-  // incomeVerificationType: "FullDoc" is the only valid value — always send it
+  // incomeVerificationType — OB v4 channel 165481 accepts only these enums
+  // (all others return HTTP 400 "Error converting value"):
+  //   FullDoc              → Full Document programs (Ascend Alt-A, Elevate)
+  //   WrittenVOE           → Alt-Doc programs (Ascend Alt-A Alt-Doc) — used as
+  //                          the catch-all for bank statement, DSCR, asset
+  //                          utilization, 1-yr tax returns, VOE, etc.
+  //   Stated               → Stated income (returns 0 products on this channel)
+  //   NoIncomeVerification → No-ratio / no-income (returns 0 products on this channel)
+  const incomeVerificationMap: Record<string, string> = {
+    fullDoc: 'FullDoc',
+    dscr: 'WrittenVOE',
+    bankStatement: 'WrittenVOE',
+    bankStatement12: 'WrittenVOE',
+    bankStatement24: 'WrittenVOE',
+    bankStatementOther: 'WrittenVOE',
+    taxReturns1Yr: 'WrittenVOE',
+    voe: 'WrittenVOE',
+    assetDepletion: 'WrittenVOE',
+    assetUtilization: 'WrittenVOE',
+    noRatio: 'NoIncomeVerification',
+    stated: 'Stated',
+  }
+  const incomeVerificationType = incomeVerificationMap[f.documentationType] || 'FullDoc'
+
   const expandedGuidelines: any = {
-    incomeVerificationType: 'FullDoc',
+    incomeVerificationType,
     housingEventType: 'None',
     housingEventSeasoning: 'NotApplicable',
     bankruptcyType: 'None',
