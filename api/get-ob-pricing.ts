@@ -203,9 +203,12 @@ function buildOBRequest(f: any): any {
   //                          utilization, 1-yr tax returns, VOE, etc.
   //   Stated               → Stated income (returns 0 products on this channel)
   //   NoIncomeVerification → No-ratio / no-income (returns 0 products on this channel)
+  // OB v4 channel 165481 accepts: FullDoc | WrittenVOE | Stated |
+  // NoIncomeVerification | InvestorDSCR (no hyphen — the hyphenated form
+  // "Investor-DSCR" returns HTTP 400 "Error converting value").
   const incomeVerificationMap: Record<string, string> = {
     fullDoc: 'FullDoc',
-    dscr: 'WrittenVOE',
+    dscr: 'InvestorDSCR',
     bankStatement: 'WrittenVOE',
     bankStatement12: 'WrittenVOE',
     bankStatement24: 'WrittenVOE',
@@ -336,6 +339,17 @@ async function fetchProductDetail(
   return r.json()
 }
 
+// Clean up OB's verbose adjustment reason strings so they read cleanly in the UI.
+// OB prefixes many rows with "Max of LTV/CLTV/HCLTV is " which the broker asked
+// us to strip. Also normalises " And " connectors to commas for readability.
+function cleanAdjustmentReason(reason: string): string {
+  return String(reason || 'Adjustment')
+    .replace(/\bMax of LTV\/CLTV\/HCLTV is\s+/gi, '')
+    .replace(/,\s*And\s+/gi, ', ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 function normalizeDetailAdjustments(detail: any): any[] {
   const raw: any[] = Array.isArray(detail?.adjustments) ? detail.adjustments : []
   return raw
@@ -344,7 +358,7 @@ function normalizeDetailAdjustments(detail: any): any[] {
       const amt = typeof a.adjustor === 'number' ? a.adjustor : parseFloat(a.adjustor) || 0
       const type = String(a.type || '')
       return {
-        description: String(a.reason || a.description || 'Adjustment'),
+        description: cleanAdjustmentReason(a.reason || a.description || 'Adjustment'),
         amount: /price/i.test(type) ? amt : 0,
         rateAdj: /rate/i.test(type) ? amt : 0,
         type,
