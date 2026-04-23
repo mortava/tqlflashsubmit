@@ -204,11 +204,11 @@ function buildOBRequest(f: any): any {
   //   Stated               → Stated income (returns 0 products on this channel)
   //   NoIncomeVerification → No-ratio / no-income (returns 0 products on this channel)
   // OB v4 channel 165481 accepts: FullDoc | WrittenVOE | Stated |
-  // NoIncomeVerification | InvestorDSCR (no hyphen — the hyphenated form
-  // "Investor-DSCR" returns HTTP 400 "Error converting value").
+  // NoIncomeVerification | InvestorDscr. The hyphenated "Investor-DSCR"
+  // form returns HTTP 400 "Error converting value".
   const incomeVerificationMap: Record<string, string> = {
     fullDoc: 'FullDoc',
-    dscr: 'InvestorDSCR',
+    dscr: 'InvestorDscr',
     bankStatement: 'WrittenVOE',
     bankStatement12: 'WrittenVOE',
     bankStatement24: 'WrittenVOE',
@@ -246,17 +246,25 @@ function buildOBRequest(f: any): any {
     vacantUnleased: false,
   }
 
-  // DSCR ratio goes into expandedGuidelines
-  // NOTE: debtServiceCoverageRatio omitted — OB channel 165481 has no DSCR-specific products.
-  // Sending it filters out all results. DSCR scenarios still return investment products via occupancy.
+  // DSCR ratio — required in expandedGuidelines when incomeVerificationType is
+  // InvestorDscr so OB returns DSCR products. Parse ratio from form input.
+  if (isDSCR) {
+    const parsedDSCR =
+      parseFloat(f.dscrManualInput) ||
+      parseFloat(String(f.dscrRatio).split('-')[0]) ||
+      1.0
+    expandedGuidelines.debtServiceCoverageRatio = parsedDSCR
+  }
 
-  // Product types - omit to return all eligible products from OB
+  // LO compensation: TQL brokers are borrower-paid, so comp is NOT baked into
+  // pricing. Use NoBuyerPaid unless the form explicitly indicates lender-paid.
+  const loCompensation = f.loanOriginatorPaidBy === 'lender' ? 'YesLenderPaid' : 'NoBuyerPaid'
 
   const loanInformation: any = {
     loanPurpose: purposeMap[f.loanPurpose] || 'Purchase',
     lienType: f.lienPosition === '2nd' ? 'Second' : 'First',
     amortizationTypes: isARM ? ['ARM'] : ['Fixed'],
-    automatedUnderwritingSystem: 'NotSpecified', // Valid: NotSpecified, DU, LP — no "Manual" enum exists
+    automatedUnderwritingSystem: 'ManualTraditional', // TQL Non-QM channel runs Manual/Traditional underwriting
     borrowerPaidMI: 'Yes',
     buydown: 'None',
     cashOutAmount: f.loanPurpose === 'cashout' ? (Number(f.cashoutAmount) || 0) : 0,
@@ -274,8 +282,10 @@ function buildOBRequest(f: any): any {
     loanType: loanTypeMap[f.loanType] || 'NonConforming',
     prepaymentPenalty: isInvestment ? (ppMap[f.prepayPeriod] || 'None') : 'None',
     exemptFromVAFundingFee: false,
-    includeLOCompensationInPricing: 'YesLenderPaid',
+    includeLOCompensationInPricing: loCompensation,
     calculateTotalLoanAmount: true,
+    dutyToServe: 'No',
+    missionScore: 'Zero',
     assetDepletion: (f.documentationType === 'assetDepletion' || f.documentationType === 'assetUtilization') ? 'Yes' : 'No',
     autoDebit: 'No',
     employeeLoan: 'No',
@@ -287,7 +297,15 @@ function buildOBRequest(f: any): any {
     totalMonthlyQualifyingIncome: isDSCR
       ? (Number(f.grossRent) || 10000)
       : Math.round((loanAmount * 0.006) / (dti / 100)),
-    customerInternalId: 'TQLOpenPrice',
+    customerInternalId: 'OBSearch',
+    // TQL NonQM channel custom product filters — OB returns zero products when
+    // these aren't populated. All four fixed to 110 per the channel spec.
+    customFields: [
+      { customFieldInputName: 'CustomProductFilter01', customFieldValue: '110', columnName: 'CustomLenderField4' },
+      { customFieldInputName: 'CustomProductFilter02', customFieldValue: '110', columnName: 'CustomLenderField5' },
+      { customFieldInputName: 'CustomProductFilter03', customFieldValue: '110', columnName: 'CustomLenderField7' },
+      { customFieldInputName: 'CustomProductFilter04', customFieldValue: '110', columnName: 'CustomLenderField8' },
+    ],
   }
 
   if (isARM) {

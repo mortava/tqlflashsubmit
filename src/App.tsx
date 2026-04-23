@@ -458,7 +458,7 @@ export default function App() {
   const [lpResult, setLpResult] = useState<any>(null)
   const [lpLoading, setLpLoading] = useState(false)
   const [lpUnlocked] = useState(false)
-  const [obResult, setObResult] = useState<any>(null)
+  const [, setObResult] = useState<any>(null)
   const [obLoading, setObLoading] = useState(false)
   // ChatCom & User Chat lightbox overlays
   const [showChatCom, setShowChatCom] = useState(false)
@@ -1997,49 +1997,30 @@ export default function App() {
             {result && (
               <motion.div key="results" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
 
-                {/* mlMessage / Out of scope state — only show if OB also has no results */}
-                {(result as any).mlMessage && (!Array.isArray(result.programs) || result.programs.length === 0) && !obLoading && (!obResult?.programs || obResult.programs.length === 0) ? (
-                  formData.isCrossCollateralized ? (
-                    <div className="bg-white border border-slate-200 rounded-xl p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 rounded-[10px] bg-slate-50 flex items-center justify-center">
-                          <Zap className="w-5 h-5 text-slate-900" />
-                        </div>
-                        <div className="text-sm font-semibold text-slate-900">Pass to National Rate Card</div>
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium tql-text-link bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
-                          <ShieldCheck className="w-3 h-3" />Verified
-                        </span>
-                        <span className="text-xs text-slate-500">Cross-Collateralized</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Globe className="w-3.5 h-3.5 text-slate-400" />
-                        <span>We just checked all of the Industry Leading Pricing Engines for you.</span>
+                {/* No results — surface the actual API error, not a placeholder. */}
+                {(!Array.isArray(result.programs) || result.programs.length === 0) && !obLoading ? (
+                  <div className="bg-white border border-[#EF4444]/40 rounded-xl p-5">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-[#EF4444] shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-bold text-[#EF4444] mb-1">No pricing returned</div>
+                        <p className="text-xs tql-text-slate leading-relaxed break-words">
+                          {result.apiError || (result as any).mlMessage || 'Optimal Blue returned no eligible products for this scenario.'}
+                        </p>
+                        <p className="text-[11px] tql-text-muted mt-2 leading-relaxed">
+                          Check Loan Type, Occupancy, Doc Type, LTV, FICO, and Property details — or email{' '}
+                          <a href="mailto:tposupport@tqlend.com" className="tql-text-teal font-semibold hover:underline">tposupport@tqlend.com</a>{' '}
+                          with the scenario for a manual quote.
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-white border border-amber-200 rounded-xl p-5">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                        <div>
-                          <div className="text-sm font-bold text-slate-900 mb-1">Scenario Out of Scope</div>
-                          <p className="text-xs text-slate-500 leading-relaxed">
-                            Please check your input fields and try again. If you receive this message more than once then your details just missed our Static Rate Sheet. Please shoot this Scenario Details Email over to{' '}
-                            <a href="mailto:tposupport@tqlend.com" className="text-slate-900 font-semibold hover:underline">tposupport@tqlend.com</a>{' '}
-                            for a Super Fast Quote!
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                ) : (result as any).mlMessage && obLoading ? (
-                  /* OB still loading, ML returned empty — show loading instead of Out of Scope */
+                  </div>
+                ) : (!Array.isArray(result.programs) || result.programs.length === 0) && obLoading ? (
                   <div className="bg-white border border-slate-200 rounded-xl p-6 flex items-center gap-4">
                     <Loader2 className="w-6 h-6 tql-text-link animate-spin shrink-0" />
                     <div>
-                      <div className="text-sm font-semibold text-slate-900">Searching Additional Pricing Engines...</div>
-                      <p className="text-xs text-slate-500 mt-0.5">Checking Optimal Blue for available rates.</p>
+                      <div className="text-sm font-semibold text-slate-900">Searching Optimal Blue…</div>
+                      <p className="text-xs text-slate-500 mt-0.5">Pulling live rates and pricing adjustments.</p>
                     </div>
                   </div>
                 ) : (
