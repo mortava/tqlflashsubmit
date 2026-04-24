@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal } from 'lucide-react'
+import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -2178,10 +2178,10 @@ export default function App() {
                                     <button
                                       type="button"
                                       onClick={() => setExpandedProgram(isExpanded ? null : programName)}
-                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${isExpanded ? 'text-slate-900 bg-slate-100 border border-[#D1D5DB]' : 'text-slate-500 bg-slate-50 border border-slate-200 hover:bg-slate-100'}`}
+                                      className={`inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm ${isExpanded ? 'text-white tql-bg-teal border tql-border-teal shadow-[0_2px_8px_rgba(36,95,115,0.25)]' : 'tql-text-teal bg-white border-2 tql-border-teal hover:tql-bg-teal hover:text-white'}`}
                                     >
-                                      MORE PRICING
-                                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                      EXPAND PRICING OPTIONS
+                                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                     </button>
                                   </div>
                                 </div>
@@ -2251,15 +2251,15 @@ export default function App() {
                                                       setOpenActionDropdown(key)
                                                     }
                                                   }}
-                                                  className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold text-white tql-bg-teal rounded hover:opacity-85 transition-colors whitespace-nowrap"
+                                                  className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white tql-bg-teal rounded-md shadow-[0_1px_3px_rgba(36,95,115,0.3)] hover:shadow-[0_2px_8px_rgba(36,95,115,0.4)] transition-all whitespace-nowrap"
                                                 >
-                                                  Actions <ChevronDown className={`w-3 h-3 transition-transform ${openActionDropdown === `${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
+                                                  Actions <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openActionDropdown === `${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
                                                 </button>
                                                 {openActionDropdown === `${programName}-${optIdx}` && actionDropdownRect && createPortal(
                                                   <div
                                                     style={{ position: 'fixed', top: actionDropdownRect.top, left: actionDropdownRect.left, zIndex: 9999 }}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="bg-white rounded-lg shadow-[0_8px_24px_rgba(15,23,42,0.12)] border tql-border-steel py-1 min-w-[200px]"
+                                                    className="bg-white rounded-xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] border tql-border-steel py-2 min-w-[220px] overflow-hidden"
                                                   >
                                                     <button
                                                       type="button"
@@ -2274,8 +2274,9 @@ export default function App() {
                                                         setRowStatus('idle')
                                                         setOpenActionDropdown(null)
                                                       }}
-                                                      className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
+                                                      className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                     >
+                                                      <Lock className="w-3.5 h-3.5" />
                                                       Reserve Pricing
                                                     </button>
                                                     {isPartner && (
@@ -2292,17 +2293,19 @@ export default function App() {
                                                           setRowStatus('idle')
                                                           setOpenActionDropdown(null)
                                                         }}
-                                                        className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
+                                                        className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                       >
+                                                        <ShieldCheck className="w-3.5 h-3.5" />
                                                         Request Lock
                                                       </button>
                                                     )}
                                                     <button
                                                       type="button"
                                                       onClick={(e) => { e.stopPropagation(); setOpenActionDropdown(null); setCurrentView('submit') }}
-                                                      className="block w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-link hover:bg-blue-50 transition-colors"
+                                                      className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
                                                     >
-                                                      Flash Submit to Encompass
+                                                      <Zap className="w-3.5 h-3.5" />
+                                                      FLASH SUBMIT → UPLOAD 3.4
                                                     </button>
                                                   </div>,
                                                   document.body
@@ -2455,9 +2458,9 @@ export default function App() {
                                                   setOpenActionDropdown(key)
                                                 }
                                               }}
-                                              className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold text-white tql-bg-teal rounded hover:opacity-85 transition-colors"
+                                              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white tql-bg-teal rounded-md shadow-[0_1px_3px_rgba(36,95,115,0.3)] hover:shadow-[0_2px_8px_rgba(36,95,115,0.4)] transition-all"
                                             >
-                                              Actions <ChevronDown className={`w-3 h-3 transition-transform ${openActionDropdown === `m-${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
+                                              Actions <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openActionDropdown === `m-${programName}-${optIdx}` ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openActionDropdown === `m-${programName}-${optIdx}` && actionDropdownRect && createPortal(
                                               <div

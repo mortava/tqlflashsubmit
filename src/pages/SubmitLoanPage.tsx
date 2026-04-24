@@ -235,11 +235,11 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: 'tposupport@tqlend.com',
-          subject: `Flash Submit — Loan #${loanNumber} — ${docs.length} Document${docs.length !== 1 ? 's' : ''} Uploaded`,
+          subject: `Flash Submit — Lender Tracking # ${loanNumber} — ${docs.length} Document${docs.length !== 1 ? 's' : ''} Uploaded`,
           html: `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
             <h2 style="margin:0 0 16px;color:#0D3B66;">Documents Submitted via Flash Submit</h2>
             <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-              <tr><td style="padding:8px 0;color:#666;font-size:13px;">Loan Number</td><td style="padding:8px 0;font-weight:600;color:#111;">${loanNumber}</td></tr>
+              <tr><td style="padding:8px 0;color:#666;font-size:13px;">Lender Tracking #</td><td style="padding:8px 0;font-weight:600;color:#111;">${loanNumber}</td></tr>
               <tr><td style="padding:8px 0;color:#666;font-size:13px;">Loan ID</td><td style="padding:8px 0;font-family:monospace;font-size:12px;color:#333;">${loanId}</td></tr>
               <tr><td style="padding:8px 0;color:#666;font-size:13px;">MLO</td><td style="padding:8px 0;color:#333;">${f.brokerMloFirst} ${f.brokerMloLast} (${f.mloEmail})</td></tr>
               <tr><td style="padding:8px 0;color:#666;font-size:13px;">Borrower</td><td style="padding:8px 0;color:#333;">${f.borrowerFirst} ${f.borrowerLast}</td></tr>
@@ -305,7 +305,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
               <div className="p-5 rounded-xl bg-green-50 border border-green-200 flex items-start gap-3 mb-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-sm font-bold text-green-900">Loan #{loanNumber} Created in Encompass</div>
+                  <div className="text-sm font-bold text-green-900">Lender Tracking # {loanNumber} · Uploaded to Encompass</div>
                   <div className="text-xs text-green-700 font-mono mt-0.5">{loanId}</div>
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
             {/* Loan ID */}
             <div className="p-5 rounded-xl border-2 border-blue-200 bg-blue-50/30">
               <label className={L}>Confirm the Loan ID # *</label>
-              <input type="text" value={f.confirmLoanId} onChange={e => set('confirmLoanId', e.target.value)} placeholder="Loan Number that was Just Issued" className={I} />
+              <input type="text" value={f.confirmLoanId} onChange={e => set('confirmLoanId', e.target.value)} placeholder="Lender Tracking # that was Just Issued" className={I} />
             </div>
 
             {/* 1. Loan Target Details — FIRST */}
@@ -521,7 +521,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
                 </div>
               )}
             </div>
-            <button type="button" onClick={handleSubmitMismo} disabled={!mismoFile} className="w-full py-3 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">Submit &amp; Create a Loan Number</button>
+            <button type="button" onClick={handleSubmitMismo} disabled={!mismoFile} className="w-full py-3 rounded-xl text-sm font-bold text-white tql-bg-teal disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-[0.99]">FLASH SUBMIT → UPLOAD 3.4</button>
           </div>
         )}
 
@@ -540,8 +540,8 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
                 <div>
-                  <h2 className="text-lg font-bold text-green-900">Loan Created Successfully</h2>
-                  <p className="text-sm text-green-800 mt-1"><span className="font-medium">Loan Number:</span> {loanNumber}</p>
+                  <h2 className="text-lg font-bold text-green-900">Loan Uploaded to Encompass</h2>
+                  <p className="text-sm text-green-800 mt-1"><span className="font-medium">Lender Tracking #:</span> {loanNumber}</p>
                   <p className="text-sm text-green-700"><span className="font-medium">GUID:</span> <span className="font-mono text-xs">{loanId}</span></p>
                 </div>
               </div>

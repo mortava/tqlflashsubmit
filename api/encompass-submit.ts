@@ -93,23 +93,39 @@ async function sendNotificationEmail(loanNumber: string, loanId: string): Promis
   })
 }
 
-async function getLoanNumber(token: string, loanId: string): Promise<string> {
-  const res = await fetch(
-    `${API_BASE}/encompass/v3/loans/${loanId}?entities=LoanNumber`,
-    {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-      },
-    }
-  )
+// Fetch Encompass field 305 — "Lender's Tracking Number for the loan".
+// Uses Field Reader API: POST /encompass/v3/loans/{loanId}/fieldReader
+async function getLenderTrackingNumber(token: string, loanId: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/encompass/v3/loans/${loanId}/fieldReader`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(['305']),
+      }
+    )
 
-  if (!res.ok) {
-    return loanId // fallback to GUID
+    if (res.ok) {
+      const arr = await res.json() as Array<{ fieldId: string; value?: string }>
+      const f305 = Array.isArray(arr) ? arr.find(f => String(f.fieldId) === '305') : null
+      if (f305?.value && String(f305.value).trim()) return String(f305.value).trim()
+    }
+  } catch {
+    // fall through to loanNumber fallback
   }
 
-  const data = await res.json() as { loanNumber?: string; fields?: Record<string, unknown> }
+  // Fallback: entities=LoanNumber (Encompass field 2) if 305 isn't populated yet.
+  const fb = await fetch(
+    `${API_BASE}/encompass/v3/loans/${loanId}?entities=LoanNumber`,
+    { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
+  )
+  if (!fb.ok) return loanId
+  const data = await fb.json() as { loanNumber?: string; fields?: Record<string, unknown> }
   return data.loanNumber || String(data.fields?.['2'] ?? loanId)
 }
 
@@ -139,8 +155,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Step 3: Create loan in target folder
     const { loanId } = await createLoan(token, loanJson)
 
-    // Step 4: Retrieve human-readable loan number
-    const loanNumber = await getLoanNumber(token, loanId)
+    // Step 4: Retrieve the Lender's Tracking Number (Encompass field 305)
+    const loanNumber = await getLenderTrackingNumber(token, loanId)
 
     // Step 5: Send notification email to TPO Support (fire-and-forget)
     sendNotificationEmail(loanNumber, loanId).catch(() => {})
@@ -148,8 +164,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       success: true,
       loanId,
-      loanNumber,
-      message: `Loan created successfully. Loan #${loanNumber}`,
+      loanNumber,                  // kept for frontend compatibility
+      lenderTrackingNumber: loanNumber, // explicit field-305 alias
+      message: `Loan created successfully. Lender Tracking # ${loanNumber}`,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Loan submission failed'
