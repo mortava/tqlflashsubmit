@@ -93,11 +93,13 @@ async function sendNotificationEmail(loanNumber: string, loanId: string): Promis
   })
 }
 
-// Fetch Encompass field 305 — "Lender's Tracking Number for the loan".
-// Uses Field Reader API: POST /encompass/v3/loans/{loanId}/fieldReader
+// Resolve (and if needed, populate) Encompass field 305 — "Lender's Tracking
+// Number for the loan". On a freshly-created MISMO 3.4 import, field 305 is
+// usually empty because the MISMO XML doesn't map to it; we auto-populate it
+// with the Encompass loan number (field 4) so the Lender Case # is always set.
 async function getLenderTrackingNumber(token: string, loanId: string): Promise<string> {
-  try {
-    const res = await fetch(
+  const fieldReader = async (ids: string[]): Promise<Record<string, string>> => {
+    const r = await fetch(
       `${API_BASE}/encompass/v3/loans/${loanId}/fieldReader`,
       {
         method: 'POST',
@@ -106,27 +108,56 @@ async function getLenderTrackingNumber(token: string, loanId: string): Promise<s
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(['305']),
+        body: JSON.stringify(ids),
       }
     )
-
-    if (res.ok) {
-      const arr = await res.json() as Array<{ fieldId: string; value?: string }>
-      const f305 = Array.isArray(arr) ? arr.find(f => String(f.fieldId) === '305') : null
-      if (f305?.value && String(f305.value).trim()) return String(f305.value).trim()
+    if (!r.ok) return {}
+    const arr = await r.json() as Array<{ fieldId: string; value?: string }>
+    const out: Record<string, string> = {}
+    if (Array.isArray(arr)) {
+      for (const f of arr) out[String(f.fieldId)] = String(f.value ?? '').trim()
     }
-  } catch {
-    // fall through to loanNumber fallback
+    return out
   }
 
-  // Fallback: entities=LoanNumber (Encompass field 2) if 305 isn't populated yet.
+  try {
+    // Read field 305 (Lender Case #) and 4 (Encompass Loan Number) together.
+    const vals = await fieldReader(['305', '4'])
+    if (vals['305']) return vals['305']
+
+    const loanNumber = vals['4']
+    if (loanNumber) {
+      // Populate field 305 with the loan number via the fieldWriter endpoint —
+      // the direct counterpart to fieldReader for setting Encompass field values.
+      await fetch(
+        `${API_BASE}/encompass/v3/loans/${loanId}/fieldWriter`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify([{ fieldId: '305', value: loanNumber }]),
+        }
+      ).catch(() => null)
+      // Re-read so we return whatever Encompass actually persisted.
+      const after = await fieldReader(['305'])
+      if (after['305']) return after['305']
+      return loanNumber
+    }
+  } catch {
+    // fall through
+  }
+
+  // Last-ditch fallback: the entities=LoanNumber shortcut.
   const fb = await fetch(
     `${API_BASE}/encompass/v3/loans/${loanId}?entities=LoanNumber`,
     { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
   )
   if (!fb.ok) return loanId
   const data = await fb.json() as { loanNumber?: string; fields?: Record<string, unknown> }
-  return data.loanNumber || String(data.fields?.['2'] ?? loanId)
+  return data.loanNumber || String(data.fields?.['4'] ?? data.fields?.['2'] ?? loanId)
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

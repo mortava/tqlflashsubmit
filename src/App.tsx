@@ -1560,11 +1560,7 @@ export default function App() {
 
         {/* ===== DESKTOP TOP HEADER BAR ===== */}
         <div className="hidden lg:block shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold tql-text-primary tql-font-display tracking-tight">TQL</span>
-              <span className="text-[10px] font-semibold tql-text-muted uppercase tracking-widest">Flash Submit</span>
-            </div>
+          <div className="flex items-center justify-end gap-2.5">
             <div className="flex items-center gap-2.5">
             {isPartner && profile ? (
               <>

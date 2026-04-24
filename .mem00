@@ -1,74 +1,123 @@
-# Session Memory — openpricev5 (DEFY CLOUD / OpenPrice)
-**Date**: 2026-03-24 15:30 CDT
+# Session Memory — tqlflashsubmit
+**Date**: 2026-04-23 (session spanned 2026-04-20 → 2026-04-23)
 **Branch**: master
-**Session Focus**: DSCR % passthrough fix for values 1.0/1.00/1.000 and prepay options investigation
+**Session Focus**: Full OB pricing integration overhaul + TQL brand + Flash Submit modal with PDF email to Disclosure Desk.
 
 ## Status
 - **Completed**:
-  - Added `dscrRangeFromNumeric()` fallback in API to compute DSCR range from numeric value when `dscrRatio` string is missing/invalid
-  - Added DSCR ratio normalization in API handler before SOAP request
-  - Explicitly sending `dscrManualInput` in frontend request body
-  - Added DSCR debug logging in frontend submit and API response (`debugSentValues.dscrManualInput`)
-  - Fixed comma stripping for `grossRent`/`presentHousingExpense` in SOAP XML builder (prevents NaN)
-  - Deployed both commits to Vercel production
-- **In Progress**: User reports issue persists — "out of scope" when entering DSCR 1.0
-- **Next Up**:
-  - Reproduce the EXACT user scenario (may involve different loan amount, credit score, or LTV)
-  - User also reports only 60MO and 48MO prepay options showing — API test confirms ALL 6 programs returned (0MO, 12MO, 24MO, 36MO, 48MO, 60MO), so this may be a frontend display/filter issue or a different test scenario
-- **Blockers**: Cannot reproduce the "out of scope" or missing prepay issues with default test values ($600K loan, $800K property, 740 FICO, 75% LTV, Investment, DSCR)
+  - OB v4 pricing integration now pulls per-product detail (`/productsearch/{searchId}/products/{productId}`) for full rate ladder (`quotes[]`) + itemized LLPAs (`adjustments[]`).
+  - DSCR scenarios return 6 programs (Ascend DSCR, Elevate DSCR, TOTAL DSCR, DSCR PPP 5/3/1%) — required `incomeVerificationType: 'InvestorDscr'` + `expandedGuidelines.debtServiceCoverageRatio` + 4 customFields = '110'.
+  - Lock-period filter — each rate now surfaces once with its matching price.
+  - TQL 2026 brand rollout: Monarch logo removed, every CTA on `#245F73` teal, "EXPAND PRICING OPTIONS" + icon-bearing Actions dropdown.
+  - Encompass submit now fetches field 305 ("Lender's Tracking Number") via `/fieldReader` POST with body `["305"]`.
+  - Empty-results UI shows the real OB error (no placeholder cards).
+  - Flash Submit confirmation modal → `/api/flash-submit-request` → PDF (pdf-lib) emailed from `Flash@tqltpo.com` to `disclosuredesk@tqlend.com` with broker cc'd.
+  - Env vars synced to Vercel production (22 keys, ENCOMPASS_* prefix, OB_*, Supabase, Gemini, Browserless, Resend) with stdin piping so special chars survive.
+- **Next Up**: Nothing blocking. Validate live DSCR + Flash Submit on `submit.tqltpo.com`; confirm Resend has `tqltpo.com` configured so `Flash@tqltpo.com` sender is verified.
+- **Blockers**: None. If `Flash@tqltpo.com` bounces, Resend may only have `TPOSub@tqltpo.com` pre-verified — domain is the same so it should work; otherwise add the mailbox alias.
 
-## Change Tree
+## Change Tree (This Session)
 ```
-modified:  api/get-pricing.ts (+44/-6)
-  - Added dscrRangeFromNumeric() function to compute DSCR range from raw numeric value
-  - Updated mapDSCRRatio() to accept fallback dscrValue and dscrManualInput params
-  - Added dscrRatio normalization step in handler (computes range from numeric if missing)
-  - Fixed comma stripping: Number(String(val).replace(/,/g,'')) for grossRent/presentHousingExpense
-  - Added dscrManualInput to debugSentValues response
-
-modified:  src/App.tsx (+14/-1)
-  - Added console.log('[DSCR Submit]', {...}) for debugging DSCR values sent
-  - Explicitly sends dscrManualInput in request body (not just via spread)
+modified:  src/App.tsx                         Hero rate card removed; criteria pills; program ladder 99-101.75; "EXPAND PRICING OPTIONS" CTA; Flash Submit modal + ToggleRow component; actions dropdown restyled (icons, teal shadow); lockPeriod added to RateOption type.
+modified:  src/index.css                       Added .tql-border-teal and .tql-dot-teal utilities.
+modified:  src/pages/SubmitLoanPage.tsx        "Loan Number" → "Lender Tracking #" copy; primary CTA renamed "FLASH SUBMIT → UPLOAD 3.4" on teal.
+modified:  api/get-ob-pricing.ts               Per-product detail fetch in parallel; quotes-based rate ladder filtered by desiredLockDays; LLPA normaliser strips "Max of LTV/CLTV/HCLTV is"; incomeVerificationMap; DSCR ratio in expandedGuidelines; ManualTraditional AUS; NoBuyerPaid LO comp; dutyToServe/missionScore; customFields 01-04 = '110'.
+modified:  api/encompass-submit.ts             getLenderTrackingNumber() using POST /fieldReader body ["305"]; API_BASE reads ENCOMPASS_API_BASE_URL first; response now includes lenderTrackingNumber.
+modified:  api/encompass-upload.ts             ENCOMPASS_API_BASE_URL with fallback to legacy API_BASE_URL.
+modified:  api/_lib/encompass-token.ts         Reads ENCOMPASS_* env vars with fallback to legacy unprefixed names.
+added:     api/flash-submit-request.ts         New endpoint. pdf-lib PDF + Resend email from Flash@tqltpo.com to disclosuredesk@tqlend.com, cc broker.
+deleted:   public/monarch_tql.svg              Replaced with "TQL · Flash Submit" wordmark.
+modified:  package.json                        Added pdf-lib ^1.17.1.
+modified:  .env.local                          Master local env rewritten with user-supplied values (ENCOMPASS_*, OB_*, Resend, Gemini, Supabase, Browserless).
+modified:  .gitignore                          Added .env*.local and .mem00.
 ```
 
 ## Key Decisions
-- DSCR tier mapping is correct: 1.0/1.00/1.000 all map to range '1.00-1.149' (code 3)
-- MeridianLink correctly differentiates DSCR tiers — DSCR 1.0 gets NO "DSCR >= 1.25" adjustment, while DSCR 1.25 gets +0.500 adjustment
-- API returns 6 programs for DSCR 1.0: No PPP, 12MO, 24MO, 36MO, 48MO, 60MO — all with rates in the 99.5-101.5 price range
-- The `aDSCR %` ML field is a SELECT code (1-6), not a ratio value. Code 3 = 1.00-1.149 tier.
-- grossRent and presentHousingExpense are supplementary SOAP fields; the DSCR tier code is what controls ML pricing
+- **OB secondary fetch over request expansion**: chose `Promise.all` of detail calls per product over attempting to expand the product search payload — proven reliable and matches what the OB portal does.
+- **`InvestorDscr` (no hyphen) for DSCR**: OB rejects `Investor-DSCR`; probed 60+ enum variants — only `FullDoc | WrittenVOE | Stated | NoIncomeVerification | InvestorDscr | InvestorDSCR` are accepted on channel 165481. Alt-doc (bank stmt, VOE, asset, tax) all routes to `WrittenVOE`.
+- **ENCOMPASS_* prefix with legacy fallback**: API handlers read `ENCOMPASS_*` first, fall back to unprefixed names so old Vercel env doesn't break existing deploys.
+- **PDF server-side via pdf-lib**: avoids client-side dep bloat; Resend `attachments[]` expects base64 content.
+- **Lock-period filter in parseOBResponse**: OB returns same rate at 30/45/60-day locks with different prices — filter to the user's `desiredLockPeriod`; fall back to nearest available lock if none match exactly.
 
 ## Commands
 ```bash
-# Dev server
-npm run dev
+# Dev
+npm run dev                 # vite, port 5173
+
+# Build + typecheck
+npm run build               # tsc -b && vite build
 
 # Deploy
-git add -A && git commit -m "msg" && git push origin master && npx vercel --prod --yes
+git push origin master
+npx vercel --prod --yes
 
-# Test API (DSCR 1.0)
-curl -s -X POST "https://openpricev5.vercel.app/api/get-pricing" \
-  -H "Content-Type: application/json" \
-  -d '{"loanAmount":600000,"propertyValue":800000,"creditScore":740,"propertyZip":"90210","propertyState":"CA","propertyCounty":"Los Angeles","occupancyType":"investment","propertyType":"sfr","loanPurpose":"purchase","documentationType":"dscr","loanType":"nonqm","dscrRatio":"1.00-1.149","dscrValue":1.0,"dscrManualInput":"1.0","lockPeriod":"30","prepayPeriod":"36mo","dti":"36","ltv":75,"grossRent":5000,"presentHousingExpense":5000,"impoundType":"escrowed","loanTerm":"30","amortization":"fixed"}'
+# Runtime logs (via Vercel MCP tool, not CLI — CLI tails interactively)
+# Use mcp__claude_ai_Vercel__get_runtime_logs with query="[OB]"
+
+# Pull Vercel env locally
+npx vercel env pull .env.local --environment=production --yes
 ```
 
 ## Technical Notes
-- `mapDSCRRatio()` now has 3-param fallback: (dscrRatio, dscrValue, dscrManualInput)
-- When dscrRatio string is missing/invalid, API auto-computes from numeric dscrValue or dscrManualInput
-- SOAP fields for DSCR: `aDSCR %` (tier code), `sSpGrossRentPe` (rent), `sPresOHExpPe` (expense), `aOccupancyRate` (100%)
-- Frontend `calculatedDSCR` is computed every render from `formData.dscrManualInput` — no stale state issue
-- Price filter: `filterRateOptionsByPrice` keeps rates with price (100 - points) between 99.5 and 101.5
-- `matchesPrepayPeriod` function highlights the selected prepay program but does NOT filter others from display
-- User's "out of scope" message could come from: (1) `validateFormBeforeSubmit` for small-balance loans <$100K, (2) `mlMessage: 'Searching National Pricing'` when API returns success:false or sanitize returns null
-- `handleInputChange` for dscrManualInput auto-computes grossRent = DSCR * 5000, presentHousingExpense = 5000
+- **OB product search does NOT return LLPAs**. Only the detail endpoint does:
+  `GET /full/api/businesschannels/{bcId}/originators/{origId}/productsearch/{searchId}/products/{productId}`
+  → returns `{ productName, quotes: [{rate, price, apr, principalAndInterest, rebateDollar, discountDollar, lockPeriod, ...}], adjustments: [{reason, adjustor (string), type: 'Adjust Price'|'Adjust Rate'|'Max Price'|'Min Price'}], parQuotes, totalRateAdjustment, totalPriceAdjustment, ... }`
+- **OB accepts these `incomeVerificationType` values ONLY**: `FullDoc`, `WrittenVOE`, `Stated`, `NoIncomeVerification`, `InvestorDscr`/`InvestorDSCR`. Hyphenated forms 400.
+- **Channel 165481 NEEDS these 4 customFields or returns 0 products**: `CustomProductFilter01..04 = '110'` mapped to `CustomLenderField4/5/7/8`.
+- **DSCR products require `expandedGuidelines.debtServiceCoverageRatio` populated** — without it, OB filters them out even with `InvestorDscr`.
+- **Encompass field 305 fetch**: POST `/encompass/v3/loans/{loanId}/fieldReader` with JSON body `["305"]`, returns array with `[{ fieldId: "305", value: "..." }]`. Fall back to `?entities=LoanNumber` (field 2) if 305 empty.
+- **Resend `attachments`**: `[{ filename, content: base64String }]`. No need for mime type — inferred from extension.
+- **Vercel env special-char gotcha**: `&`, `#`, `@`, `*`, `^`, `!`, `~`, `+`, `/` in secret values must be piped via stdin (`printf '%s' 'val' | vercel env add NAME production`). `.env.local` needs single quotes or values get mangled when re-read by custom parsers — defensive parsers should strip both `'` and `"` wrappers.
+- **Resend domain**: `tqltpo.com` is already verified (key `re_hLkp4Nxh_8Mt9gG9ZRgmpn4Rorfugi2aJ`). `Flash@tqltpo.com` should work since domain is verified; if bounce, set up mailbox alias.
+- **OB token**: Azure AD v1, resource `https://marketplaceauth.optimalblue.com/d35ae893-2367-40b5-a9b4-bfab3acb7991`.
+- **Vercel MCP log tool truncates** — only shows one log line per request. Use local probe scripts in `scripts/` (deleted at end of session) for meaningful diagnostics.
 
-## Recent Commits
+## Encompass Creds (Current)
+- Username: `Jbeach` (was `jimtaco` earlier this session)
+- Password: `enPlantshop25$` (was `Winner26!`)
+- Instance: `BE11223549`
+- Verified live auth → 200 + bearer token.
+
+## OB Request Shape (DSCR Reference)
+Key non-obvious values that make DSCR return products on channel 165481:
 ```
-5b034ea Fix grossRent/presentHousingExpense comma stripping in SOAP builder
-963bb22 Fix DSCR % passthrough for values 1.0/1.00/1.000
+loanInformation.automatedUnderwritingSystem = 'ManualTraditional'
+loanInformation.includeLOCompensationInPricing = 'NoBuyerPaid'
+loanInformation.dutyToServe = 'No'
+loanInformation.missionScore = 'Zero'
+loanInformation.customFields = [
+  { customFieldInputName: 'CustomProductFilter01', customFieldValue: '110', columnName: 'CustomLenderField4' },
+  { customFieldInputName: 'CustomProductFilter02', customFieldValue: '110', columnName: 'CustomLenderField5' },
+  { customFieldInputName: 'CustomProductFilter03', customFieldValue: '110', columnName: 'CustomLenderField7' },
+  { customFieldInputName: 'CustomProductFilter04', customFieldValue: '110', columnName: 'CustomLenderField8' },
+]
+loanInformation.expandedGuidelines.incomeVerificationType = 'InvestorDscr'
+loanInformation.expandedGuidelines.debtServiceCoverageRatio = <ratio>
+```
+
+## Recent Commits (Session)
+```
+e3589f4 feat(flash-submit): Confirmation modal + PDF email to disclosure desk
+950c682 feat(encompass+ui): Field 305 Lender Tracking # + polished CTAs
+626675a fix(ob): DSCR now returns products; show API error when empty, no mocks
+64bf64c fix(ob): Route DSCR to InvestorDSCR + strip LTV/CLTV/HCLTV prefix from LLPAs
+a30eb33 feat(brand): Remove Monarch logo, all CTAs on TQL teal #245F73
+4422049 fix(ob): Map documentationType to OB incomeVerificationType enum
+201fc74 fix(ob): One price per rate — filter quotes by selected lock period
+90cefdc fix(ob): Fetch per-product detail to surface LLPAs + full rate ladder
+f7c840d feat(results): Drop Best Available Rate hero + recursive OB LLPA extraction
+aef4ed8 feat(results): Selected prepay/term pills + Pricing Adjustments panel + ADJ column fix
+3d2aa62 feat(results): Always show full 99.000-101.750 ladder per program + adjustments grid
+594ed32 feat(adjustments+brand): Inline itemized LLPA view + TQL brand kit applied
+48ddd16 feat(ob+brand): Return OB LLPAs on every rate option + full TQL 2026 brand overhaul
 ```
 
 ## Uncommitted Changes
 ```
-None — all committed
+None — all committed.
+Working tree has an untracked nested `tqlflashsubmit/` directory (stale embedded checkout).
+Exclude from every git add via `git reset HEAD tqlflashsubmit`.
 ```
+
+## Latest Prod URL
+https://tqlflashsubmit-cuagg9e0y-james-projects-d94c6754.vercel.app → `submit.tqltpo.com`
