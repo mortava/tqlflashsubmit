@@ -128,6 +128,7 @@ interface RateOption {
   qualPmt?: number
   cashToClose?: number
   status?: string
+  lockPeriod?: number | string
   adjustments?: Adjustment[]
 }
 
@@ -324,6 +325,27 @@ const DEFAULT_FORM_DATA: LoanData = {
 }
 
 /* ── Draggable Floating Panel ── */
+// Yes/No pill toggle used in the Flash Submit modal.
+function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-[12.5px] tql-text-primary leading-tight">{label}</span>
+      <div className="flex items-center gap-1 shrink-0 rounded-lg p-0.5 bg-[color:var(--tql-bg)] border tql-border-steel">
+        <button
+          type="button"
+          onClick={() => onChange(true)}
+          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${value ? 'tql-bg-teal text-white shadow-sm' : 'tql-text-muted hover:tql-text-primary'}`}
+        >Yes</button>
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${!value ? 'tql-bg-teal text-white shadow-sm' : 'tql-text-muted hover:tql-text-primary'}`}
+        >No</button>
+      </div>
+    </div>
+  )
+}
+
 function DraggablePanel({ children, onClose, title, defaultX, defaultY, width, height }: {
   children: React.ReactNode
   onClose: () => void
@@ -482,6 +504,28 @@ export default function App() {
   const [rowLockFields, setRowLockFields] = useState({ name: '', email: '', loanNumber: '' })
   const [rowSending, setRowSending] = useState(false)
   const [rowStatus, setRowStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  // Flash Submit popup — captures broker/borrower details before kicking off the 3.4 upload
+  const [flashSubmitRate, setFlashSubmitRate] = useState<{
+    programName: string; rate: number; price: number; apr: number; payment: number;
+    points?: number; lockPeriod?: number | string;
+    adjustments?: Array<{ description: string; amount: number; rateAdj?: number }>
+  } | null>(null)
+  const [flashSubmitFields, setFlashSubmitFields] = useState({
+    borrowerLastName: '',
+    brokerName: '',
+    brokerEmail: '',
+    companyName: '',
+    originationCharge: '',
+    chargingProcessingFee: false,
+    processingFeeAmount: '',
+    collectingCreditReportFee: false,
+    creditReportFeeAmount: '',
+    thirdPartyProcessingFee: '',
+    hasTitleEscrowSheet: false,   // default No
+    authorizeSmartFees: true,     // default Yes
+  })
+  const [flashSubmitSending, setFlashSubmitSending] = useState(false)
+  const [flashSubmitError, setFlashSubmitError] = useState<string | null>(null)
   const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null) // "programName-optIdx"
   // Anchor rect for the portal-rendered Actions dropdown (escapes overflow-hidden parents)
   const [actionDropdownRect, setActionDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
@@ -1010,6 +1054,61 @@ export default function App() {
       } else { setRowStatus('error') }
     } catch { setRowStatus('error') }
     finally { setRowSending(false) }
+  }
+
+  // Flash Submit handler — sends the loan package to the disclosure desk
+  // with the PDF pricing summary attached, then hands off to the 3.4 upload flow.
+  const handleFlashSubmit = async () => {
+    if (!flashSubmitRate) return
+    const f = flashSubmitFields
+    if (!f.borrowerLastName || !f.brokerName || !f.brokerEmail || !f.companyName) {
+      setFlashSubmitError("Borrower's Last Name, Your Name, Email, and Company are required.")
+      return
+    }
+    setFlashSubmitSending(true)
+    setFlashSubmitError(null)
+    try {
+      const res = await fetch('/api/flash-submit-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broker: f,
+          rate: flashSubmitRate,
+          scenario: {
+            loanAmount: formData.loanAmount,
+            propertyValue: formData.propertyValue,
+            propertyState: formData.propertyState,
+            propertyZip: formData.propertyZip,
+            propertyCounty: formData.propertyCounty,
+            propertyCity: formData.propertyCity,
+            occupancyType: formData.occupancyType,
+            propertyType: formData.propertyType,
+            loanPurpose: formData.loanPurpose,
+            loanTerm: formData.loanTerm,
+            amortization: formData.amortization,
+            documentationType: formData.documentationType,
+            creditScore: formData.creditScore,
+            dti: formData.dti,
+            lockPeriod: formData.lockPeriod,
+            prepayPeriod: formData.prepayPeriod,
+            isInvestment: formData.occupancyType === 'investment',
+          },
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        setFlashSubmitError(data?.error || 'Failed to send Flash Submit request.')
+        setFlashSubmitSending(false)
+        return
+      }
+      // Success — close the modal and continue to 3.4 upload
+      setFlashSubmitRate(null)
+      setFlashSubmitSending(false)
+      setCurrentView('submit')
+    } catch (err) {
+      setFlashSubmitError(err instanceof Error ? err.message : 'Failed to send Flash Submit request.')
+      setFlashSubmitSending(false)
+    }
   }
 
   // Help Desk submit handler
@@ -2301,7 +2400,21 @@ export default function App() {
                                                     )}
                                                     <button
                                                       type="button"
-                                                      onClick={(e) => { e.stopPropagation(); setOpenActionDropdown(null); setCurrentView('submit') }}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setOpenActionDropdown(null)
+                                                        setFlashSubmitError(null)
+                                                        setFlashSubmitRate({
+                                                          programName,
+                                                          rate: safeNumber(opt.rate),
+                                                          price,
+                                                          apr: safeNumber(opt.apr),
+                                                          payment,
+                                                          points: safeNumber(opt.points),
+                                                          lockPeriod: opt.lockPeriod,
+                                                          adjustments: opt.adjustments || [],
+                                                        })
+                                                      }}
                                                       className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
                                                     >
                                                       <Zap className="w-3.5 h-3.5" />
@@ -2480,8 +2593,9 @@ export default function App() {
                                                     setRowStatus('idle')
                                                     setOpenActionDropdown(null)
                                                   }}
-                                                  className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
+                                                  className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                 >
+                                                  <Lock className="w-3.5 h-3.5" />
                                                   Reserve Pricing
                                                 </button>
                                                 {isPartner && (
@@ -2497,17 +2611,32 @@ export default function App() {
                                                       setRowStatus('idle')
                                                       setOpenActionDropdown(null)
                                                     }}
-                                                    className="w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-primary hover:bg-slate-50 transition-colors"
+                                                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                   >
+                                                    <ShieldCheck className="w-3.5 h-3.5" />
                                                     Request Lock
                                                   </button>
                                                 )}
                                                 <button
                                                   type="button"
-                                                  onClick={() => { setOpenActionDropdown(null); setCurrentView('submit') }}
-                                                  className="block w-full text-left px-3 py-2 text-[11px] font-semibold tql-text-link hover:bg-blue-50 transition-colors"
+                                                  onClick={() => {
+                                                    setOpenActionDropdown(null)
+                                                    setFlashSubmitError(null)
+                                                    setFlashSubmitRate({
+                                                      programName,
+                                                      rate: safeNumber(opt.rate),
+                                                      price,
+                                                      apr: safeNumber(opt.apr),
+                                                      payment,
+                                                      points: safeNumber(opt.points),
+                                                      lockPeriod: opt.lockPeriod,
+                                                      adjustments: opt.adjustments || [],
+                                                    })
+                                                  }}
+                                                  className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
                                                 >
-                                                  Flash Submit to Encompass
+                                                  <Zap className="w-3.5 h-3.5" />
+                                                  FLASH SUBMIT → UPLOAD 3.4
                                                 </button>
                                               </div>,
                                               document.body
@@ -2691,6 +2820,122 @@ export default function App() {
       </main>
 
       {/* ===== HELP DESK MODAL ===== */}
+      {/* ═════════ FLASH SUBMIT REQUEST MODAL ═════════ */}
+      {flashSubmitRate && (
+        <>
+          <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => !flashSubmitSending && setFlashSubmitRate(null)} />
+          <div className="fixed inset-0 z-[301] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
+            <div className="w-full max-w-[560px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
+              {/* Header */}
+              <div className="tql-bg-teal px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Zap className="w-5 h-5 text-white shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-bold text-white tracking-tight">Flash Submit — Confirm Details</div>
+                    <div className="text-[11px] text-white/80 mt-0.5 truncate">
+                      {flashSubmitRate.programName} · {flashSubmitRate.rate.toFixed(3)}% @ {flashSubmitRate.price.toFixed(3)}
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => !flashSubmitSending && setFlashSubmitRate(null)} className="p-1 text-white/80 hover:text-white transition-colors shrink-0">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5 space-y-4">
+                <p className="text-[12px] tql-text-muted leading-relaxed">Please confirm a few details before we hand off to the 3.4 upload.</p>
+
+                {/* Borrower + Broker block */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Borrower's Last Name *</label>
+                    <input type="text" value={flashSubmitFields.borrowerLastName} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, borrowerLastName: e.target.value }))} placeholder="Smith" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Your Name *</label>
+                    <input type="text" value={flashSubmitFields.brokerName} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, brokerName: e.target.value }))} placeholder="Jane Broker" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Your Email *</label>
+                    <input type="email" value={flashSubmitFields.brokerEmail} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, brokerEmail: e.target.value }))} placeholder="you@company.com" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Submitting Company Name *</label>
+                    <input type="text" value={flashSubmitFields.companyName} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, companyName: e.target.value }))} placeholder="ABC Mortgage Group" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+                </div>
+
+                {/* Fees block */}
+                <div className="pt-2 border-t tql-border-steel">
+                  <div className="text-[10px] font-bold uppercase tracking-widest tql-text-teal mb-2 mt-3">Fees</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Broker Origination Charge</label>
+                      <input type="text" value={flashSubmitFields.originationCharge} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, originationCharge: e.target.value }))} placeholder="$ or %" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">3rd Party Processing Fee</label>
+                      <input type="text" value={flashSubmitFields.thirdPartyProcessingFee} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, thirdPartyProcessingFee: e.target.value }))} placeholder="$ amount" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    </div>
+                  </div>
+
+                  {/* Yes/No toggles */}
+                  <div className="mt-3 space-y-2">
+                    <ToggleRow
+                      label="Are you charging a Processing Fee?"
+                      value={flashSubmitFields.chargingProcessingFee}
+                      onChange={(v) => setFlashSubmitFields(prev => ({ ...prev, chargingProcessingFee: v }))}
+                    />
+                    {flashSubmitFields.chargingProcessingFee && (
+                      <input type="text" value={flashSubmitFields.processingFeeAmount} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, processingFeeAmount: e.target.value }))} placeholder="Processing fee amount" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    )}
+                    <ToggleRow
+                      label="Are you collecting a Credit Report Fee?"
+                      value={flashSubmitFields.collectingCreditReportFee}
+                      onChange={(v) => setFlashSubmitFields(prev => ({ ...prev, collectingCreditReportFee: v }))}
+                    />
+                    {flashSubmitFields.collectingCreditReportFee && (
+                      <input type="text" value={flashSubmitFields.creditReportFeeAmount} onChange={(e) => setFlashSubmitFields(prev => ({ ...prev, creditReportFeeAmount: e.target.value }))} placeholder="Credit report fee amount" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    )}
+                    <ToggleRow
+                      label="Do you have the Title / Escrow Fee Sheet?"
+                      value={flashSubmitFields.hasTitleEscrowSheet}
+                      onChange={(v) => setFlashSubmitFields(prev => ({ ...prev, hasTitleEscrowSheet: v }))}
+                    />
+                    <ToggleRow
+                      label="Do you authorize TQL to pull Smart Fees?"
+                      value={flashSubmitFields.authorizeSmartFees}
+                      onChange={(v) => setFlashSubmitFields(prev => ({ ...prev, authorizeSmartFees: v }))}
+                    />
+                  </div>
+                </div>
+
+                {flashSubmitError && (
+                  <div className="flex items-start gap-2 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.25)] rounded-lg px-3 py-2">
+                    <AlertCircle className="w-4 h-4 text-[#EF4444] shrink-0 mt-0.5" />
+                    <div className="text-[12px] text-[#EF4444]">{flashSubmitError}</div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleFlashSubmit}
+                  disabled={flashSubmitSending}
+                  className="w-full py-3 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[13px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(36,95,115,0.3)]"
+                >
+                  {flashSubmitSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  {flashSubmitSending ? 'Sending…' : 'Confirm & Go to 3.4 Upload'}
+                </button>
+                <p className="text-[11px] tql-text-muted text-center leading-relaxed">
+                  A summary PDF + pricing detail will be emailed from <span className="tql-text-teal font-semibold">Flash@tqltpo.com</span> to <span className="tql-text-teal font-semibold">disclosuredesk@tqlend.com</span> with you cc'd.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {showHelpDesk && (
         <>
           <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => setShowHelpDesk(false)} />
