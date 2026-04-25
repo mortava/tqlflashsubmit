@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const AdminChatPage = lazy(() => import('@/pages/AdminChatPage'))
 const UserChatPage = lazy(() => import('@/pages/UserChatPage'))
@@ -40,8 +41,10 @@ function Router() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <Router />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router />
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )
