@@ -1236,6 +1236,17 @@ export default function App() {
     })
   }
 
+  // DSCR 5% Fixed PPP — this program is always displayed when DSCR is the
+  // selected Doc Type, even if its prices fall outside the 99.000–101.750
+  // band. TQL leans on this program as the default investor scenario.
+  const isDSCR5PctPPPProgram = (programName: string): boolean => {
+    const n = String(programName || '').toUpperCase()
+    return /DSCR/.test(n) && /5\s*%\s*.*PPP|PPP\s*5\s*%|5\s*YEAR\s*PPP|5YR\s*PPP/.test(n)
+  }
+  const isDSCRSelected = formData.documentationType === 'dscr'
+  const shouldPinDSCR5Pct = (programName: string): boolean =>
+    isDSCRSelected && isDSCR5PctPPPProgram(programName)
+
   // Type for target pricing option
   type TargetPricingOption = {
     rate: number
@@ -2225,21 +2236,32 @@ export default function App() {
                     )}
 
                     {/* ===== AVAILABLE PROGRAMS ===== */}
-                    {Array.isArray(result.programs) && result.programs.length > 0 ? (
+                    {Array.isArray(result.programs) && result.programs.length > 0 ? (() => {
+                      // Pre-compute renderable programs. DSCR 5% PPP is force-displayed
+                      // with its full ladder when DSCR is the selected Doc Type;
+                      // every other program still obeys the 99.000–101.750 filter.
+                      const visiblePrograms = result.programs
+                        .map((program) => {
+                          if (!program || typeof program !== 'object') return null
+                          const allRateOptions = Array.isArray(program.rateOptions) ? program.rateOptions : []
+                          const programName = program.name || 'Unknown'
+                          const pinned = shouldPinDSCR5Pct(programName)
+                          const filteredRateOptions = pinned ? allRateOptions : filterRateOptionsByPrice(allRateOptions)
+                          if (filteredRateOptions.length === 0) return null
+                          return { program, programName, filteredRateOptions, pinned }
+                        })
+                        .filter((p): p is { program: Program; programName: string; filteredRateOptions: RateOption[]; pinned: boolean } => p !== null)
+                      // Pinned DSCR 5% PPP rides to the top when DSCR is selected.
+                      visiblePrograms.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+                      return (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">Available Programs</h3>
                           <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                            {result.programs.filter(p => p && Array.isArray(p.rateOptions) && filterRateOptionsByPrice(p.rateOptions).length > 0).length} found
+                            {visiblePrograms.length} found
                           </span>
                         </div>
-                        {result.programs.map((program, idx) => {
-                          if (!program || typeof program !== 'object') return null
-                          const allRateOptions = Array.isArray(program.rateOptions) ? program.rateOptions : []
-                          const filteredRateOptions = filterRateOptionsByPrice(allRateOptions)
-                          if (filteredRateOptions.length === 0) return null
-
-                          const programName = program.name || `Program ${idx + 1}`
+                        {visiblePrograms.map(({ programName, filteredRateOptions, pinned }, idx) => {
                           const bestRate = filteredRateOptions.reduce((best, opt) => {
                             const price = pointsToPrice(safeNumber(opt.points))
                             const bestPrice = best ? pointsToPrice(safeNumber(best.points)) : Infinity
@@ -2250,13 +2272,16 @@ export default function App() {
                           const isSelectedPrepay = formData.occupancyType === 'investment' && programMatchesPrepay(programName, formData.prepayPeriod)
 
                           return (
-                            <div key={idx} className={`rounded-xl overflow-hidden border transition-all bg-white ${isSelectedPrepay ? 'border-slate-900 shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : isExpanded ? 'border-[#D1D5DB] shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-slate-200'}`}>
+                            <div key={idx} className={`rounded-xl overflow-hidden border transition-all bg-white ${pinned ? 'tql-border-teal shadow-[0_2px_12px_rgba(36,95,115,0.15)]' : isSelectedPrepay ? 'border-slate-900 shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : isExpanded ? 'border-[#D1D5DB] shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-slate-200'}`}>
                               <div className="px-4 py-3">
                                 <div className="flex items-center justify-between mb-2.5">
                                   <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                       <div className="font-bold text-[13px] tql-text-primary tql-font-display tracking-tight">{programName}</div>
-                                      {isSelectedPrepay && (
+                                      {pinned && (
+                                        <span className="shrink-0 text-[9px] font-bold text-white tql-bg-teal px-1.5 py-0.5 rounded uppercase tracking-wider">DSCR Default · 5% PPP</span>
+                                      )}
+                                      {isSelectedPrepay && !pinned && (
                                         <span className="shrink-0 text-[9px] font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">Selected Prepay</span>
                                       )}
                                     </div>
@@ -2673,7 +2698,8 @@ export default function App() {
                           )
                         })}
                       </div>
-                    ) : null}
+                      )
+                    })() : null}
 
                     {/* Secondary Access — HIDDEN */}
 
