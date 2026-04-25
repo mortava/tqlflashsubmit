@@ -64,12 +64,8 @@ interface SubmitLoanPageProps {
   onBack: () => void
 }
 
-const DOC_TYPES = [
-  'Other', '1003 Application', 'Appraisal', 'Bank Statement', 'Credit Report',
-  'Drivers License', 'Employment Verification', 'Flood Certificate', 'HOI Policy',
-  'Income Documentation', 'Mortgage Statement', 'Pay Stub', 'Purchase Contract',
-  'Tax Return (1040)', 'Title Commitment', 'W-2',
-]
+// All uploaded docs are tagged "General Submission Docs" by default —
+// per-file document classification was removed from the broker-facing flow.
 
 const MAX_DOC_SIZE_MB = 3
 const MAX_DOC_SIZE_BYTES = MAX_DOC_SIZE_MB * 1024 * 1024
@@ -186,7 +182,9 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
       if (!data.success) throw new Error(data.error || 'Submission failed')
       setLoanId(data.loanId || ''); setLoanNumber(data.loanNumber || '')
       setF(prev => ({ ...prev, confirmLoanId: data.loanNumber || data.loanId || '' }))
-      setStep('form')
+      // Skip the Loan Setup form — broker provided everything via the
+      // Flash Submit confirmation modal already. Jump straight to Attach Docs.
+      setStep('loan-created')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Submission failed'); setStep('upload-mismo')
     }
@@ -197,7 +195,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
     const oversized = Array.from(files).filter(f => f.size > MAX_DOC_SIZE_BYTES)
     if (oversized.length > 0) { setError(`Files over ${MAX_DOC_SIZE_MB}MB: ${oversized.map(f => f.name).join(', ')}`); return }
     setError(null)
-    setDocs(prev => [...prev, ...Array.from(files).filter(f => f.size <= MAX_DOC_SIZE_BYTES).map(file => ({ file, docType: 'Other' }))])
+    setDocs(prev => [...prev, ...Array.from(files).filter(f => f.size <= MAX_DOC_SIZE_BYTES).map(file => ({ file, docType: 'General Submission Docs' }))])
   }, [])
 
   const handleUploadDocs = useCallback(async () => {
@@ -254,8 +252,8 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
     setStep('complete')
   }, [docs, loanId, loanNumber, f])
 
-  const STEPS = ['MISMO Upload', 'Create Loan', 'Loan Setup Form', 'Attach Docs', 'Complete']
-  const STEP_KEYS: SubmitStep[] = ['upload-mismo', 'submitting', 'form', 'upload-docs', 'complete']
+  const STEPS = ['MISMO Upload', 'Create Loan', 'Attach Docs', 'Complete']
+  const STEP_KEYS: SubmitStep[] = ['upload-mismo', 'submitting', 'upload-docs', 'complete']
   const showBpcFields = f.compType === 'BPC (all DSCR)'
   const showLpcFields = f.compType === 'LPC'
   const showCreditVendorFields = f.reIssueCreditReport
@@ -276,7 +274,7 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
         <div className="flex items-center gap-1.5 mb-8 overflow-x-auto">
           {STEPS.map((label, i) => {
             const si = STEP_KEYS.indexOf(step)
-            const active = i <= Math.max(si, step === 'upload-docs' ? 3 : si)
+            const active = i <= Math.max(si, step === 'upload-docs' || step === 'loan-created' ? 2 : si)
             return (
               <div key={label} className="flex items-center gap-1.5 shrink-0">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${active ? 'bg-black text-white' : 'bg-slate-100 text-slate-400'}`}>{i + 1}</div>
@@ -498,7 +496,6 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">Upload MISMO 3.4 File</h2>
-              <p className="text-sm text-slate-500">Upload your MISMO 3.4 XML file to create a new loan in Encompass.</p>
             </div>
             <div
               onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
@@ -554,10 +551,10 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
                   {docs.map((doc, i) => (
                     <div key={`${doc.file.name}-${i}`} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                       <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                      <div className="flex-1 min-w-0"><p className="text-sm font-medium text-slate-900 truncate">{doc.file.name}</p><p className="text-xs text-slate-400">{(doc.file.size / 1024).toFixed(1)} KB</p></div>
-                      <select value={doc.docType} onChange={e => setDocs(prev => prev.map((d, idx) => idx === i ? { ...d, docType: e.target.value } : d))} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-black">
-                        {DOC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{doc.file.name}</p>
+                        <p className="text-xs text-slate-400">{(doc.file.size / 1024).toFixed(1)} KB · General Submission Docs</p>
+                      </div>
                       <button type="button" onClick={() => setDocs(prev => prev.filter((_, idx) => idx !== i))} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   ))}
