@@ -503,10 +503,11 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
     }
   }
 
-  // Group products by program name. For each product we now pull the rate ladder
-  // (quotes[]) and LLPAs (adjustments[]) from the /products/{productId} detail
-  // endpoint — the initial product-search response only contains a single summary
-  // price per product and no adjustment breakdown.
+  // Group products by RAW productName + investor + productId so each underlying
+  // investor product remains a distinct bucket. The masked TQL display name is
+  // computed for broker view, but the admin "Reveal Master Investor Results"
+  // toggle needs every investor's distinct entry — collapsing them by masked
+  // name (e.g. all "TQL - DSCR 30yr Fixed" merging) would lose investor data.
   const programsMap: Record<string, any> = {}
 
   for (const p of products) {
@@ -514,6 +515,8 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
     // Mask the investor brand so brokers see every program as TQL-branded.
     const programName = maskProgramName(rawProgramName)
     const investor = 'TQL'
+    // Bucket key keeps each investor product separate — admin reveal needs them.
+    const bucketKey = `${rawProgramName}::${String(p.investor || '')}::${p.productId || ''}`
     const status = p.priceStatus || 'Available'
     const monthlyMI = p.monthlyMI || 0
     const lockPeriod = p.lockPeriod || 0
@@ -565,10 +568,10 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
           lockPeriod,
         }]
 
-    // Seed the program bucket the first time we see it
-    if (!programsMap[programName]) {
+    // Seed the program bucket the first time we see this raw investor product
+    if (!programsMap[bucketKey]) {
       const seed = rateRungs[0]
-      programsMap[programName] = {
+      programsMap[bucketKey] = {
         name: programName,                                      // masked, broker-facing
         programName,                                            // masked alias
         rawName: rawProgramName,                                // ADMIN-ONLY — never render directly
@@ -603,7 +606,7 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
       }
     }
 
-    const bucket = programsMap[programName]
+    const bucket = programsMap[bucketKey]
     for (const rung of rateRungs) {
       const pointsOffset = 100 - rung.price
       // Update program-level summary to the rung closest to par.

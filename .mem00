@@ -1,123 +1,93 @@
 # Session Memory — tqlflashsubmit
-**Date**: 2026-04-23 (session spanned 2026-04-20 → 2026-04-23)
+**Date**: 2026-04-26 (rolled forward from earlier 2026-04-20 → 2026-04-23 work)
 **Branch**: master
-**Session Focus**: Full OB pricing integration overhaul + TQL brand + Flash Submit modal with PDF email to Disclosure Desk.
+**Session Focus**: Strict TQL investor masking + Quinn AI experience layer + Flash Submit / 3.4 upload polish + Encompass field-305 hardening.
 
 ## Status
-- **Completed**:
-  - OB v4 pricing integration now pulls per-product detail (`/productsearch/{searchId}/products/{productId}`) for full rate ladder (`quotes[]`) + itemized LLPAs (`adjustments[]`).
-  - DSCR scenarios return 6 programs (Ascend DSCR, Elevate DSCR, TOTAL DSCR, DSCR PPP 5/3/1%) — required `incomeVerificationType: 'InvestorDscr'` + `expandedGuidelines.debtServiceCoverageRatio` + 4 customFields = '110'.
-  - Lock-period filter — each rate now surfaces once with its matching price.
-  - TQL 2026 brand rollout: Monarch logo removed, every CTA on `#245F73` teal, "EXPAND PRICING OPTIONS" + icon-bearing Actions dropdown.
-  - Encompass submit now fetches field 305 ("Lender's Tracking Number") via `/fieldReader` POST with body `["305"]`.
-  - Empty-results UI shows the real OB error (no placeholder cards).
-  - Flash Submit confirmation modal → `/api/flash-submit-request` → PDF (pdf-lib) emailed from `Flash@tqltpo.com` to `disclosuredesk@tqlend.com` with broker cc'd.
-  - Env vars synced to Vercel production (22 keys, ENCOMPASS_* prefix, OB_*, Supabase, Gemini, Browserless, Resend) with stdin piping so special chars survive.
-- **Next Up**: Nothing blocking. Validate live DSCR + Flash Submit on `submit.tqltpo.com`; confirm Resend has `tqltpo.com` configured so `Flash@tqltpo.com` sender is verified.
-- **Blockers**: None. If `Flash@tqltpo.com` bounces, Resend may only have `TPOSub@tqltpo.com` pre-verified — domain is the same so it should work; otherwise add the mailbox alias.
+- **Completed:**
+  - **Strict masking is live** in `api/get-ob-pricing.ts`. `maskProgramName()` strips ~25 investor brands (Ascend, Elevate, Peek, TOTAL, TPO-VRS, Deephaven, Verus, Rocket TPO, AD Mortgage, LoanStream, Planet Mortgage, Champions, Lima One, Acra, Velocity, Visio, Newrez, Citadel, Angel Oak, A&D, FOA, Quontic, Sprout, Carrington, plus pre-existing TQL prefixes) and tier suffixes (`- EG`, `- Tier N`, `- Standard/Plus/Premier/Select/Premium/Core/Prime`, `(EG)`). PPP qualifier extracted and re-emitted as `5%PPP / 3%PPP / 1%PPP / 5yrPPP / NoPPP`. Format: `TQL - <doc> <term>yr <amort>[ <ppp>]`.
+  - Programs ship `name`/`programName` (masked) **plus** `rawName`/`rawInvestor`/`rawProgramName`/`rawInvestorName` (admin-only). `investor`/`investorName` forced `"TQL"`.
+  - **Admin reveals raw** — passcode `TQLFAITH` (case + space insensitive) flips `showRawInvestor`. Sidebar "User Admin · Raw Investor View"; modal CTAs "Reveal Master Investor Results" / "Re-Mask · Hide Raw Investor Names".
+  - Full price ladder always visible to brokers; `showFullResults` is now a constant `true`. Removed all "Hide Full Results" copy/state.
+  - **Quinn AI flair**: new `<QuinnGlow>` component (glowing **Q**, Sky Signal `#38BDF8`). Hero card: `Quinn AI · Lowest Rate · Highest Price` + corner "AI Pick" chip with mini Q. Loading: "Quinn AI · Price Search…". "More Pricing Options" pill: sky-blue `AI Filtered · 99.000–101.750`.
+  - Encompass field 305 (Lender Case #) — retries up to 4× with 350ms backoff reading fields 305 / 4 / 364, then writes loan number into 305 via `/fieldReader`+`/fieldWriter`. Returns 317-prefixed number, never the GUID.
+  - Submit Complete page: 3 CTAs (Submit a New Loan, Go to TQLTPO Site, Log into Bench Loan Hub) + Lender Tracking # surfaced.
+  - Flash Submit confirmation modal + `/api/flash-submit-request` endpoint sends PDF (pdf-lib) email from `Flash@tqltpo.com` → `disclosuredesk@tqlend.com` cc broker.
+  - Email Rate Quote modal + `buildRateQuoteEmail()` (mobile-first, system-font stack, max-width 600px, viewport meta).
+  - DSCR 5% PPP pinned + price-band-bypassed when Doc Type = DSCR.
+  - ErrorBoundary at `<main>` root prevents blank-screen crashes.
+- **Next Up:** Validate live DSCR end-to-end on `submit.tqltpo.com`; manually confirm passcode unlock (controlled-input limitation in headless tests).
+- **Blockers:** None.
 
-## Change Tree (This Session)
+## Change Tree (cumulative this session arc)
 ```
-modified:  src/App.tsx                         Hero rate card removed; criteria pills; program ladder 99-101.75; "EXPAND PRICING OPTIONS" CTA; Flash Submit modal + ToggleRow component; actions dropdown restyled (icons, teal shadow); lockPeriod added to RateOption type.
-modified:  src/index.css                       Added .tql-border-teal and .tql-dot-teal utilities.
-modified:  src/pages/SubmitLoanPage.tsx        "Loan Number" → "Lender Tracking #" copy; primary CTA renamed "FLASH SUBMIT → UPLOAD 3.4" on teal.
-modified:  api/get-ob-pricing.ts               Per-product detail fetch in parallel; quotes-based rate ladder filtered by desiredLockDays; LLPA normaliser strips "Max of LTV/CLTV/HCLTV is"; incomeVerificationMap; DSCR ratio in expandedGuidelines; ManualTraditional AUS; NoBuyerPaid LO comp; dutyToServe/missionScore; customFields 01-04 = '110'.
-modified:  api/encompass-submit.ts             getLenderTrackingNumber() using POST /fieldReader body ["305"]; API_BASE reads ENCOMPASS_API_BASE_URL first; response now includes lenderTrackingNumber.
-modified:  api/encompass-upload.ts             ENCOMPASS_API_BASE_URL with fallback to legacy API_BASE_URL.
-modified:  api/_lib/encompass-token.ts         Reads ENCOMPASS_* env vars with fallback to legacy unprefixed names.
-added:     api/flash-submit-request.ts         New endpoint. pdf-lib PDF + Resend email from Flash@tqltpo.com to disclosuredesk@tqlend.com, cc broker.
-deleted:   public/monarch_tql.svg              Replaced with "TQL · Flash Submit" wordmark.
-modified:  package.json                        Added pdf-lib ^1.17.1.
-modified:  .env.local                          Master local env rewritten with user-supplied values (ENCOMPASS_*, OB_*, Resend, Gemini, Supabase, Browserless).
-modified:  .gitignore                          Added .env*.local and .mem00.
+modified:  api/get-ob-pricing.ts        Comprehensive maskProgramName() + rawName/rawInvestor passthrough; per-product detail fetch; lock-period filter; LLPA prefix scrub; DSCR ratio + customFields 110.
+modified:  api/encompass-submit.ts      getLenderTrackingNumber() with retries + fieldReader/fieldWriter + multi-field fallback (305/4/364).
+modified:  api/encompass-upload.ts      ENCOMPASS_API_BASE_URL prefix.
+modified:  api/_lib/encompass-token.ts  ENCOMPASS_* env vars, legacy fallback.
+added:     api/flash-submit-request.ts  pdf-lib summary + Resend send to disclosure desk.
+modified:  src/App.tsx                  showRawInvestor + QuinnGlow + admin modal rewrite + masked vs raw program rendering + best-rate hero + email quote modal + Flash Submit modal + ToggleRow + criteria pills.
+added:     src/components/ErrorBoundary.tsx
+modified:  src/main.tsx                 Wrapped app in <ErrorBoundary>.
+modified:  src/index.css                .tql-border-teal / .tql-dot-teal utilities.
+modified:  src/pages/SubmitLoanPage.tsx Skipped Loan Setup form step; "General Submission Docs" default; 3 Complete CTAs; Lender Tracking # surfaced.
+deleted:   public/monarch_tql.svg
+modified:  package.json                 + pdf-lib ^1.17.1.
+modified:  .env.local                   Master values for ENCOMPASS_* / OB_* / Resend / Gemini / Supabase / Browserless.
 ```
 
-## Key Decisions
-- **OB secondary fetch over request expansion**: chose `Promise.all` of detail calls per product over attempting to expand the product search payload — proven reliable and matches what the OB portal does.
-- **`InvestorDscr` (no hyphen) for DSCR**: OB rejects `Investor-DSCR`; probed 60+ enum variants — only `FullDoc | WrittenVOE | Stated | NoIncomeVerification | InvestorDscr | InvestorDSCR` are accepted on channel 165481. Alt-doc (bank stmt, VOE, asset, tax) all routes to `WrittenVOE`.
-- **ENCOMPASS_* prefix with legacy fallback**: API handlers read `ENCOMPASS_*` first, fall back to unprefixed names so old Vercel env doesn't break existing deploys.
-- **PDF server-side via pdf-lib**: avoids client-side dep bloat; Resend `attachments[]` expects base64 content.
-- **Lock-period filter in parseOBResponse**: OB returns same rate at 30/45/60-day locks with different prices — filter to the user's `desiredLockPeriod`; fall back to nearest available lock if none match exactly.
+## Key Rules (NON-NEGOTIABLE)
+- **Investor masking is permanent.** Every broker / borrower / email / PDF / quote surface MUST display `name`. Only the admin-gated `rawName` may surface for internal audit.
+- **Investor field is forced to `"TQL"`.** Never display the underlying lender brand on broker-facing surfaces.
+- **Admin passcode is `TQLFAITH`** (lowercased + whitespace stripped before comparison).
+
+## OB Channel 165481 Reference
+- Accepted `incomeVerificationType` enums: `FullDoc | WrittenVOE | Stated | NoIncomeVerification | InvestorDscr` (no hyphen). Map: full → FullDoc, dscr → InvestorDscr, everything alt-doc → WrittenVOE, noRatio → NoIncomeVerification.
+- Required `customFields` (else 0 products): `CustomProductFilter01..04 = '110'` mapped to `CustomLenderField4/5/7/8`.
+- DSCR products require `expandedGuidelines.debtServiceCoverageRatio` populated.
+- Product search returns NO LLPAs — must call detail endpoint per product:
+  `GET /full/api/businesschannels/{bcId}/originators/{origId}/productsearch/{searchId}/products/{productId}` → `{ quotes[], adjustments: [{reason, adjustor (string), type}] }`. Filter quotes by `desiredLockPeriod`.
+
+## Encompass Reference
+- Token: `POST /oauth2/v1/token` with `username@encompass:{instanceId}` smart user, password grant.
+- Field 305 (Lender Case #) — populate via `PATCH /encompass/v3/loans/{loanId}/fieldWriter` body `[{fieldId:"305", value:"…"}]`.
+- Field 4 (Loan Number) — Encompass auto-generates 317-prefixed.
+- Current creds (live in Vercel + .env.local): `ENCOMPASS_USERNAME=Jbeach`, `ENCOMPASS_PASSWORD=enPlantshop25$`, `ENCOMPASS_INSTANCE_ID=BE11223549`.
 
 ## Commands
 ```bash
-# Dev
-npm run dev                 # vite, port 5173
-
-# Build + typecheck
+npm run dev                 # vite dev
 npm run build               # tsc -b && vite build
-
-# Deploy
 git push origin master
 npx vercel --prod --yes
-
-# Runtime logs (via Vercel MCP tool, not CLI — CLI tails interactively)
-# Use mcp__claude_ai_Vercel__get_runtime_logs with query="[OB]"
-
-# Pull Vercel env locally
 npx vercel env pull .env.local --environment=production --yes
 ```
 
-## Technical Notes
-- **OB product search does NOT return LLPAs**. Only the detail endpoint does:
-  `GET /full/api/businesschannels/{bcId}/originators/{origId}/productsearch/{searchId}/products/{productId}`
-  → returns `{ productName, quotes: [{rate, price, apr, principalAndInterest, rebateDollar, discountDollar, lockPeriod, ...}], adjustments: [{reason, adjustor (string), type: 'Adjust Price'|'Adjust Rate'|'Max Price'|'Min Price'}], parQuotes, totalRateAdjustment, totalPriceAdjustment, ... }`
-- **OB accepts these `incomeVerificationType` values ONLY**: `FullDoc`, `WrittenVOE`, `Stated`, `NoIncomeVerification`, `InvestorDscr`/`InvestorDSCR`. Hyphenated forms 400.
-- **Channel 165481 NEEDS these 4 customFields or returns 0 products**: `CustomProductFilter01..04 = '110'` mapped to `CustomLenderField4/5/7/8`.
-- **DSCR products require `expandedGuidelines.debtServiceCoverageRatio` populated** — without it, OB filters them out even with `InvestorDscr`.
-- **Encompass field 305 fetch**: POST `/encompass/v3/loans/{loanId}/fieldReader` with JSON body `["305"]`, returns array with `[{ fieldId: "305", value: "..." }]`. Fall back to `?entities=LoanNumber` (field 2) if 305 empty.
-- **Resend `attachments`**: `[{ filename, content: base64String }]`. No need for mime type — inferred from extension.
-- **Vercel env special-char gotcha**: `&`, `#`, `@`, `*`, `^`, `!`, `~`, `+`, `/` in secret values must be piped via stdin (`printf '%s' 'val' | vercel env add NAME production`). `.env.local` needs single quotes or values get mangled when re-read by custom parsers — defensive parsers should strip both `'` and `"` wrappers.
-- **Resend domain**: `tqltpo.com` is already verified (key `re_hLkp4Nxh_8Mt9gG9ZRgmpn4Rorfugi2aJ`). `Flash@tqltpo.com` should work since domain is verified; if bounce, set up mailbox alias.
-- **OB token**: Azure AD v1, resource `https://marketplaceauth.optimalblue.com/d35ae893-2367-40b5-a9b4-bfab3acb7991`.
-- **Vercel MCP log tool truncates** — only shows one log line per request. Use local probe scripts in `scripts/` (deleted at end of session) for meaningful diagnostics.
-
-## Encompass Creds (Current)
-- Username: `Jbeach` (was `jimtaco` earlier this session)
-- Password: `enPlantshop25$` (was `Winner26!`)
-- Instance: `BE11223549`
-- Verified live auth → 200 + bearer token.
-
-## OB Request Shape (DSCR Reference)
-Key non-obvious values that make DSCR return products on channel 165481:
+## Recent Commits (latest 8)
 ```
-loanInformation.automatedUnderwritingSystem = 'ManualTraditional'
-loanInformation.includeLOCompensationInPricing = 'NoBuyerPaid'
-loanInformation.dutyToServe = 'No'
-loanInformation.missionScore = 'Zero'
-loanInformation.customFields = [
-  { customFieldInputName: 'CustomProductFilter01', customFieldValue: '110', columnName: 'CustomLenderField4' },
-  { customFieldInputName: 'CustomProductFilter02', customFieldValue: '110', columnName: 'CustomLenderField5' },
-  { customFieldInputName: 'CustomProductFilter03', customFieldValue: '110', columnName: 'CustomLenderField7' },
-  { customFieldInputName: 'CustomProductFilter04', customFieldValue: '110', columnName: 'CustomLenderField8' },
-]
-loanInformation.expandedGuidelines.incomeVerificationType = 'InvestorDscr'
-loanInformation.expandedGuidelines.debtServiceCoverageRatio = <ratio>
-```
-
-## Recent Commits (Session)
-```
+aa0074a feat: Strict TQL masking + Admin reveal raw investor + Quinn AI flair
+59d0b66 feat(results): TQL-masked program names + AI Best Pick on top + admin hides ladder
+57cdf2c feat: Best-rate-only view + User Admin gate, Email Quote, Lender # retry, Submit CTAs
+320fdca feat(submit): Skip Loan Setup form, drop doc type picker, default to General
+a0a617c fix: Wrap app in ErrorBoundary so render crashes don't blank the screen
+264eb2d feat(results): Always show DSCR 5% PPP when Doc Type is DSCR
+bcd8404 fix: Populate field 305 + remove duplicate TQL Flash wordmark
 e3589f4 feat(flash-submit): Confirmation modal + PDF email to disclosure desk
-950c682 feat(encompass+ui): Field 305 Lender Tracking # + polished CTAs
-626675a fix(ob): DSCR now returns products; show API error when empty, no mocks
-64bf64c fix(ob): Route DSCR to InvestorDSCR + strip LTV/CLTV/HCLTV prefix from LLPAs
-a30eb33 feat(brand): Remove Monarch logo, all CTAs on TQL teal #245F73
-4422049 fix(ob): Map documentationType to OB incomeVerificationType enum
-201fc74 fix(ob): One price per rate — filter quotes by selected lock period
-90cefdc fix(ob): Fetch per-product detail to surface LLPAs + full rate ladder
-f7c840d feat(results): Drop Best Available Rate hero + recursive OB LLPA extraction
-aef4ed8 feat(results): Selected prepay/term pills + Pricing Adjustments panel + ADJ column fix
-3d2aa62 feat(results): Always show full 99.000-101.750 ladder per program + adjustments grid
-594ed32 feat(adjustments+brand): Inline itemized LLPA view + TQL brand kit applied
-48ddd16 feat(ob+brand): Return OB LLPAs on every rate option + full TQL 2026 brand overhaul
 ```
 
-## Uncommitted Changes
+## Uncommitted
 ```
 None — all committed.
-Working tree has an untracked nested `tqlflashsubmit/` directory (stale embedded checkout).
-Exclude from every git add via `git reset HEAD tqlflashsubmit`.
+Untracked: nested ./tqlflashsubmit/ directory (stale embedded checkout, intentionally excluded from every git add via `git reset HEAD tqlflashsubmit`).
 ```
 
 ## Latest Prod URL
-https://tqlflashsubmit-cuagg9e0y-james-projects-d94c6754.vercel.app → `submit.tqltpo.com`
+https://tqlflashsubmit-9bulzbtqw-james-projects-d94c6754.vercel.app → `submit.tqltpo.com`
+
+## Routing & Brand Quick Refs
+- Quinn AI Sky Signal: `#38BDF8` (with rgba(56,189,248,…) gradients)
+- TQL teal CTA: `#245F73` (.tql-bg-teal / .tql-text-teal / .tql-border-teal)
+- Canvas bg: `#FAFAF8` (--tql-bg)
+- Steel borders: `#CBD5E1` (.tql-border-steel)
+- Default font display: Manrope (.tql-font-display); body: Inter
+- Email templates: system-font stack only (Manrope/Inter not safe across Outlook/Gmail).

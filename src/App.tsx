@@ -219,6 +219,9 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
       .filter((p): p is Record<string, unknown> => p && typeof p === 'object')
       .map(p => ({
         name: String(p.name || 'Unknown Program'),
+        // Preserve admin-only raw fields so the User Admin reveal works.
+        rawName: typeof p.rawName === 'string' ? p.rawName : undefined,
+        rawInvestor: typeof p.rawInvestor === 'string' ? p.rawInvestor : undefined,
         parRate: safeNumber(p.parRate || p.rate),
         parPoints: safeNumber(p.parPoints || p.price),
         rateOptions: Array.isArray(p.rateOptions)
@@ -230,6 +233,7 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
                 apr: safeNumber(o.apr),
                 description: String(o.description || ''),
                 payment: safeNumber(o.payment),
+                lockPeriod: typeof o.lockPeriod === 'number' || typeof o.lockPeriod === 'string' ? o.lockPeriod : undefined,
                 adjustments: Array.isArray(o.adjustments) ? o.adjustments.map((adj: any) => ({
                   description: String(adj.description || ''),
                   amount: safeNumber(adj.amount),
@@ -2546,7 +2550,27 @@ export default function App() {
                       // Pre-compute renderable programs. DSCR 5% PPP is force-displayed
                       // with its full ladder when DSCR is the selected Doc Type;
                       // every other program still obeys the 99.000–101.750 filter.
-                      const visiblePrograms = result.programs
+                      // The OB API returns one bucket per investor product (so admin
+                      // can reveal each), but the broker default view dedupes them by
+                      // masked name to avoid showing 3 cards labeled the same way.
+                      let sourcePrograms: Program[] = result.programs
+                      if (!showRawInvestor) {
+                        const byMasked: Record<string, Program> = {}
+                        for (const prog of result.programs) {
+                          if (!prog) continue
+                          const key = prog.name || 'Unknown'
+                          if (!byMasked[key]) {
+                            byMasked[key] = { ...prog, rateOptions: [...(prog.rateOptions || [])] }
+                          } else {
+                            byMasked[key].rateOptions = [
+                              ...(byMasked[key].rateOptions || []),
+                              ...((prog.rateOptions || []) as RateOption[]),
+                            ]
+                          }
+                        }
+                        sourcePrograms = Object.values(byMasked)
+                      }
+                      const visiblePrograms = sourcePrograms
                         .map((program) => {
                           if (!program || typeof program !== 'object') return null
                           const allRateOptions = Array.isArray(program.rateOptions) ? program.rateOptions : []
@@ -2582,8 +2606,10 @@ export default function App() {
                           const isExpanded = expandedProgram === programName
                           const isSelectedPrepay = formData.occupancyType === 'investment' && programMatchesPrepay(programName, formData.prepayPeriod)
                           // Admin-only raw investor reveal — broker view stays masked.
+                          // Show "<rawProduct>" · "<rawInvestor>" so all underlying
+                          // investors are distinguishable in the admin view.
                           const displayName = showRawInvestor && program.rawName
-                            ? program.rawName
+                            ? `${program.rawName}${program.rawInvestor ? ` · ${program.rawInvestor}` : ''}`
                             : programName
 
                           return (
