@@ -602,9 +602,9 @@ export default function App() {
   const [adminPasscodeInput, setAdminPasscodeInput] = useState('')
   const [adminPasscodeError, setAdminPasscodeError] = useState(false)
   const [showRawInvestor, setShowRawInvestor] = useState(false)
-  // Full price-ladder is always visible to brokers — masking happens at the
-  // program-name layer, not at the visibility layer.
-  const showFullResults = true
+  // Admin unlock controls BOTH raw investor reveal AND full price ladder
+  // visibility. Default broker view = single tier-2 hero card only.
+  const showFullResults = showRawInvestor
   // Email Rate Quote — captures rate + recipient and sends a branded summary
   const [quoteRate, setQuoteRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -1377,30 +1377,41 @@ export default function App() {
   // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
 
-  // ── BEST RATE: Lowest interest rate that still has the highest final price ──
-  // Used for the broker-facing default view (single-result mode); the full
-  // ladder is gated behind the User Admin passcode.
-  const findBestRate = (programs: Program[] | undefined): {
+  // ── 2ND-BEST RATE: tier-2 broker-facing rate ──
+  // Collects every qualifying rate option across every program in the
+  // 99.500–101.750 band, sorts (rate ASC, price DESC) so the top entry is the
+  // absolute best, then returns index 1 — the next-tier-down combination.
+  // Falls back to the absolute best if only one rate qualifies.
+  const findSecondBestRate = (programs: Program[] | undefined): {
     program: Program; opt: RateOption; price: number
   } | null => {
     if (!Array.isArray(programs) || programs.length === 0) return null
-    let best: { program: Program; opt: RateOption; price: number } | null = null
+    const candidates: Array<{ program: Program; opt: RateOption; price: number }> = []
     for (const program of programs) {
       if (!program || !Array.isArray(program.rateOptions)) continue
       for (const opt of program.rateOptions) {
         if (!opt) continue
         const pts = safeNumber(opt.points)
         const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
-        if (price < 99.5 || price > 101.75) continue   // stay inside TQL's price band
+        if (price < 99.5 || price > 101.75) continue
         const rate = safeNumber(opt.rate)
         if (rate <= 0) continue
-        if (!best) { best = { program, opt, price }; continue }
-        // Lower rate wins. Ties broken by higher price.
-        if (rate < best.opt.rate - 1e-6) best = { program, opt, price }
-        else if (Math.abs(rate - best.opt.rate) < 1e-6 && price > best.price) best = { program, opt, price }
+        candidates.push({ program, opt, price })
       }
     }
-    return best
+    if (candidates.length === 0) return null
+    candidates.sort((a, b) => {
+      if (Math.abs(a.opt.rate - b.opt.rate) > 1e-6) return a.opt.rate - b.opt.rate
+      return b.price - a.price
+    })
+    // The very best is intentionally withheld from broker view — surface tier-2.
+    // Skip every entry that ties with the absolute best (same rate AND price)
+    // so brokers always see a truly different combo.
+    const top = candidates[0]
+    const tier2 = candidates.find((c, i) =>
+      i > 0 && (Math.abs(c.opt.rate - top.opt.rate) > 1e-6 || Math.abs(c.price - top.price) > 1e-6)
+    )
+    return tier2 || top
   }
 
   // Filter rate options to only show prices between 99.000 and 101.750 (TQL target range)
@@ -2163,8 +2174,10 @@ export default function App() {
                         <SelectTrigger id="prepayType" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="5pct">5%</SelectItem>
-                          <SelectItem value="declining">Declining</SelectItem>
-                          <SelectItem value="6mointerest">6 Months Interest</SelectItem>
+                          <SelectItem value="3pct">3%</SelectItem>
+                          <SelectItem value="5-3-3pct">5-3-3%</SelectItem>
+                          <SelectItem value="declining-5-1">Declining 5-1%</SelectItem>
+                          <SelectItem value="1pct-oh-mi">1% (OH, MI Only)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2435,9 +2448,9 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* ===== AI-SELECTED BEST RATE (always visible) ===== */}
+                    {/* ===== AI-SELECTED RATE (tier-2; always visible) ===== */}
                     {Array.isArray(result.programs) && result.programs.length > 0 && (() => {
-                      const bestPick = findBestRate(result.programs)
+                      const bestPick = findSecondBestRate(result.programs)
                       // Count what the AI parsed for the helper line.
                       const totalRateOpts = result.programs.reduce(
                         (s, p) => s + (Array.isArray(p?.rateOptions) ? p.rateOptions.length : 0), 0
