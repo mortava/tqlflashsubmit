@@ -312,7 +312,7 @@ const DEFAULT_FORM_DATA: LoanData = {
   paymentType: 'pi',
   impoundType: 'escrowed',
   prepayPeriod: '36mo',
-  prepayType: '5pct',
+  prepayType: '3pct',
   dscrEntityType: 'individual',
   dscrRatio: '1.00-1.149',
   dscrManualInput: '1.000',
@@ -605,6 +605,9 @@ export default function App() {
   // Admin unlock controls BOTH raw investor reveal AND full price ladder
   // visibility. Default broker view = single tier-2 hero card only.
   const showFullResults = showRawInvestor
+  // Broker-facing "Expand Rate Options" — shows the masked TQL rate stack
+  // from 99.000 to 101.750 below the tier-2 hero card.
+  const [showRateStack, setShowRateStack] = useState(false)
   // Email Rate Quote — captures rate + recipient and sends a branded summary
   const [quoteRate, setQuoteRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -1376,6 +1379,72 @@ export default function App() {
 
   // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
+
+  // ── Best rate within a specific PPP family (used for DSCR companion cards) ──
+  const findBestPPPRate = (programs: Program[] | undefined, pppRegex: RegExp): {
+    program: Program; opt: RateOption; price: number
+  } | null => {
+    if (!Array.isArray(programs) || programs.length === 0) return null
+    let best: { program: Program; opt: RateOption; price: number } | null = null
+    for (const program of programs) {
+      if (!program || !pppRegex.test(program.name || '')) continue
+      if (!Array.isArray(program.rateOptions)) continue
+      for (const opt of program.rateOptions) {
+        if (!opt) continue
+        const pts = safeNumber(opt.points)
+        const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
+        if (price < 99.5 || price > 101.75) continue
+        const rate = safeNumber(opt.rate)
+        if (rate <= 0) continue
+        if (!best) { best = { program, opt, price }; continue }
+        if (rate < best.opt.rate - 1e-6) best = { program, opt, price }
+        else if (Math.abs(rate - best.opt.rate) < 1e-6 && price > best.price) best = { program, opt, price }
+      }
+    }
+    return best
+  }
+
+  // ── Consolidated TQL rate stack (99.000–101.750) for "Expand Rate Options" ──
+  // Pulls every qualifying rate option across every program, dedupes by
+  // (rate, price) so duplicates from the same masked program collapse,
+  // and sorts ascending by rate. Excludes the absolute best so brokers
+  // see the same tier-2-and-below picture as the hero card.
+  const buildRateStack = (programs: Program[] | undefined): Array<{
+    program: Program; opt: RateOption; price: number
+  }> => {
+    if (!Array.isArray(programs) || programs.length === 0) return []
+    const all: Array<{ program: Program; opt: RateOption; price: number }> = []
+    for (const program of programs) {
+      if (!program || !Array.isArray(program.rateOptions)) continue
+      for (const opt of program.rateOptions) {
+        if (!opt) continue
+        const pts = safeNumber(opt.points)
+        const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
+        if (price < 99.0 || price > 101.75) continue
+        const rate = safeNumber(opt.rate)
+        if (rate <= 0) continue
+        all.push({ program, opt, price })
+      }
+    }
+    // Dedupe by program-name + rate + price so the same masked combo doesn't repeat.
+    const seen = new Set<string>()
+    const unique = all.filter(c => {
+      const key = `${c.program.name}|${c.opt.rate.toFixed(3)}|${c.price.toFixed(3)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    // Sort by rate ASC, then by price DESC (best price first within the same rate).
+    unique.sort((a, b) => {
+      if (Math.abs(a.opt.rate - b.opt.rate) > 1e-6) return a.opt.rate - b.opt.rate
+      return b.price - a.price
+    })
+    // Drop the absolute top (every entry tying it on rate AND price) so brokers
+    // see the same tier-2-and-below picture as the hero card.
+    if (unique.length === 0) return unique
+    const top = unique[0]
+    return unique.filter(c => Math.abs(c.opt.rate - top.opt.rate) > 1e-6 || Math.abs(c.price - top.price) > 1e-6)
+  }
 
   // ── 2ND-BEST RATE: tier-2 broker-facing rate ──
   // Collects every qualifying rate option across every program in the
@@ -2549,11 +2618,114 @@ export default function App() {
                                 <Zap className="w-3.5 h-3.5" />Flash Submit → 3.4
                               </button>
                             </div>
-                            <div className="mt-3 text-[10px] tql-text-muted text-center flex items-center justify-center gap-1.5">
-                              <QuinnGlow size={12} withRing={false} />
-                              <span>Quinn AI parsed <span className="font-semibold tql-text-primary">{totalRateOpts}</span> rate combinations across <span className="font-semibold tql-text-primary">{result.programs.length}</span> TQL programs to surface this pick.</span>
-                            </div>
                           </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* ===== DSCR COMPANION CARDS — always show 5% PPP and 3% PPP picks ===== */}
+                    {formData.documentationType === 'dscr' && Array.isArray(result.programs) && result.programs.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {(['5', '3'] as const).map(pct => {
+                          const re = new RegExp(`\\b${pct}\\s*%\\s*PPP\\b`, 'i')
+                          const pick = findBestPPPRate(result.programs, re)
+                          if (!pick) return null
+                          const adj = pick.opt.adjustments || []
+                          const net = adj.reduce((s, a) => s + (a.amount || 0), 0)
+                          const display = showRawInvestor && pick.program.rawName ? pick.program.rawName : (pick.program.name || `TQL - ${pct}%PPP Program`)
+                          return (
+                            <div key={pct} className="bg-white border tql-border-steel rounded-xl overflow-hidden shadow-sm">
+                              <div className="px-4 py-2.5 flex items-center justify-between border-b tql-border-steel" style={{ background: 'rgba(56,189,248,0.08)' }}>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <QuinnGlow size={14} withRing={false} />
+                                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#0284C7' }}>DSCR · {pct}% PPP</span>
+                                </div>
+                                <span className="text-[10px] font-medium tql-text-muted truncate ml-2" title={display}>{display}</span>
+                              </div>
+                              <div className="px-4 py-3 grid grid-cols-4 gap-2">
+                                <div>
+                                  <div className="text-[16px] font-bold tql-text-primary tabular-nums">{pick.opt.rate.toFixed(3)}%</div>
+                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">Rate</div>
+                                </div>
+                                <div>
+                                  <div className={`text-[16px] font-bold tabular-nums ${pick.price >= 100 ? 'tql-text-teal' : 'tql-text-primary'}`}>{pick.price.toFixed(3)}</div>
+                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">Price</div>
+                                </div>
+                                <div>
+                                  <div className="text-[16px] font-bold tql-text-primary tabular-nums">{safeNumber(pick.opt.apr).toFixed(3)}%</div>
+                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">APR</div>
+                                </div>
+                                <div>
+                                  <div className="text-[16px] font-bold tql-text-primary tabular-nums">{safeNumber(pick.opt.payment) > 0 ? formatCurrency(safeNumber(pick.opt.payment)) : '—'}</div>
+                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">P&amp;I</div>
+                                </div>
+                              </div>
+                              {adj.length > 0 && (
+                                <div className="px-4 py-1.5 border-t tql-border-steel flex items-center justify-between text-[10px]">
+                                  <span className="tql-text-muted uppercase tracking-wider">Net LLPA · {adj.length}</span>
+                                  <span className={`font-bold tabular-nums ${net >= 0 ? 'tql-text-teal' : 'text-[#EF4444]'}`}>{net >= 0 ? '+' : ''}{net.toFixed(3)}</span>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* ===== EXPAND RATE OPTIONS — broker-facing masked rate stack 99.000–101.750 ===== */}
+                    {Array.isArray(result.programs) && result.programs.length > 0 && (() => {
+                      const stack = buildRateStack(result.programs)
+                      if (stack.length === 0) return null
+                      return (
+                        <div className="bg-white border tql-border-steel rounded-xl overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setShowRateStack(v => !v)}
+                            className="w-full flex items-center justify-between px-5 py-3 hover:bg-[color:var(--tql-bg)] transition-colors"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <QuinnGlow size={14} withRing={false} />
+                              <span className="text-[12px] font-bold uppercase tracking-wider tql-text-primary tql-font-display">Expand Rate Options</span>
+                              <span className="hidden sm:inline-flex items-center text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>99.000 – 101.750</span>
+                              <span className="text-[10px] tql-text-muted whitespace-nowrap">· {stack.length} option{stack.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            {showRateStack ? <ChevronUp className="w-4 h-4 tql-text-teal" /> : <ChevronDown className="w-4 h-4 tql-text-teal" />}
+                          </button>
+                          {showRateStack && (
+                            <div className="border-t tql-border-steel overflow-x-auto">
+                              <table className="w-full text-[11px]">
+                                <thead>
+                                  <tr className="tql-text-muted border-b tql-border-steel uppercase tracking-wider">
+                                    <th className="text-left py-2 px-4 font-medium">Program</th>
+                                    <th className="text-right py-2 px-2 font-medium">Rate</th>
+                                    <th className="text-right py-2 px-2 font-medium">Price</th>
+                                    <th className="text-right py-2 px-2 font-medium">APR</th>
+                                    <th className="text-right py-2 px-2 font-medium">P&amp;I</th>
+                                    <th className="text-right py-2 px-4 font-medium">Net LLPA</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {stack.map((row, i) => {
+                                    const adj = row.opt.adjustments || []
+                                    const net = adj.reduce((s, a) => s + (a.amount || 0), 0)
+                                    const display = showRawInvestor && row.program.rawName ? row.program.rawName : (row.program.name || 'TQL - Program')
+                                    return (
+                                      <tr key={`${row.program.name}-${i}`} className="border-b tql-border-steel last:border-b-0 hover:bg-[color:var(--tql-bg)]">
+                                        <td className="py-2 px-4 tql-text-primary truncate max-w-[280px]" title={display}>{display}</td>
+                                        <td className="py-2 px-2 text-right font-semibold tabular-nums tql-text-primary">{row.opt.rate.toFixed(3)}%</td>
+                                        <td className={`py-2 px-2 text-right font-semibold tabular-nums ${row.price >= 100 ? 'tql-text-teal' : 'tql-text-primary'}`}>{row.price.toFixed(3)}</td>
+                                        <td className="py-2 px-2 text-right tabular-nums tql-text-primary">{safeNumber(row.opt.apr).toFixed(3)}%</td>
+                                        <td className="py-2 px-2 text-right tabular-nums tql-text-primary">{safeNumber(row.opt.payment) > 0 ? formatCurrency(safeNumber(row.opt.payment)) : '—'}</td>
+                                        <td className={`py-2 px-4 text-right tabular-nums font-semibold ${adj.length === 0 ? 'tql-text-muted' : net >= 0 ? 'tql-text-teal' : 'text-[#EF4444]'}`}>
+                                          {adj.length === 0 ? '–' : `${net >= 0 ? '+' : ''}${net.toFixed(3)}`}
+                                        </td>
+                                      </tr>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       )
                     })()}
