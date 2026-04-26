@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock, Sparkles } from 'lucide-react'
+import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -133,7 +133,9 @@ interface RateOption {
 }
 
 interface Program {
-  name: string
+  name: string                 // masked, broker-facing program name (always "TQL - …")
+  rawName?: string             // ADMIN-ONLY — original investor productName
+  rawInvestor?: string         // ADMIN-ONLY — original lender brand
   status?: string
   term?: number
   due?: number
@@ -325,6 +327,33 @@ const DEFAULT_FORM_DATA: LoanData = {
 }
 
 /* ── Draggable Floating Panel ── */
+// Quinn AI badge — glowing "Q" in TQL Sky Signal #38BDF8.
+// Used wherever the app should feel AI-driven (hero card, loading state, pills).
+function QuinnGlow({ size = 18, withRing = true }: { size?: number; withRing?: boolean }) {
+  const dim = `${size}px`
+  return (
+    <span className="relative inline-flex items-center justify-center" style={{ width: dim, height: dim }}>
+      {withRing && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.55) 0%, rgba(56,189,248,0) 70%)', filter: 'blur(0.5px)' }}
+        />
+      )}
+      <span
+        className="relative font-extrabold tql-font-display"
+        style={{
+          color: '#38BDF8',
+          fontSize: `${Math.round(size * 0.78)}px`,
+          lineHeight: 1,
+          textShadow: '0 0 6px rgba(56,189,248,0.55), 0 0 12px rgba(56,189,248,0.25)',
+          letterSpacing: '-0.02em',
+        }}
+      >Q</span>
+    </span>
+  )
+}
+
 // Builds a mobile-friendly TQL-branded HTML email for a single rate quote.
 // Sent via /api/send-email; rendered inside common email clients (Gmail, Apple Mail, Outlook).
 function buildRateQuoteEmail(
@@ -562,13 +591,16 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'pricing' | 'login' | 'signup' | 'submit'>('pricing')
   // Help Desk state
   const [showHelpDesk, setShowHelpDesk] = useState(false)
-  // User Admin — passcode toggles the full results ladder OFF so only the
-  // AI-selected best rate is visible. Default = full ladder shown to brokers.
-  const ADMIN_PASSCODE = 'tql faith'
+  // User Admin — passcode reveals the RAW investor names (Master Investor
+  // Results). Default broker view shows TQL-masked program names only.
+  const ADMIN_PASSCODE = 'tqlfaith'
   const [showUserAdmin, setShowUserAdmin] = useState(false)
   const [adminPasscodeInput, setAdminPasscodeInput] = useState('')
   const [adminPasscodeError, setAdminPasscodeError] = useState(false)
-  const [showFullResults, setShowFullResults] = useState(true)
+  const [showRawInvestor, setShowRawInvestor] = useState(false)
+  // Full price-ladder is always visible to brokers — masking happens at the
+  // program-name layer, not at the visibility layer.
+  const showFullResults = true
   // Email Rate Quote — captures rate + recipient and sends a branded summary
   const [quoteRate, setQuoteRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -1615,7 +1647,7 @@ export default function App() {
             className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left ${showFullResults ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-900 hover:bg-slate-50'}`}
           >
             <Lock className="w-[18px] h-[18px] shrink-0" />
-            <span className="text-[13px] truncate">User Admin{showFullResults ? '' : ' · Best-Rate Only'}</span>
+            <span className="text-[13px] truncate">User Admin{showRawInvestor ? ' · Raw Investor View' : ''}</span>
           </button>
         </nav>
 
@@ -1701,7 +1733,7 @@ export default function App() {
                 className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left ${showFullResults ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-900 hover:bg-slate-50'}`}
               >
                 <Lock className="w-[18px] h-[18px] shrink-0" />
-                <span className="text-[13px]">User Admin{showFullResults ? '' : ' · Best-Rate Only'}</span>
+                <span className="text-[13px]">User Admin{showRawInvestor ? ' · Raw Investor View' : ''}</span>
               </button>
             </nav>
             <div className="px-3 py-4 border-t border-slate-200">
@@ -2286,10 +2318,10 @@ export default function App() {
                   <div className="bg-white border tql-border-steel rounded-xl p-6 flex items-center gap-4">
                     <div className="relative shrink-0">
                       <Loader2 className="w-6 h-6 tql-text-teal animate-spin" />
-                      <Sparkles className="w-3 h-3 absolute -top-1 -right-1" style={{ color: '#818CF8' }} />
+                      <span className="absolute -top-1 -right-1"><QuinnGlow size={14} /></span>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold tql-text-primary">AI is parsing live pricing…</div>
+                      <div className="text-sm font-semibold tql-text-primary">Quinn AI · Price Search…</div>
                       <p className="text-[11px] tql-text-muted mt-0.5">Pulling rates, LLPAs, and pricing adjustments to find your best fit.</p>
                     </div>
                   </div>
@@ -2420,17 +2452,17 @@ export default function App() {
                       return (
                         <div className="bg-white border-2 tql-border-teal rounded-xl shadow-[0_4px_20px_rgba(36,95,115,0.18)] overflow-hidden">
                           <div className="tql-bg-teal text-white px-5 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Sparkles className="w-4 h-4 shrink-0" style={{ color: '#C4CCFB' }} />
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <QuinnGlow size={20} />
                               <div className="min-w-0">
                                 <div className="text-[11px] uppercase tracking-widest opacity-90 flex items-center gap-1.5">
-                                  <span>AI-Selected · Lowest Rate · Highest Price</span>
+                                  <span>Quinn AI · Lowest Rate · Highest Price</span>
                                 </div>
-                                <div className="text-[14px] font-bold truncate tql-font-display">{programName}</div>
+                                <div className="text-[14px] font-bold truncate tql-font-display">{showRawInvestor ? (program.rawName || programName) : programName}</div>
                               </div>
                             </div>
                             <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-white/15 px-2 py-1 rounded-md backdrop-blur-sm">
-                              <Sparkles className="w-3 h-3" />AI Pick
+                              <QuinnGlow size={11} withRing={false} />AI Pick
                             </span>
                           </div>
                           <div className="px-5 py-4">
@@ -2501,8 +2533,8 @@ export default function App() {
                               </button>
                             </div>
                             <div className="mt-3 text-[10px] tql-text-muted text-center flex items-center justify-center gap-1.5">
-                              <Sparkles className="w-3 h-3" style={{ color: '#818CF8' }} />
-                              <span>AI parsed <span className="font-semibold tql-text-primary">{totalRateOpts}</span> rate combinations across <span className="font-semibold tql-text-primary">{result.programs.length}</span> TQL programs to surface this pick.</span>
+                              <QuinnGlow size={12} withRing={false} />
+                              <span>Quinn AI parsed <span className="font-semibold tql-text-primary">{totalRateOpts}</span> rate combinations across <span className="font-semibold tql-text-primary">{result.programs.length}</span> TQL programs to surface this pick.</span>
                             </div>
                           </div>
                         </div>
@@ -2532,15 +2564,15 @@ export default function App() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">More Pricing Options</h3>
-                            <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#818CF8', background: 'rgba(129,140,248,0.10)', border: '1px solid rgba(129,140,248,0.28)' }}>
-                              <Sparkles className="w-2.5 h-2.5" />AI Filtered · 99.000–101.750
+                            <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>
+                              <QuinnGlow size={10} withRing={false} />AI Filtered · 99.000–101.750
                             </span>
                           </div>
                           <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                             {visiblePrograms.length} found
                           </span>
                         </div>
-                        {visiblePrograms.map(({ programName, filteredRateOptions, pinned }, idx) => {
+                        {visiblePrograms.map(({ program, programName, filteredRateOptions, pinned }, idx) => {
                           const bestRate = filteredRateOptions.reduce((best, opt) => {
                             const price = pointsToPrice(safeNumber(opt.points))
                             const bestPrice = best ? pointsToPrice(safeNumber(best.points)) : Infinity
@@ -2549,6 +2581,10 @@ export default function App() {
                           const bestPayment = bestRate ? safeNumber(bestRate.payment) : 0
                           const isExpanded = expandedProgram === programName
                           const isSelectedPrepay = formData.occupancyType === 'investment' && programMatchesPrepay(programName, formData.prepayPeriod)
+                          // Admin-only raw investor reveal — broker view stays masked.
+                          const displayName = showRawInvestor && program.rawName
+                            ? program.rawName
+                            : programName
 
                           return (
                             <div key={idx} className={`rounded-xl overflow-hidden border transition-all bg-white ${pinned ? 'tql-border-teal shadow-[0_2px_12px_rgba(36,95,115,0.15)]' : isSelectedPrepay ? 'border-slate-900 shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : isExpanded ? 'border-[#D1D5DB] shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-slate-200'}`}>
@@ -2556,7 +2592,10 @@ export default function App() {
                                 <div className="flex items-center justify-between mb-2.5">
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <div className="font-bold text-[13px] tql-text-primary tql-font-display tracking-tight">{programName}</div>
+                                      <div className="font-bold text-[13px] tql-text-primary tql-font-display tracking-tight">{displayName}</div>
+                                      {showRawInvestor && (
+                                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>Raw · Admin</span>
+                                      )}
                                       {pinned && (
                                         <span className="shrink-0 text-[9px] font-bold text-white tql-bg-teal px-1.5 py-0.5 rounded uppercase tracking-wider">DSCR Default · 5% PPP</span>
                                       )}
@@ -3248,32 +3287,32 @@ export default function App() {
                   <Lock className="w-5 h-5 text-white" />
                   <div>
                     <div className="text-[15px] font-bold text-white tracking-tight tql-font-display">User Admin</div>
-                    <div className="text-[11px] text-white/80 mt-0.5">{showFullResults ? 'Enter passcode to switch to Best-Rate-Only mode' : 'Best-Rate-Only mode active'}</div>
+                    <div className="text-[11px] text-white/80 mt-0.5">{showRawInvestor ? 'Raw investor view active — Master Investor Results visible' : 'Enter passcode to reveal raw investor data'}</div>
                   </div>
                 </div>
                 <button type="button" onClick={() => setShowUserAdmin(false)} className="p-1 text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-6 py-5 space-y-4">
-                {!showFullResults ? (
+                {showRawInvestor ? (
                   <>
-                    <div className="flex items-center gap-2 text-[13px] tql-text-primary">
-                      <CheckCircle2 className="w-5 h-5 tql-text-teal" />
-                      Full pricing ladder is hidden — broker view shows only the AI-selected best rate.
+                    <div className="flex items-start gap-2 text-[13px] tql-text-primary">
+                      <CheckCircle2 className="w-5 h-5 tql-text-teal shrink-0 mt-0.5" />
+                      <div>Master Investor Results unlocked. The full pricing ladder now shows the underlying lender / investor product names instead of the TQL-masked names.</div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setShowFullResults(true); setShowUserAdmin(false) }}
+                      onClick={() => { setShowRawInvestor(false); setShowUserAdmin(false) }}
                       className="w-full py-2.5 bg-white border tql-border-steel hover:bg-[color:var(--tql-bg)] tql-text-primary rounded-lg text-[12px] font-bold uppercase tracking-wider transition-colors"
                     >
-                      Show Full Pricing Ladder Again
+                      Re-Mask · Hide Raw Investor Names
                     </button>
                   </>
                 ) : (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault()
-                      if (adminPasscodeInput.trim().toLowerCase() === ADMIN_PASSCODE) {
-                        setShowFullResults(false)
+                      if (adminPasscodeInput.trim().toLowerCase().replace(/\s+/g, '') === ADMIN_PASSCODE) {
+                        setShowRawInvestor(true)
                         setShowUserAdmin(false)
                         setAdminPasscodeInput('')
                         setAdminPasscodeError(false)
@@ -3299,10 +3338,10 @@ export default function App() {
                       type="submit"
                       className="w-full py-2.5 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[12px] font-bold uppercase tracking-wider transition-opacity"
                     >
-                      Hide Full Results · Show Best Rate Only
+                      Reveal Master Investor Results
                     </button>
                     <p className="text-[10px] tql-text-muted text-center leading-relaxed">
-                      Hides the full price ladder (99.000 – 101.750) so brokers see only the AI-selected best rate.
+                      Admin-only. Reveals the raw investor / lender product names returned by Optimal Blue. Default broker view stays masked as TQL.
                     </p>
                   </form>
                 )}

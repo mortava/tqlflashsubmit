@@ -335,36 +335,90 @@ function buildOBRequest(f: any): any {
   }
 }
 
-// ================= Investor-name masking =================
-// Brokers see every program as a TQL-branded product. Strip known investor
-// labels from the OB-returned product names and ensure a TQL prefix.
+// ================= STRICT INVESTOR-NAME MASKING (NON-NEGOTIABLE) =================
+// Every broker- / borrower- / email- / PDF- facing surface MUST display the
+// program as TQL-branded. The original investor identity is NEVER exposed
+// downstream. Admin-level passcode UI may reveal the raw `rawName` field for
+// internal audit, but the masked `name` is the canonical display string.
+//
+// Output format: "TQL - <doc-type> <term>yr <amort>[ <ppp>]"
+//   "Ascend Alt-A 30yr Fixed"               → "TQL - Alt-A 30yr Fixed"
+//   "TOTAL DSCR 30yr Fixed"                 → "TQL - DSCR 30yr Fixed"
+//   "DSCR 5% Fixed PPP 30 Yr Fixed - EG"    → "TQL - DSCR 30yr Fixed 5%PPP"
+//   "Elevate / 30 Yr Fixed"                 → "TQL - 30yr Fixed"
 function maskProgramName(name: string | undefined): string {
-  if (!name) return 'TQL Program'
+  if (!name) return 'TQL - Program'
   let s = String(name)
-  // Strip leading investor brand tokens (case-insensitive) returned by OB.
+
+  // ── 1. Strip leading investor brand tokens (case-insensitive). Add new
+  // investor brand names to this list as TQL onboards more lenders.
   const brands: RegExp[] = [
     /^Ascend\b/i,
     /^Elevate\s*\/?\s*/i,
+    /^Peek\b/i,
+    /^TOTAL\b/i,
+    /^TPO[\s-]?VRS\b/i,
+    /^VRS\b/i,
+    /^Deephaven\b/i,
+    /^Verus\b/i,
+    /^Rocket\s*TPO\b/i,
+    /^Rocket\b/i,
+    /^AD\s*Mortgage\b/i,
+    /^LoanStream\b/i,
+    /^Planet\s*Mortgage\b/i,
+    /^Planet\b/i,
     /^Champion(s)?\s*Funding\b/i,
     /^Champion(s)?\b/i,
-    /^TOTAL\b/i,
-    /^VRS\b/i,
-    /^Lima(\s*One)?\b/i,
-    /^Verus\b/i,
+    /^Lima\s*One\b/i,
+    /^Lima\b/i,
     /^Acra\b/i,
     /^Velocity\b/i,
     /^Visio\b/i,
     /^Newrez\b/i,
     /^Citadel\b/i,
+    /^Angel\s*Oak\b/i,
+    /^A&D\b/i,
+    /^FOA\b/i,
+    /^Finance\s*of\s*America\b/i,
+    /^Quontic\b/i,
+    /^Sprout\b/i,
+    /^Carrington\b/i,
+    /^TQL\b/i,                      // strip any pre-existing TQL prefix
   ]
   for (const re of brands) s = s.replace(re, '').trim()
-  // Strip trailing internal-tier markers like " - EG" or " - Tier 1"
-  s = s.replace(/\s*[-·•]\s*(EG|Tier\s*\d+|Standard|Plus|Premier|Select)\s*$/i, '').trim()
-  // Strip duplicate "DSCR /" leading slash leftovers, collapse whitespace.
-  s = s.replace(/^\/\s*/, '').replace(/\s{2,}/g, ' ').trim()
-  // Always prefix TQL.
-  if (!/^TQL\b/i.test(s)) s = `TQL ${s}`
-  return s
+
+  // ── 2. Clean up leftovers: leading slash/dash, trailing tier suffixes.
+  s = s.replace(/^[/\-·•\s]+/, '').trim()
+  s = s.replace(/\s*[-·•]\s*(EG|Tier\s*\d+|Standard|Plus|Premier|Select|Premium|Core|Prime)\s*$/gi, '').trim()
+  s = s.replace(/\s*\(\s*EG\s*\)\s*$/i, '').trim()
+
+  // ── 3. Extract a PPP qualifier and re-emit it at the end as "X%PPP".
+  let ppp = ''
+  const pppPctMatch = s.match(/(\d+)\s*%\s*(?:Fixed\s*|Step(?:down)?\s*)?PPP/i)
+  const pppYrMatch = !pppPctMatch ? s.match(/(\d+)\s*(?:Year|Yr|YR)\s*PPP/i) : null
+  if (pppPctMatch) {
+    ppp = `${pppPctMatch[1]}%PPP`
+    s = s.replace(pppPctMatch[0], '').trim()
+  } else if (pppYrMatch) {
+    ppp = `${pppYrMatch[1]}yrPPP`
+    s = s.replace(pppYrMatch[0], '').trim()
+  } else if (/\bno[\s-]?ppp\b/i.test(s)) {
+    ppp = 'NoPPP'
+    s = s.replace(/\bno[\s-]?ppp\b/i, '').trim()
+  }
+
+  // ── 4. Normalize term/amort/IO tokens to a tight, broker-readable form.
+  s = s.replace(/(\d+)\s*Y(?:ea)?r\b/gi, '$1yr')             // "30 Year" → "30yr"
+  s = s.replace(/\bInterest\s*Only\b/gi, 'I/O')              // "Interest Only" → "I/O"
+  s = s.replace(/\bIO\b/g, 'I/O')                             // "IO" → "I/O"
+
+  // ── 5. Drop separators left over from removals, collapse whitespace.
+  s = s.replace(/\s*\/\s*/g, ' ').replace(/\s{2,}/g, ' ').trim()
+  // Trim trailing dangling separators / commas
+  s = s.replace(/[\s,/\-·•]+$/g, '').trim()
+
+  if (!s) s = 'Program'
+  return ppp ? `TQL - ${s} ${ppp}` : `TQL - ${s}`
 }
 
 // ================= Fetch OB v4 Product Detail =================
@@ -515,11 +569,13 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
     if (!programsMap[programName]) {
       const seed = rateRungs[0]
       programsMap[programName] = {
-        name: programName,
-        programName,
+        name: programName,                                      // masked, broker-facing
+        programName,                                            // masked alias
+        rawName: rawProgramName,                                // ADMIN-ONLY — never render directly
+        rawInvestor: String(p.investor || ''),                  // ADMIN-ONLY
         status,
-        investor,
-        investorName: investor,
+        investor,                                               // forced "TQL"
+        investorName: investor,                                 // forced "TQL"
         investorId: p.investorId || 0,
         productId: p.productId || 0,
         productCode: p.productCode || '',
@@ -567,15 +623,17 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
         price: rung.price,
         apr: rung.apr,
         payment: rung.payment,
-        // Program/PPP column — show program name, not "rate / price"
+        // Program/PPP column — masked program name only.
         description: programName,
         status,
         totalClosingCost: rung.closingCost,
         monthlyMI: rung.monthlyMI,
         rebate: rung.rebate,
         discount: rung.discount,
-        programName,
-        investorName: investor,
+        programName,                                              // masked
+        rawProgramName,                                           // ADMIN-ONLY
+        investorName: investor,                                   // forced "TQL"
+        rawInvestorName: String(p.investor || ''),                // ADMIN-ONLY
         lockPeriod: rung.lockPeriod,
         adjustments: detailAdjustments,
       })
