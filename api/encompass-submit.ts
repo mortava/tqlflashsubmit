@@ -93,10 +93,12 @@ async function sendNotificationEmail(loanNumber: string, loanId: string): Promis
   })
 }
 
-// Resolve (and if needed, populate) Encompass field 305 — "Lender's Tracking
-// Number for the loan". On a freshly-created MISMO 3.4 import, field 305 is
-// usually empty because the MISMO XML doesn't map to it; we auto-populate it
-// with the Encompass loan number (field 4) so the Lender Case # is always set.
+// Resolve the Encompass Lender Case # / Loan Number for the loan that was just
+// created. TQL's Encompass instance auto-assigns a 317-prefixed loan number,
+// stored in field 4 (Loan Number) and mirrored to field 305 (Lender Case #).
+// Numbers are not always populated on the very first read after a /loans POST,
+// so we retry the fieldReader a few times with a short backoff and never
+// fall back to the loan GUID — only return a real number.
 async function getLenderTrackingNumber(token: string, loanId: string): Promise<string> {
   const fieldReader = async (ids: string[]): Promise<Record<string, string>> => {
     const r = await fetch(
@@ -120,44 +122,57 @@ async function getLenderTrackingNumber(token: string, loanId: string): Promise<s
     return out
   }
 
-  try {
-    // Read field 305 (Lender Case #) and 4 (Encompass Loan Number) together.
-    const vals = await fieldReader(['305', '4'])
-    if (vals['305']) return vals['305']
+  // Pull all the candidate loan-number fields together. Encompass installations
+  // vary on which one is "primary": 305 = Lender Case #, 4 = Loan Number,
+  // 364 = NMLS Loan ID. First non-empty wins.
+  const FIELDS = ['305', '4', '364']
 
-    const loanNumber = vals['4']
-    if (loanNumber) {
-      // Populate field 305 with the loan number via the fieldWriter endpoint —
-      // the direct counterpart to fieldReader for setting Encompass field values.
-      await fetch(
-        `${API_BASE}/encompass/v3/loans/${loanId}/fieldWriter`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify([{ fieldId: '305', value: loanNumber }]),
-        }
-      ).catch(() => null)
-      // Re-read so we return whatever Encompass actually persisted.
-      const after = await fieldReader(['305'])
-      if (after['305']) return after['305']
-      return loanNumber
-    }
-  } catch {
-    // fall through
+  // Retry up to 4× with 350ms backoff in case Encompass hasn't persisted the
+  // auto-assigned loan number yet (race against the create-loan response).
+  let collected: Record<string, string> = {}
+  for (let attempt = 0; attempt < 4; attempt++) {
+    collected = await fieldReader(FIELDS).catch(() => ({}))
+    if (collected['305'] || collected['4'] || collected['364']) break
+    await new Promise(r => setTimeout(r, 350))
   }
 
-  // Last-ditch fallback: the entities=LoanNumber shortcut.
-  const fb = await fetch(
-    `${API_BASE}/encompass/v3/loans/${loanId}?entities=LoanNumber`,
-    { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
-  )
-  if (!fb.ok) return loanId
-  const data = await fb.json() as { loanNumber?: string; fields?: Record<string, unknown> }
-  return data.loanNumber || String(data.fields?.['4'] ?? data.fields?.['2'] ?? loanId)
+  // If 305 already has a value, use it directly.
+  if (collected['305']) return collected['305']
+
+  // Otherwise fall back to field 4 (loan number) and copy it into 305 so the
+  // Lender Case # is populated for downstream Encompass workflows.
+  const loanNumber = collected['4'] || collected['364']
+  if (loanNumber) {
+    await fetch(
+      `${API_BASE}/encompass/v3/loans/${loanId}/fieldWriter`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify([{ fieldId: '305', value: loanNumber }]),
+      }
+    ).catch(() => null)
+    return loanNumber
+  }
+
+  // Final fallback path: the entities=LoanNumber shortcut, then the GUID
+  // (the GUID is only returned if absolutely nothing else is available).
+  try {
+    const fb = await fetch(
+      `${API_BASE}/encompass/v3/loans/${loanId}?entities=LoanNumber`,
+      { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
+    )
+    if (fb.ok) {
+      const data = await fb.json() as { loanNumber?: string; fields?: Record<string, unknown> }
+      const ln = data.loanNumber || String(data.fields?.['4'] ?? data.fields?.['2'] ?? '').trim()
+      if (ln) return ln
+    }
+  } catch { /* swallow */ }
+
+  return loanId
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

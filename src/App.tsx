@@ -325,6 +325,106 @@ const DEFAULT_FORM_DATA: LoanData = {
 }
 
 /* ── Draggable Floating Panel ── */
+// Builds a mobile-friendly TQL-branded HTML email for a single rate quote.
+// Sent via /api/send-email; rendered inside common email clients (Gmail, Apple Mail, Outlook).
+function buildRateQuoteEmail(
+  rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
+  borrowerName: string,
+  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string }
+): string {
+  const fmtMoney = (n: string | number | undefined) => {
+    if (n === undefined || n === '') return '—'
+    const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
+    return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
+  }
+  const adj = rate.adjustments || []
+  const totalAdj = adj.reduce((s, a) => s + (a.amount || 0), 0)
+  const adjRows = adj.map(a => `
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${a.description}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:600;color:${a.amount >= 0 ? '#245F73' : '#EF4444'};text-align:right;white-space:nowrap;">${a.amount >= 0 ? '+' : ''}${a.amount.toFixed(3)}</td>
+    </tr>`).join('')
+  const headline = borrowerName ? `Rate Quote · ${borrowerName}` : 'Rate Quote'
+  const propertyLine = [scenario.propertyCity, scenario.propertyState, scenario.propertyZip].filter(Boolean).join(', ')
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>${headline}</title>
+</head>
+<body style="margin:0;padding:0;background:#F5F4F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
+<div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
+    <!-- Header -->
+    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL Flash Submit</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${headline}</div>
+      <div style="font-size:13px;opacity:0.85;margin-top:6px;line-height:1.4;">${rate.programName}</div>
+    </td></tr>
+    <!-- Hero rate panel -->
+    <tr><td style="padding:24px 24px 8px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="padding:8px 4px;text-align:left;vertical-align:top;">
+            <div style="font-size:32px;font-weight:800;color:#0B1220;line-height:1;letter-spacing:-1px;">${rate.rate.toFixed(3)}<span style="font-size:18px;color:#245F73;">%</span></div>
+            <div style="font-size:10px;font-weight:700;color:#4D4D4D;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Interest Rate</div>
+          </td>
+          <td width="50%" style="padding:8px 4px;text-align:right;vertical-align:top;">
+            <div style="font-size:32px;font-weight:800;color:${rate.price >= 100 ? '#245F73' : '#0B1220'};line-height:1;letter-spacing:-1px;">${rate.price.toFixed(3)}</div>
+            <div style="font-size:10px;font-weight:700;color:#4D4D4D;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Final Price</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+    <!-- Stats row -->
+    <tr><td style="padding:8px 24px 20px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF8;border-radius:10px;">
+        <tr>
+          <td width="50%" style="padding:14px 16px;text-align:left;border-right:1px solid #CBD5E1;">
+            <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${rate.apr.toFixed(3)}%</div>
+            <div style="font-size:9px;font-weight:700;color:#4D4D4D;letter-spacing:1.2px;text-transform:uppercase;margin-top:3px;">APR</div>
+          </td>
+          <td width="50%" style="padding:14px 16px;text-align:right;">
+            <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${rate.payment > 0 ? fmtMoney(rate.payment) : '—'}</div>
+            <div style="font-size:9px;font-weight:700;color:#4D4D4D;letter-spacing:1.2px;text-transform:uppercase;margin-top:3px;">Monthly P&amp;I</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+    <!-- Scenario summary -->
+    <tr><td style="padding:0 24px 16px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Scenario</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;">
+        <tr><td style="padding:4px 0;color:#4D4D4D;width:40%;">Loan Amount</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${fmtMoney(scenario.loanAmount)}</td></tr>
+        <tr><td style="padding:4px 0;color:#4D4D4D;">Property Value</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${fmtMoney(scenario.propertyValue)}</td></tr>
+        ${propertyLine ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Property</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${propertyLine}</td></tr>` : ''}
+        ${scenario.loanTerm ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Term · Amort</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${scenario.loanTerm}yr ${scenario.amortization || ''}</td></tr>` : ''}
+        ${scenario.documentationType ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Doc Type</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${scenario.documentationType}</td></tr>` : ''}
+        ${scenario.creditScore ? `<tr><td style="padding:4px 0;color:#4D4D4D;">FICO</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${scenario.creditScore}</td></tr>` : ''}
+        ${rate.lockPeriod ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Lock Period</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${rate.lockPeriod} days</td></tr>` : ''}
+      </table>
+    </td></tr>
+    ${adjRows ? `
+    <tr><td style="padding:0 24px 16px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Pricing Adjustments</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#ffffff;">${adjRows}
+        <tr><td style="padding:8px;font-size:11px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;background:#FAFAF8;">Net Adjustment</td><td style="padding:8px;font-size:13px;font-weight:800;text-align:right;background:#FAFAF8;color:${totalAdj >= 0 ? '#245F73' : '#EF4444'};">${totalAdj >= 0 ? '+' : ''}${totalAdj.toFixed(3)}</td></tr>
+      </table>
+    </td></tr>` : ''}
+    <!-- CTA -->
+    <tr><td style="padding:8px 24px 24px 24px;">
+      <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open in TQL Flash Submit</a>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:#4D4D4D;line-height:1.5;">Reply to this email to lock or request changes.</div>
+    </td></tr>
+    <!-- Footer -->
+    <tr><td style="padding:14px 24px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
+      Total Quality Lending · Flash Submit · Quote generated ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+    </td></tr>
+  </table>
+</div>
+</body></html>`
+}
+
 // Yes/No pill toggle used in the Flash Submit modal.
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -462,6 +562,22 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'pricing' | 'login' | 'signup' | 'submit'>('pricing')
   // Help Desk state
   const [showHelpDesk, setShowHelpDesk] = useState(false)
+  // User Admin — passcode-gated full pricing results display
+  const ADMIN_PASSCODE = 'tql faith'
+  const [showUserAdmin, setShowUserAdmin] = useState(false)
+  const [adminPasscodeInput, setAdminPasscodeInput] = useState('')
+  const [adminPasscodeError, setAdminPasscodeError] = useState(false)
+  const [showFullResults, setShowFullResults] = useState(false)
+  // Email Rate Quote — captures rate + recipient and sends a branded summary
+  const [quoteRate, setQuoteRate] = useState<{
+    programName: string; rate: number; price: number; apr: number; payment: number;
+    points?: number; lockPeriod?: number | string;
+    adjustments?: Array<{ description: string; amount: number; rateAdj?: number }>
+  } | null>(null)
+  const [quoteEmail, setQuoteEmail] = useState('')
+  const [quoteBorrower, setQuoteBorrower] = useState('')
+  const [quoteSending, setQuoteSending] = useState(false)
+  const [quoteStatus, setQuoteStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [helpDeskFields, setHelpDeskFields] = useState({ name: '', email: '', topic: '', message: '' })
   const [helpDeskSending, setHelpDeskSending] = useState(false)
   const [helpDeskStatus, setHelpDeskStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -1224,6 +1340,32 @@ export default function App() {
   // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
 
+  // ── BEST RATE: Lowest interest rate that still has the highest final price ──
+  // Used for the broker-facing default view (single-result mode); the full
+  // ladder is gated behind the User Admin passcode.
+  const findBestRate = (programs: Program[] | undefined): {
+    program: Program; opt: RateOption; price: number
+  } | null => {
+    if (!Array.isArray(programs) || programs.length === 0) return null
+    let best: { program: Program; opt: RateOption; price: number } | null = null
+    for (const program of programs) {
+      if (!program || !Array.isArray(program.rateOptions)) continue
+      for (const opt of program.rateOptions) {
+        if (!opt) continue
+        const pts = safeNumber(opt.points)
+        const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
+        if (price < 99.5 || price > 101.75) continue   // stay inside TQL's price band
+        const rate = safeNumber(opt.rate)
+        if (rate <= 0) continue
+        if (!best) { best = { program, opt, price }; continue }
+        // Lower rate wins. Ties broken by higher price.
+        if (rate < best.opt.rate - 1e-6) best = { program, opt, price }
+        else if (Math.abs(rate - best.opt.rate) < 1e-6 && price > best.price) best = { program, opt, price }
+      }
+    }
+    return best
+  }
+
   // Filter rate options to only show prices between 99.000 and 101.750 (TQL target range)
   const PRICE_MIN = 99.0
   const PRICE_MAX = 101.75
@@ -1465,6 +1607,15 @@ export default function App() {
             <HelpCircle className="w-[18px] h-[18px] shrink-0" />
             <span className="text-[13px] truncate">Help Desk</span>
           </button>
+          {/* User Admin — passcode-gated, unlocks full pricing results */}
+          <button
+            type="button"
+            onClick={() => { setAdminPasscodeInput(''); setAdminPasscodeError(false); setShowUserAdmin(true) }}
+            className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left ${showFullResults ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-900 hover:bg-slate-50'}`}
+          >
+            <Lock className="w-[18px] h-[18px] shrink-0" />
+            <span className="text-[13px] truncate">User Admin{showFullResults ? ' · Unlocked' : ''}</span>
+          </button>
         </nav>
 
         {/* User Info (login moved to top header) */}
@@ -1542,6 +1693,15 @@ export default function App() {
                 <HelpCircle className="w-[18px] h-[18px] shrink-0" />
                 <span className="text-[13px]">Help Desk</span>
               </span>
+              {/* User Admin — passcode-gated, unlocks full pricing results */}
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen(false); setAdminPasscodeInput(''); setAdminPasscodeError(false); setShowUserAdmin(true) }}
+                className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left ${showFullResults ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-900 hover:bg-slate-50'}`}
+              >
+                <Lock className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[13px]">User Admin{showFullResults ? ' · Unlocked' : ''}</span>
+              </button>
             </nav>
             <div className="px-3 py-4 border-t border-slate-200">
               {isPartner && profile ? (
@@ -2235,8 +2395,108 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* ===== AVAILABLE PROGRAMS ===== */}
-                    {Array.isArray(result.programs) && result.programs.length > 0 ? (() => {
+                    {/* ===== BEST RATE (LOCKED VIEW) ===== */}
+                    {!showFullResults && Array.isArray(result.programs) && result.programs.length > 0 && (() => {
+                      const bestPick = findBestRate(result.programs)
+                      if (!bestPick) {
+                        return (
+                          <div className="bg-white border border-amber-200 rounded-xl p-5 text-[12px] tql-text-slate">
+                            No qualifying rate in the 99.500 – 101.750 price band. Unlock <span className="tql-text-teal font-semibold">User Admin</span> to view the full ladder.
+                          </div>
+                        )
+                      }
+                      const { program, opt, price } = bestPick
+                      const programName = program.name || 'Best Available Program'
+                      const adjustments = opt.adjustments || []
+                      const totalAdj = adjustments.reduce((s, a) => s + (a.amount || 0), 0)
+                      return (
+                        <div className="bg-white border-2 tql-border-teal rounded-xl shadow-[0_4px_20px_rgba(36,95,115,0.18)] overflow-hidden">
+                          <div className="tql-bg-teal text-white px-5 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ShieldCheck className="w-4 h-4 shrink-0" />
+                              <div className="min-w-0">
+                                <div className="text-[11px] uppercase tracking-widest opacity-80">Best Rate · Lowest Rate · Highest Price</div>
+                                <div className="text-[14px] font-bold truncate tql-font-display">{programName}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-5 py-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div>
+                                <div className="text-[24px] font-bold tql-text-primary tabular-nums">{safeNumber(opt.rate).toFixed(3)}%</div>
+                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">Rate</div>
+                              </div>
+                              <div>
+                                <div className={`text-[24px] font-bold tabular-nums ${price >= 100 ? 'tql-text-teal' : 'tql-text-primary'}`}>{price.toFixed(3)}</div>
+                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">Price</div>
+                              </div>
+                              <div>
+                                <div className="text-[24px] font-bold tql-text-primary tabular-nums">{safeNumber(opt.apr).toFixed(3)}%</div>
+                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">APR</div>
+                              </div>
+                              <div>
+                                <div className="text-[24px] font-bold tql-text-primary tabular-nums">{safeNumber(opt.payment) > 0 ? formatCurrency(safeNumber(opt.payment)) : '—'}</div>
+                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">P&amp;I Payment</div>
+                              </div>
+                            </div>
+                            {adjustments.length > 0 && (
+                              <div className="mt-4 pt-3 border-t tql-border-steel flex items-center justify-between">
+                                <div className="text-[11px] tql-text-muted uppercase tracking-wider">Net LLPA · {adjustments.length} item{adjustments.length !== 1 ? 's' : ''}</div>
+                                <div className={`text-[13px] font-bold tabular-nums ${totalAdj >= 0 ? 'tql-text-teal' : 'text-[#EF4444]'}`}>{totalAdj >= 0 ? '+' : ''}{totalAdj.toFixed(3)}</div>
+                              </div>
+                            )}
+                            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setQuoteEmail(flashSubmitFields.brokerEmail || '')
+                                  setQuoteBorrower('')
+                                  setQuoteStatus('idle')
+                                  setQuoteRate({
+                                    programName,
+                                    rate: safeNumber(opt.rate),
+                                    price,
+                                    apr: safeNumber(opt.apr),
+                                    payment: safeNumber(opt.payment),
+                                    points: safeNumber(opt.points),
+                                    lockPeriod: opt.lockPeriod,
+                                    adjustments: opt.adjustments || [],
+                                  })
+                                }}
+                                className="flex-1 py-2.5 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[12px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-opacity"
+                              >
+                                <Mail className="w-3.5 h-3.5" />Email This Quote
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFlashSubmitError(null)
+                                  setFlashSubmitRate({
+                                    programName,
+                                    rate: safeNumber(opt.rate),
+                                    price,
+                                    apr: safeNumber(opt.apr),
+                                    payment: safeNumber(opt.payment),
+                                    points: safeNumber(opt.points),
+                                    lockPeriod: opt.lockPeriod,
+                                    adjustments: opt.adjustments || [],
+                                  })
+                                }}
+                                className="flex-1 py-2.5 bg-white border-2 tql-border-teal tql-text-teal hover:tql-bg-teal hover:text-white rounded-lg text-[12px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
+                              >
+                                <Zap className="w-3.5 h-3.5" />Flash Submit → 3.4
+                              </button>
+                            </div>
+                            <div className="mt-3 text-[10px] tql-text-muted text-center">
+                              Full price ladder gated behind <button type="button" onClick={() => { setAdminPasscodeInput(''); setAdminPasscodeError(false); setShowUserAdmin(true) }} className="tql-text-teal font-semibold underline underline-offset-2">User Admin</button> passcode.
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* ===== AVAILABLE PROGRAMS (FULL RESULTS — passcode-gated) ===== */}
+                    {showFullResults && Array.isArray(result.programs) && result.programs.length > 0 ? (() => {
                       // Pre-compute renderable programs. DSCR 5% PPP is force-displayed
                       // with its full ladder when DSCR is the selected Doc Type;
                       // every other program still obeys the 99.000–101.750 filter.
@@ -2952,6 +3212,139 @@ export default function App() {
                 <p className="text-[11px] tql-text-muted text-center leading-relaxed">
                   A summary PDF + pricing detail will be emailed from <span className="tql-text-teal font-semibold">Flash@tqltpo.com</span> to <span className="tql-text-teal font-semibold">disclosuredesk@tqlend.com</span> with you cc'd.
                 </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═════════ USER ADMIN PASSCODE MODAL ═════════ */}
+      {showUserAdmin && (
+        <>
+          <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => setShowUserAdmin(false)} />
+          <div className="fixed inset-0 z-[301] flex items-center justify-center px-4">
+            <div className="w-full max-w-[400px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
+              <div className="tql-bg-teal px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Lock className="w-5 h-5 text-white" />
+                  <div>
+                    <div className="text-[15px] font-bold text-white tracking-tight">User Admin</div>
+                    <div className="text-[11px] text-white/80 mt-0.5">{showFullResults ? 'Full results unlocked' : 'Enter passcode to unlock full results'}</div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setShowUserAdmin(false)} className="p-1 text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                {showFullResults ? (
+                  <>
+                    <div className="flex items-center gap-2 text-[13px] tql-text-primary">
+                      <CheckCircle2 className="w-5 h-5 tql-text-teal" />
+                      Full pricing ladder is unlocked for this session.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowFullResults(false); setShowUserAdmin(false) }}
+                      className="w-full py-2.5 bg-white border tql-border-steel hover:bg-[color:var(--tql-bg)] tql-text-primary rounded-lg text-[12px] font-bold uppercase tracking-wider transition-colors"
+                    >
+                      Re-Lock Best-Rate-Only View
+                    </button>
+                  </>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      if (adminPasscodeInput.trim().toLowerCase() === ADMIN_PASSCODE) {
+                        setShowFullResults(true)
+                        setShowUserAdmin(false)
+                        setAdminPasscodeInput('')
+                        setAdminPasscodeError(false)
+                      } else {
+                        setAdminPasscodeError(true)
+                      }
+                    }}
+                    className="space-y-3"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Passcode</label>
+                      <input
+                        type="password"
+                        autoFocus
+                        value={adminPasscodeInput}
+                        onChange={(e) => { setAdminPasscodeInput(e.target.value); setAdminPasscodeError(false) }}
+                        placeholder="Enter admin passcode"
+                        className={`w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent ${adminPasscodeError ? 'border-[#EF4444]' : 'tql-border-steel'}`}
+                      />
+                      {adminPasscodeError && <div className="mt-1.5 text-[11px] text-[#EF4444]">Incorrect passcode</div>}
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[12px] font-bold uppercase tracking-wider transition-opacity"
+                    >
+                      Unlock Full Results
+                    </button>
+                    <p className="text-[10px] tql-text-muted text-center leading-relaxed">
+                      Unlocks the full price ladder (99.000 – 101.750) across every program for this session.
+                    </p>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═════════ EMAIL RATE QUOTE MODAL ═════════ */}
+      {quoteRate && (
+        <>
+          <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => !quoteSending && setQuoteRate(null)} />
+          <div className="fixed inset-0 z-[301] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
+            <div className="w-full max-w-[480px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
+              <div className="tql-bg-teal px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Mail className="w-5 h-5 text-white shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-bold text-white tracking-tight">Email Rate Quote</div>
+                    <div className="text-[11px] text-white/80 mt-0.5 truncate">{quoteRate.programName} · {quoteRate.rate.toFixed(3)}% @ {quoteRate.price.toFixed(3)}</div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => !quoteSending && setQuoteRate(null)} className="p-1 text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Borrower Name (optional)</label>
+                  <input type="text" value={quoteBorrower} onChange={(e) => setQuoteBorrower(e.target.value)} placeholder="John Smith" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Send To Email *</label>
+                  <input type="email" value={quoteEmail} onChange={(e) => setQuoteEmail(e.target.value)} placeholder="recipient@example.com" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                </div>
+                <button
+                  type="button"
+                  disabled={!quoteEmail || quoteSending}
+                  onClick={async () => {
+                    if (!quoteRate) return
+                    setQuoteSending(true)
+                    setQuoteStatus('idle')
+                    const html = buildRateQuoteEmail(quoteRate, quoteBorrower, formData)
+                    const subject = `TQL Rate Quote — ${quoteRate.rate.toFixed(3)}% / ${quoteRate.price.toFixed(3)}${quoteBorrower ? ` — ${quoteBorrower}` : ''}`
+                    try {
+                      const r = await fetch('/api/send-email', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ to: quoteEmail, subject, html }),
+                      })
+                      if (r.ok) {
+                        setQuoteStatus('success')
+                        setTimeout(() => { setQuoteRate(null); setQuoteStatus('idle') }, 2000)
+                      } else { setQuoteStatus('error') }
+                    } catch { setQuoteStatus('error') }
+                    finally { setQuoteSending(false) }
+                  }}
+                  className="w-full py-3 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[13px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(36,95,115,0.3)]"
+                >
+                  {quoteSending ? <Loader2 className="w-4 h-4 animate-spin" /> : quoteStatus === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                  {quoteSending ? 'Sending…' : quoteStatus === 'success' ? 'Sent!' : 'Send Quote'}
+                </button>
+                {quoteStatus === 'error' && <p className="text-[11px] text-[#EF4444] text-center">Failed to send. Please check the email address and try again.</p>}
               </div>
             </div>
           </div>

@@ -599,15 +599,41 @@ export default function SubmitLoanPage({ onBack }: SubmitLoanPageProps) {
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-8 h-8 text-green-600" /></div>
             <div className="text-center">
               <h2 className="text-xl font-bold text-slate-900">Setup Requested</h2>
+              {loanNumber && (
+                <p className="text-sm text-slate-700 mt-2"><span className="text-slate-500">Lender Tracking #:</span> <span className="font-bold tracking-wide">{loanNumber}</span></p>
+              )}
               <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
                 Your Business is important to us, if you have any questions or need help please email{' '}
                 <a href="mailto:TPOSupport@tqltpo.com" className="text-slate-900 font-semibold hover:underline">TPOSupport@tqltpo.com</a>
               </p>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button type="button" onClick={() => { setStep('upload-mismo'); setF(DEFAULT_FORM); setMismoFile(null); setMismoXml(''); setLoanId(''); setLoanNumber(''); setDocs([]); setUploadedDocs([]); setError(null) }} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-black hover:bg-slate-800">Submit Another Loan</button>
-              <button type="button" onClick={onBack} className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50">Back to Dashboard</button>
+            {/* Three primary CTAs requested by ops */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl mt-2">
+              <button
+                type="button"
+                onClick={() => { setStep('upload-mismo'); setF(DEFAULT_FORM); setMismoFile(null); setMismoXml(''); setLoanId(''); setLoanNumber(''); setDocs([]); setUploadedDocs([]); setError(null) }}
+                className="py-3 rounded-xl text-[12px] font-bold uppercase tracking-wider text-white tql-bg-teal hover:opacity-90 transition-opacity shadow-[0_2px_8px_rgba(36,95,115,0.25)]"
+              >
+                Submit a New Loan
+              </button>
+              <a
+                href="https://tqltpo.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-center py-3 rounded-xl text-[12px] font-bold uppercase tracking-wider tql-text-teal bg-white border-2 tql-border-teal hover:tql-bg-teal hover:text-white transition-colors"
+              >
+                Go to TQLTPO Site
+              </a>
+              <a
+                href="https://9838392344.encompasstpoconnect.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-center py-3 rounded-xl text-[12px] font-bold uppercase tracking-wider tql-text-teal bg-white border-2 tql-border-teal hover:tql-bg-teal hover:text-white transition-colors"
+              >
+                Log into Bench Loan Hub
+              </a>
             </div>
+            <button type="button" onClick={onBack} className="text-[12px] font-medium text-slate-500 hover:text-slate-900 mt-2 underline underline-offset-2">Back to Dashboard</button>
           </div>
         )}
       </div>
