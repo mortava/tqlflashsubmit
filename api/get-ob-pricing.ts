@@ -335,6 +335,38 @@ function buildOBRequest(f: any): any {
   }
 }
 
+// ================= Investor-name masking =================
+// Brokers see every program as a TQL-branded product. Strip known investor
+// labels from the OB-returned product names and ensure a TQL prefix.
+function maskProgramName(name: string | undefined): string {
+  if (!name) return 'TQL Program'
+  let s = String(name)
+  // Strip leading investor brand tokens (case-insensitive) returned by OB.
+  const brands: RegExp[] = [
+    /^Ascend\b/i,
+    /^Elevate\s*\/?\s*/i,
+    /^Champion(s)?\s*Funding\b/i,
+    /^Champion(s)?\b/i,
+    /^TOTAL\b/i,
+    /^VRS\b/i,
+    /^Lima(\s*One)?\b/i,
+    /^Verus\b/i,
+    /^Acra\b/i,
+    /^Velocity\b/i,
+    /^Visio\b/i,
+    /^Newrez\b/i,
+    /^Citadel\b/i,
+  ]
+  for (const re of brands) s = s.replace(re, '').trim()
+  // Strip trailing internal-tier markers like " - EG" or " - Tier 1"
+  s = s.replace(/\s*[-·•]\s*(EG|Tier\s*\d+|Standard|Plus|Premier|Select)\s*$/i, '').trim()
+  // Strip duplicate "DSCR /" leading slash leftovers, collapse whitespace.
+  s = s.replace(/^\/\s*/, '').replace(/\s{2,}/g, ' ').trim()
+  // Always prefix TQL.
+  if (!/^TQL\b/i.test(s)) s = `TQL ${s}`
+  return s
+}
+
 // ================= Fetch OB v4 Product Detail =================
 // Product search returns only one price per product. The per-product detail
 // endpoint returns the full rate/price ladder (quotes[]) AND the itemized
@@ -424,8 +456,10 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
   const programsMap: Record<string, any> = {}
 
   for (const p of products) {
-    const programName = p.productName || p.productCode || 'OB Program'
-    const investor = p.investor || ''
+    const rawProgramName = p.productName || p.productCode || 'OB Program'
+    // Mask the investor brand so brokers see every program as TQL-branded.
+    const programName = maskProgramName(rawProgramName)
+    const investor = 'TQL'
     const status = p.priceStatus || 'Available'
     const monthlyMI = p.monthlyMI || 0
     const lockPeriod = p.lockPeriod || 0

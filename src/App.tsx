@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock } from 'lucide-react'
+import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -562,12 +562,13 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'pricing' | 'login' | 'signup' | 'submit'>('pricing')
   // Help Desk state
   const [showHelpDesk, setShowHelpDesk] = useState(false)
-  // User Admin — passcode-gated full pricing results display
+  // User Admin — passcode toggles the full results ladder OFF so only the
+  // AI-selected best rate is visible. Default = full ladder shown to brokers.
   const ADMIN_PASSCODE = 'tql faith'
   const [showUserAdmin, setShowUserAdmin] = useState(false)
   const [adminPasscodeInput, setAdminPasscodeInput] = useState('')
   const [adminPasscodeError, setAdminPasscodeError] = useState(false)
-  const [showFullResults, setShowFullResults] = useState(false)
+  const [showFullResults, setShowFullResults] = useState(true)
   // Email Rate Quote — captures rate + recipient and sends a branded summary
   const [quoteRate, setQuoteRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -1614,7 +1615,7 @@ export default function App() {
             className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left ${showFullResults ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-900 hover:bg-slate-50'}`}
           >
             <Lock className="w-[18px] h-[18px] shrink-0" />
-            <span className="text-[13px] truncate">User Admin{showFullResults ? ' · Unlocked' : ''}</span>
+            <span className="text-[13px] truncate">User Admin{showFullResults ? '' : ' · Best-Rate Only'}</span>
           </button>
         </nav>
 
@@ -1700,7 +1701,7 @@ export default function App() {
                 className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left ${showFullResults ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-900 hover:bg-slate-50'}`}
               >
                 <Lock className="w-[18px] h-[18px] shrink-0" />
-                <span className="text-[13px]">User Admin{showFullResults ? ' · Unlocked' : ''}</span>
+                <span className="text-[13px]">User Admin{showFullResults ? '' : ' · Best-Rate Only'}</span>
               </button>
             </nav>
             <div className="px-3 py-4 border-t border-slate-200">
@@ -2282,11 +2283,14 @@ export default function App() {
                     </div>
                   </div>
                 ) : (!Array.isArray(result.programs) || result.programs.length === 0) && obLoading ? (
-                  <div className="bg-white border border-slate-200 rounded-xl p-6 flex items-center gap-4">
-                    <Loader2 className="w-6 h-6 tql-text-link animate-spin shrink-0" />
+                  <div className="bg-white border tql-border-steel rounded-xl p-6 flex items-center gap-4">
+                    <div className="relative shrink-0">
+                      <Loader2 className="w-6 h-6 tql-text-teal animate-spin" />
+                      <Sparkles className="w-3 h-3 absolute -top-1 -right-1" style={{ color: '#818CF8' }} />
+                    </div>
                     <div>
-                      <div className="text-sm font-semibold text-slate-900">Searching Optimal Blue…</div>
-                      <p className="text-xs text-slate-500 mt-0.5">Pulling live rates and pricing adjustments.</p>
+                      <div className="text-sm font-semibold tql-text-primary">AI is parsing live pricing…</div>
+                      <p className="text-[11px] tql-text-muted mt-0.5">Pulling rates, LLPAs, and pricing adjustments to find your best fit.</p>
                     </div>
                   </div>
                 ) : (
@@ -2395,30 +2399,39 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* ===== BEST RATE (LOCKED VIEW) ===== */}
-                    {!showFullResults && Array.isArray(result.programs) && result.programs.length > 0 && (() => {
+                    {/* ===== AI-SELECTED BEST RATE (always visible) ===== */}
+                    {Array.isArray(result.programs) && result.programs.length > 0 && (() => {
                       const bestPick = findBestRate(result.programs)
+                      // Count what the AI parsed for the helper line.
+                      const totalRateOpts = result.programs.reduce(
+                        (s, p) => s + (Array.isArray(p?.rateOptions) ? p.rateOptions.length : 0), 0
+                      )
                       if (!bestPick) {
                         return (
                           <div className="bg-white border border-amber-200 rounded-xl p-5 text-[12px] tql-text-slate">
-                            No qualifying rate in the 99.500 – 101.750 price band. Unlock <span className="tql-text-teal font-semibold">User Admin</span> to view the full ladder.
+                            AI scanned <span className="font-semibold">{totalRateOpts}</span> rate combinations across <span className="font-semibold">{result.programs.length}</span> programs but none landed in the 99.500 – 101.750 price band.
                           </div>
                         )
                       }
                       const { program, opt, price } = bestPick
-                      const programName = program.name || 'Best Available Program'
+                      const programName = program.name || 'TQL Best Available Program'
                       const adjustments = opt.adjustments || []
                       const totalAdj = adjustments.reduce((s, a) => s + (a.amount || 0), 0)
                       return (
                         <div className="bg-white border-2 tql-border-teal rounded-xl shadow-[0_4px_20px_rgba(36,95,115,0.18)] overflow-hidden">
                           <div className="tql-bg-teal text-white px-5 py-3 flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
-                              <ShieldCheck className="w-4 h-4 shrink-0" />
+                              <Sparkles className="w-4 h-4 shrink-0" style={{ color: '#C4CCFB' }} />
                               <div className="min-w-0">
-                                <div className="text-[11px] uppercase tracking-widest opacity-80">Best Rate · Lowest Rate · Highest Price</div>
+                                <div className="text-[11px] uppercase tracking-widest opacity-90 flex items-center gap-1.5">
+                                  <span>AI-Selected · Lowest Rate · Highest Price</span>
+                                </div>
                                 <div className="text-[14px] font-bold truncate tql-font-display">{programName}</div>
                               </div>
                             </div>
+                            <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-white/15 px-2 py-1 rounded-md backdrop-blur-sm">
+                              <Sparkles className="w-3 h-3" />AI Pick
+                            </span>
                           </div>
                           <div className="px-5 py-4">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -2487,15 +2500,16 @@ export default function App() {
                                 <Zap className="w-3.5 h-3.5" />Flash Submit → 3.4
                               </button>
                             </div>
-                            <div className="mt-3 text-[10px] tql-text-muted text-center">
-                              Full price ladder gated behind <button type="button" onClick={() => { setAdminPasscodeInput(''); setAdminPasscodeError(false); setShowUserAdmin(true) }} className="tql-text-teal font-semibold underline underline-offset-2">User Admin</button> passcode.
+                            <div className="mt-3 text-[10px] tql-text-muted text-center flex items-center justify-center gap-1.5">
+                              <Sparkles className="w-3 h-3" style={{ color: '#818CF8' }} />
+                              <span>AI parsed <span className="font-semibold tql-text-primary">{totalRateOpts}</span> rate combinations across <span className="font-semibold tql-text-primary">{result.programs.length}</span> TQL programs to surface this pick.</span>
                             </div>
                           </div>
                         </div>
                       )
                     })()}
 
-                    {/* ===== AVAILABLE PROGRAMS (FULL RESULTS — passcode-gated) ===== */}
+                    {/* ===== AVAILABLE PROGRAMS — full price ladder (default; admin can hide) ===== */}
                     {showFullResults && Array.isArray(result.programs) && result.programs.length > 0 ? (() => {
                       // Pre-compute renderable programs. DSCR 5% PPP is force-displayed
                       // with its full ladder when DSCR is the selected Doc Type;
@@ -2515,9 +2529,14 @@ export default function App() {
                       visiblePrograms.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
                       return (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">Available Programs</h3>
-                          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">More Pricing Options</h3>
+                            <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#818CF8', background: 'rgba(129,140,248,0.10)', border: '1px solid rgba(129,140,248,0.28)' }}>
+                              <Sparkles className="w-2.5 h-2.5" />AI Filtered · 99.000–101.750
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                             {visiblePrograms.length} found
                           </span>
                         </div>
@@ -3228,25 +3247,25 @@ export default function App() {
                 <div className="flex items-center gap-2.5">
                   <Lock className="w-5 h-5 text-white" />
                   <div>
-                    <div className="text-[15px] font-bold text-white tracking-tight">User Admin</div>
-                    <div className="text-[11px] text-white/80 mt-0.5">{showFullResults ? 'Full results unlocked' : 'Enter passcode to unlock full results'}</div>
+                    <div className="text-[15px] font-bold text-white tracking-tight tql-font-display">User Admin</div>
+                    <div className="text-[11px] text-white/80 mt-0.5">{showFullResults ? 'Enter passcode to switch to Best-Rate-Only mode' : 'Best-Rate-Only mode active'}</div>
                   </div>
                 </div>
                 <button type="button" onClick={() => setShowUserAdmin(false)} className="p-1 text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-6 py-5 space-y-4">
-                {showFullResults ? (
+                {!showFullResults ? (
                   <>
                     <div className="flex items-center gap-2 text-[13px] tql-text-primary">
                       <CheckCircle2 className="w-5 h-5 tql-text-teal" />
-                      Full pricing ladder is unlocked for this session.
+                      Full pricing ladder is hidden — broker view shows only the AI-selected best rate.
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setShowFullResults(false); setShowUserAdmin(false) }}
+                      onClick={() => { setShowFullResults(true); setShowUserAdmin(false) }}
                       className="w-full py-2.5 bg-white border tql-border-steel hover:bg-[color:var(--tql-bg)] tql-text-primary rounded-lg text-[12px] font-bold uppercase tracking-wider transition-colors"
                     >
-                      Re-Lock Best-Rate-Only View
+                      Show Full Pricing Ladder Again
                     </button>
                   </>
                 ) : (
@@ -3254,7 +3273,7 @@ export default function App() {
                     onSubmit={(e) => {
                       e.preventDefault()
                       if (adminPasscodeInput.trim().toLowerCase() === ADMIN_PASSCODE) {
-                        setShowFullResults(true)
+                        setShowFullResults(false)
                         setShowUserAdmin(false)
                         setAdminPasscodeInput('')
                         setAdminPasscodeError(false)
@@ -3280,10 +3299,10 @@ export default function App() {
                       type="submit"
                       className="w-full py-2.5 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[12px] font-bold uppercase tracking-wider transition-opacity"
                     >
-                      Unlock Full Results
+                      Hide Full Results · Show Best Rate Only
                     </button>
                     <p className="text-[10px] tql-text-muted text-center leading-relaxed">
-                      Unlocks the full price ladder (99.000 – 101.750) across every program for this session.
+                      Hides the full price ladder (99.000 – 101.750) so brokers see only the AI-selected best rate.
                     </p>
                   </form>
                 )}
