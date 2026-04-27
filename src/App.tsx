@@ -358,8 +358,9 @@ function QuinnGlow({ size = 18, withRing = true }: { size?: number; withRing?: b
   )
 }
 
-// Builds a mobile-friendly TQL-branded HTML email for a single rate quote.
-// Sent via /api/send-email; rendered inside common email clients (Gmail, Apple Mail, Outlook).
+// Builds a mobile-friendly TQL-branded HTML email for a CLIENT rate quote.
+// LLPAs are intentionally stripped — the client never sees pricing adjustments.
+// Sent via /api/send-email; renders cleanly in Gmail / Apple Mail / Outlook.
 function buildRateQuoteEmail(
   rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
   borrowerName: string,
@@ -370,13 +371,6 @@ function buildRateQuoteEmail(
     const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
     return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
   }
-  const adj = rate.adjustments || []
-  const totalAdj = adj.reduce((s, a) => s + (a.amount || 0), 0)
-  const adjRows = adj.map(a => `
-    <tr>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${a.description}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:600;color:${a.amount >= 0 ? '#245F73' : '#EF4444'};text-align:right;white-space:nowrap;">${a.amount >= 0 ? '+' : ''}${a.amount.toFixed(3)}</td>
-    </tr>`).join('')
   const headline = borrowerName ? `Rate Quote · ${borrowerName}` : 'Rate Quote'
   const propertyLine = [scenario.propertyCity, scenario.propertyState, scenario.propertyZip].filter(Boolean).join(', ')
   return `<!DOCTYPE html>
@@ -437,6 +431,107 @@ function buildRateQuoteEmail(
         ${rate.lockPeriod ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Lock Period</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${rate.lockPeriod} days</td></tr>` : ''}
       </table>
     </td></tr>
+    ${/* Pricing Adjustments intentionally omitted from the client-facing email. */ ''}
+    <!-- CTA -->
+    <tr><td style="padding:8px 24px 24px 24px;">
+      <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open in TQL Flash Submit</a>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:#4D4D4D;line-height:1.5;">Reply to this email to lock or request changes.</div>
+    </td></tr>
+    <!-- Footer -->
+    <tr><td style="padding:14px 24px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
+      Total Quality Lending · Flash Submit · Quote generated ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+    </td></tr>
+  </table>
+</div>
+</body></html>`
+}
+
+// Builds the FULL TQL quote email (sales-rep → broker). Includes the highlighted
+// rate card, optional rate stack, LLPAs for the highlighted rate, plus a free-form
+// note from the rep that lands above the footer.
+function buildFullQuoteEmail(
+  highlight: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
+  borrowerName: string,
+  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string },
+  noteHtml: string,
+  rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }>
+): string {
+  const fmtMoney = (n: string | number | undefined) => {
+    if (n === undefined || n === '') return '—'
+    const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
+    return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
+  }
+  const adj = highlight.adjustments || []
+  const totalAdj = adj.reduce((s, a) => s + (a.amount || 0), 0)
+  const adjRows = adj.map(a => `
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${a.description}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:600;color:${a.amount >= 0 ? '#245F73' : '#EF4444'};text-align:right;white-space:nowrap;">${a.amount >= 0 ? '+' : ''}${a.amount.toFixed(3)}</td>
+    </tr>`).join('')
+  const stackRows = rateStack.map(r => `
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${r.programName}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:700;text-align:right;color:#0B1220;white-space:nowrap;">${r.rate.toFixed(3)}%</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:700;text-align:right;color:${r.price >= 100 ? '#245F73' : '#0B1220'};white-space:nowrap;">${r.price.toFixed(3)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:#334155;white-space:nowrap;">${r.apr.toFixed(3)}%</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:#334155;white-space:nowrap;">${r.payment > 0 ? fmtMoney(r.payment) : '—'}</td>
+    </tr>`).join('')
+  const headline = borrowerName ? `Full Quote · ${borrowerName}` : 'Full Quote'
+  const propertyLine = [scenario.propertyCity, scenario.propertyState, scenario.propertyZip].filter(Boolean).join(', ')
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>${headline}</title>
+</head>
+<body style="margin:0;padding:0;background:#F5F4F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
+<div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
+    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL Flash Submit · Full Quote</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${headline}</div>
+      <div style="font-size:13px;opacity:0.85;margin-top:6px;line-height:1.4;">${highlight.programName}</div>
+    </td></tr>
+    <tr><td style="padding:24px 24px 8px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="padding:8px 4px;text-align:left;vertical-align:top;">
+            <div style="font-size:32px;font-weight:800;color:#0B1220;line-height:1;letter-spacing:-1px;">${highlight.rate.toFixed(3)}<span style="font-size:18px;color:#245F73;">%</span></div>
+            <div style="font-size:10px;font-weight:700;color:#4D4D4D;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Interest Rate</div>
+          </td>
+          <td width="50%" style="padding:8px 4px;text-align:right;vertical-align:top;">
+            <div style="font-size:32px;font-weight:800;color:${highlight.price >= 100 ? '#245F73' : '#0B1220'};line-height:1;letter-spacing:-1px;">${highlight.price.toFixed(3)}</div>
+            <div style="font-size:10px;font-weight:700;color:#4D4D4D;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Final Price</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:8px 24px 20px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF8;border-radius:10px;">
+        <tr>
+          <td width="50%" style="padding:14px 16px;text-align:left;border-right:1px solid #CBD5E1;">
+            <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${highlight.apr.toFixed(3)}%</div>
+            <div style="font-size:9px;font-weight:700;color:#4D4D4D;letter-spacing:1.2px;text-transform:uppercase;margin-top:3px;">APR</div>
+          </td>
+          <td width="50%" style="padding:14px 16px;text-align:right;">
+            <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${highlight.payment > 0 ? fmtMoney(highlight.payment) : '—'}</div>
+            <div style="font-size:9px;font-weight:700;color:#4D4D4D;letter-spacing:1.2px;text-transform:uppercase;margin-top:3px;">Monthly P&amp;I</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:0 24px 16px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Scenario</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;">
+        <tr><td style="padding:4px 0;color:#4D4D4D;width:40%;">Loan Amount</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${fmtMoney(scenario.loanAmount)}</td></tr>
+        <tr><td style="padding:4px 0;color:#4D4D4D;">Property Value</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${fmtMoney(scenario.propertyValue)}</td></tr>
+        ${propertyLine ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Property</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${propertyLine}</td></tr>` : ''}
+        ${scenario.loanTerm ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Term · Amort</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${scenario.loanTerm}yr ${scenario.amortization || ''}</td></tr>` : ''}
+        ${scenario.documentationType ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Doc Type</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${scenario.documentationType}</td></tr>` : ''}
+        ${scenario.creditScore ? `<tr><td style="padding:4px 0;color:#4D4D4D;">FICO</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${scenario.creditScore}</td></tr>` : ''}
+        ${highlight.lockPeriod ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Lock Period</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${highlight.lockPeriod} days</td></tr>` : ''}
+      </table>
+    </td></tr>
     ${adjRows ? `
     <tr><td style="padding:0 24px 16px 24px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Pricing Adjustments</div>
@@ -444,12 +539,29 @@ function buildRateQuoteEmail(
         <tr><td style="padding:8px;font-size:11px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;background:#FAFAF8;">Net Adjustment</td><td style="padding:8px;font-size:13px;font-weight:800;text-align:right;background:#FAFAF8;color:${totalAdj >= 0 ? '#245F73' : '#EF4444'};">${totalAdj >= 0 ? '+' : ''}${totalAdj.toFixed(3)}</td></tr>
       </table>
     </td></tr>` : ''}
-    <!-- CTA -->
+    ${stackRows ? `
+    <tr><td style="padding:0 24px 16px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Full Rate Stack (99.000 – 101.750)</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#ffffff;">
+        <tr style="background:#FAFAF8;">
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;">Program</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Rate</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Price</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">APR</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">P&amp;I</td>
+        </tr>
+        ${stackRows}
+      </table>
+    </td></tr>` : ''}
+    ${noteHtml ? `
+    <tr><td style="padding:0 24px 18px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Notes from your TQL rep</div>
+      <div style="background:#FAFAF8;border:1px solid #CBD5E1;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.55;color:#0B1220;white-space:pre-wrap;">${noteHtml}</div>
+    </td></tr>` : ''}
     <tr><td style="padding:8px 24px 24px 24px;">
       <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open in TQL Flash Submit</a>
-      <div style="text-align:center;margin-top:10px;font-size:11px;color:#4D4D4D;line-height:1.5;">Reply to this email to lock or request changes.</div>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:#4D4D4D;line-height:1.5;">Reply to lock or request changes.</div>
     </td></tr>
-    <!-- Footer -->
     <tr><td style="padding:14px 24px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
       Total Quality Lending · Flash Submit · Quote generated ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
     </td></tr>
@@ -615,6 +727,20 @@ export default function App() {
   const [quoteBorrower, setQuoteBorrower] = useState('')
   const [quoteSending, setQuoteSending] = useState(false)
   const [quoteStatus, setQuoteStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  // Full Quote (sales-rep → broker) — supports custom subject/body, optional rate stack
+  const [fullQuoteRate, setFullQuoteRate] = useState<{
+    programName: string; rate: number; price: number; apr: number; payment: number;
+    points?: number; lockPeriod?: number | string;
+    adjustments?: Array<{ description: string; amount: number; rateAdj?: number }>
+  } | null>(null)
+  const [fullQuoteEmail, setFullQuoteEmail] = useState('')
+  const [fullQuoteBorrower, setFullQuoteBorrower] = useState('')
+  const [fullQuoteSubject, setFullQuoteSubject] = useState('')
+  const [fullQuoteNote, setFullQuoteNote] = useState('')
+  const [fullQuoteIncludeStack, setFullQuoteIncludeStack] = useState(true)
+  const [fullQuoteSelectedKey, setFullQuoteSelectedKey] = useState<string>('')
+  const [fullQuoteSending, setFullQuoteSending] = useState(false)
+  const [fullQuoteStatus, setFullQuoteStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [helpDeskFields, setHelpDeskFields] = useState({ name: '', email: '', topic: '', message: '' })
   const [helpDeskSending, setHelpDeskSending] = useState(false)
   const [helpDeskStatus, setHelpDeskStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -2453,21 +2579,19 @@ export default function App() {
                       visiblePrograms.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
                       return (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">{showRawInvestor ? 'Master Investor Results' : 'More Pricing Options'}</h3>
-                            <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>
-                              {showRawInvestor ? (
-                                <><Lock className="w-2.5 h-2.5" />Admin · Raw Investor View · No Filter</>
-                              ) : (
-                                <><QuinnGlow size={10} withRing={false} />AI Filtered · 99.000–101.750</>
-                              )}
+                        {showRawInvestor && (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">Master Investor Results</h3>
+                              <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>
+                                <Lock className="w-2.5 h-2.5" />Admin · Raw Investor View · No Filter
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {visiblePrograms.length} found
                             </span>
                           </div>
-                          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">
-                            {visiblePrograms.length} found
-                          </span>
-                        </div>
+                        )}
                         {visiblePrograms.map(({ program, programName, filteredRateOptions, pinned }, idx) => {
                           const bestRate = filteredRateOptions.reduce((best, opt) => {
                             const price = pointsToPrice(safeNumber(opt.points))
@@ -2503,13 +2627,59 @@ export default function App() {
                                     </div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{filteredRateOptions.length} rate option{filteredRateOptions.length !== 1 ? 's' : ''}</div>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2 justify-end">
                                     <button
                                       type="button"
-                                      onClick={(e) => { e.stopPropagation(); setShowEmailForm(!showEmailForm) }}
-                                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const opt = bestRate
+                                        if (!opt) return
+                                        setQuoteEmail('')
+                                        setQuoteBorrower('')
+                                        setQuoteStatus('idle')
+                                        setQuoteRate({
+                                          programName,
+                                          rate: safeNumber(opt.rate),
+                                          price: pointsToPrice(safeNumber(opt.points)),
+                                          apr: safeNumber(opt.apr),
+                                          payment: safeNumber(opt.payment),
+                                          points: safeNumber(opt.points),
+                                          lockPeriod: opt.lockPeriod,
+                                          adjustments: opt.adjustments || [],
+                                        })
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
                                     >
-                                      <Mail className="w-3 h-3" />Email Results
+                                      <Mail className="w-3.5 h-3.5" />Email Client Quote
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const opt = bestRate
+                                        if (!opt) return
+                                        setFullQuoteEmail('')
+                                        setFullQuoteBorrower('')
+                                        setFullQuoteNote('')
+                                        setFullQuoteIncludeStack(true)
+                                        setFullQuoteStatus('idle')
+                                        const price = pointsToPrice(safeNumber(opt.points))
+                                        setFullQuoteSubject(`TQL Full Quote · ${programName} · ${safeNumber(opt.rate).toFixed(3)}% / ${price.toFixed(3)}`)
+                                        setFullQuoteSelectedKey(`${programName}|${safeNumber(opt.rate).toFixed(3)}|${price.toFixed(3)}`)
+                                        setFullQuoteRate({
+                                          programName,
+                                          rate: safeNumber(opt.rate),
+                                          price,
+                                          apr: safeNumber(opt.apr),
+                                          payment: safeNumber(opt.payment),
+                                          points: safeNumber(opt.points),
+                                          lockPeriod: opt.lockPeriod,
+                                          adjustments: opt.adjustments || [],
+                                        })
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white tql-bg-teal rounded-lg shadow-[0_1px_3px_rgba(36,95,115,0.3)] hover:opacity-90 transition-opacity"
+                                    >
+                                      <Send className="w-3.5 h-3.5" />Send Full Quote
                                     </button>
                                     <button
                                       type="button"
@@ -3255,24 +3425,25 @@ export default function App() {
           <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => !quoteSending && setQuoteRate(null)} />
           <div className="fixed inset-0 z-[301] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
             <div className="w-full max-w-[480px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
-              <div className="tql-bg-teal px-6 py-4 flex items-center justify-between">
+              <div className="tql-bg-teal px-5 py-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Mail className="w-5 h-5 text-white shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-[15px] font-bold text-white tracking-tight">Email Rate Quote</div>
+                    <div className="text-[15px] font-bold text-white tracking-tight">Email Client Quote</div>
                     <div className="text-[11px] text-white/80 mt-0.5 truncate">{quoteRate.programName} · {quoteRate.rate.toFixed(3)}% @ {quoteRate.price.toFixed(3)}</div>
                   </div>
                 </div>
                 <button type="button" onClick={() => !quoteSending && setQuoteRate(null)} className="p-1 text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
               </div>
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-5 py-5 sm:px-6 space-y-4">
+                <p className="text-[11px] tql-text-muted leading-relaxed">Sends a clean rate summary to the client. <span className="tql-text-teal font-semibold">Pricing adjustments are NOT included</span> — this is the borrower-facing version.</p>
                 <div>
                   <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Borrower Name (optional)</label>
-                  <input type="text" value={quoteBorrower} onChange={(e) => setQuoteBorrower(e.target.value)} placeholder="John Smith" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  <input type="text" value={quoteBorrower} onChange={(e) => setQuoteBorrower(e.target.value)} placeholder="John Smith" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Send To Email *</label>
-                  <input type="email" value={quoteEmail} onChange={(e) => setQuoteEmail(e.target.value)} placeholder="recipient@example.com" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={quoteEmail} onChange={(e) => setQuoteEmail(e.target.value)} placeholder="recipient@example.com" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                 </div>
                 <button
                   type="button"
@@ -3306,6 +3477,150 @@ export default function App() {
           </div>
         </>
       )}
+
+      {/* ═════════ SEND FULL QUOTE MODAL (sales-rep → broker) ═════════ */}
+      {fullQuoteRate && (() => {
+        // Build the candidate rate list across every program (filtered to 99-101.75
+        // band) so the rep can pick which rate the email highlights.
+        const allCandidates: Array<{ key: string; programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> }> = []
+        if (result?.programs) {
+          for (const p of result.programs) {
+            if (!p?.rateOptions) continue
+            for (const o of p.rateOptions) {
+              const pts = safeNumber(o.points)
+              const price = safeNumber(o.price) || (pts > 50 ? pts : 100 - pts)
+              if (price < 99.0 || price > 101.75) continue
+              const rate = safeNumber(o.rate)
+              if (rate <= 0) continue
+              const programName = p.name || 'TQL Program'
+              allCandidates.push({
+                key: `${programName}|${rate.toFixed(3)}|${price.toFixed(3)}`,
+                programName, rate, price,
+                apr: safeNumber(o.apr),
+                payment: safeNumber(o.payment),
+                lockPeriod: o.lockPeriod,
+                adjustments: o.adjustments,
+              })
+            }
+          }
+          // Dedupe by key
+          const seen = new Set<string>()
+          for (let i = allCandidates.length - 1; i >= 0; i--) {
+            if (seen.has(allCandidates[i].key)) allCandidates.splice(i, 1)
+            else seen.add(allCandidates[i].key)
+          }
+          allCandidates.sort((a, b) => a.rate - b.rate || b.price - a.price)
+        }
+        const selected = allCandidates.find(c => c.key === fullQuoteSelectedKey) || {
+          key: '',
+          programName: fullQuoteRate.programName,
+          rate: fullQuoteRate.rate,
+          price: fullQuoteRate.price,
+          apr: fullQuoteRate.apr,
+          payment: fullQuoteRate.payment,
+          lockPeriod: fullQuoteRate.lockPeriod,
+          adjustments: fullQuoteRate.adjustments,
+        }
+        return (
+          <>
+            <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => !fullQuoteSending && setFullQuoteRate(null)} />
+            <div className="fixed inset-0 z-[301] flex items-start sm:items-center justify-center px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
+              <div className="w-full max-w-[560px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden my-2">
+                <div className="tql-bg-teal px-5 py-4 sm:px-6 flex items-center justify-between sticky top-0 z-10">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Send className="w-5 h-5 text-white shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-bold text-white tracking-tight">Send Full Quote</div>
+                      <div className="text-[11px] text-white/80 mt-0.5 truncate">Sales rep → broker · highlighted + optional rate stack</div>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => !fullQuoteSending && setFullQuoteRate(null)} className="p-1 text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
+                </div>
+
+                <div className="px-5 py-5 sm:px-6 space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Broker Email *</label>
+                    <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={fullQuoteEmail} onChange={(e) => setFullQuoteEmail(e.target.value)} placeholder="broker@company.com" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Borrower Name (optional)</label>
+                    <input type="text" value={fullQuoteBorrower} onChange={(e) => setFullQuoteBorrower(e.target.value)} placeholder="John Smith" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Highlight Rate</label>
+                    <select
+                      value={fullQuoteSelectedKey}
+                      onChange={(e) => setFullQuoteSelectedKey(e.target.value)}
+                      className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent"
+                    >
+                      {allCandidates.length === 0 && <option value="">{fullQuoteRate.programName} · {fullQuoteRate.rate.toFixed(3)}% @ {fullQuoteRate.price.toFixed(3)}</option>}
+                      {allCandidates.map(c => (
+                        <option key={c.key} value={c.key}>{c.programName} · {c.rate.toFixed(3)}% @ {c.price.toFixed(3)}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Subject *</label>
+                    <input type="text" value={fullQuoteSubject} onChange={(e) => setFullQuoteSubject(e.target.value)} placeholder="TQL Full Quote · …" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Note to Broker (rendered after the rate card)</label>
+                    <textarea
+                      value={fullQuoteNote}
+                      onChange={(e) => setFullQuoteNote(e.target.value)}
+                      rows={4}
+                      placeholder="Hi Jane — wanted to circle back with the latest scenario pricing. Let me know if you'd like to lock or run a different combination…"
+                      className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent resize-y min-h-[100px]"
+                    />
+                  </div>
+
+                  <ToggleRow
+                    label={`Include full rate stack (${allCandidates.length} option${allCandidates.length !== 1 ? 's' : ''}, 99.000–101.750)`}
+                    value={fullQuoteIncludeStack}
+                    onChange={setFullQuoteIncludeStack}
+                  />
+
+                  <button
+                    type="button"
+                    disabled={!fullQuoteEmail || !fullQuoteSubject || fullQuoteSending}
+                    onClick={async () => {
+                      if (!fullQuoteRate) return
+                      setFullQuoteSending(true)
+                      setFullQuoteStatus('idle')
+                      const noteSafe = fullQuoteNote
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      const stackForEmail = fullQuoteIncludeStack
+                        ? allCandidates.map(c => ({ programName: c.programName, rate: c.rate, price: c.price, apr: c.apr, payment: c.payment }))
+                        : []
+                      const html = buildFullQuoteEmail(selected, fullQuoteBorrower, formData, noteSafe, stackForEmail)
+                      try {
+                        const r = await fetch('/api/send-email', {
+                          method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ to: fullQuoteEmail, subject: fullQuoteSubject, html }),
+                        })
+                        if (r.ok) {
+                          setFullQuoteStatus('success')
+                          setTimeout(() => { setFullQuoteRate(null); setFullQuoteStatus('idle') }, 2000)
+                        } else { setFullQuoteStatus('error') }
+                      } catch { setFullQuoteStatus('error') }
+                      finally { setFullQuoteSending(false) }
+                    }}
+                    className="w-full py-3.5 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[13px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(36,95,115,0.3)]"
+                  >
+                    {fullQuoteSending ? <Loader2 className="w-4 h-4 animate-spin" /> : fullQuoteStatus === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                    {fullQuoteSending ? 'Sending…' : fullQuoteStatus === 'success' ? 'Sent!' : 'Send Full Quote'}
+                  </button>
+                  {fullQuoteStatus === 'error' && <p className="text-[11px] text-[#EF4444] text-center">Failed to send. Please check the email address and try again.</p>}
+                </div>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {showHelpDesk && (
         <>
