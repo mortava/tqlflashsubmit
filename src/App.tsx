@@ -583,120 +583,38 @@ function buildFullQuoteEmail(
 </body></html>`
 }
 
-// Opens a print-only window with a TQL-branded rate card so the broker can save
-// it as a PDF or print. Includes the highlighted rate, scenario summary, and
-// the full TQL rate stack (99.000–101.750). LLPAs are intentionally omitted.
-function printRateCardPdf(
+// Downloads a TQL-branded rate-quote PDF directly — no print preview, no popup
+// window. Hits /api/rate-quote-pdf which builds the PDF server-side with
+// pdf-lib and streams it back as application/pdf with attachment disposition.
+// LLPAs are intentionally omitted (matches client-quote convention).
+async function printRateCardPdf(
   rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
-  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string },
+  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; propertyCounty?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string },
   rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
 ) {
-  const fmtMoney = (n: string | number | undefined) => {
-    if (n === undefined || n === '') return '—'
-    const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
-    return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
+  try {
+    const res = await fetch('/api/rate-quote-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rate, scenario, rateStack }),
+    })
+    if (!res.ok) throw new Error(`PDF generation failed (${res.status})`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const safeName = String(rate.programName || 'Rate-Quote').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const filename = `TQL-Quote-${safeName}-${rate.rate.toFixed(3)}-${rate.price.toFixed(3)}.pdf`
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove() }, 1000)
+    return
+  } catch (err) {
+    console.error('[PDF download]', err)
+    alert('Could not generate the PDF. Please try again or use Email Client Quote.')
   }
-  const propertyLine = [scenario.propertyCity, scenario.propertyState, scenario.propertyZip].filter(Boolean).join(', ')
-  const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"/>
-<title>TQL Rate Quote · ${rate.programName}</title>
-<style>
-  @page { size: letter; margin: 0.5in; }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0B1220; background: #FAFAF8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .wrap { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(15,23,42,0.08); }
-  .hdr { background: #245F73; color: #fff; padding: 22px 28px; }
-  .hdr .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.85; }
-  .hdr .title { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin-top: 4px; line-height: 1.2; }
-  .hdr .sub { font-size: 13px; opacity: 0.85; margin-top: 6px; }
-  .hero { padding: 26px 28px 10px; display: flex; gap: 18px; }
-  .hero .col { flex: 1; }
-  .hero .num { font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -1px; color: #0B1220; }
-  .hero .num.right { text-align: right; }
-  .hero .num .pct { font-size: 20px; color: #245F73; }
-  .hero .lbl { font-size: 10px; font-weight: 700; color: #4D4D4D; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
-  .hero .lbl.right { text-align: right; }
-  .stats { margin: 8px 28px 20px; background: #FAFAF8; border-radius: 10px; display: flex; }
-  .stats .col { flex: 1; padding: 14px 16px; }
-  .stats .col + .col { border-left: 1px solid #CBD5E1; text-align: right; }
-  .stats .num { font-size: 18px; font-weight: 700; color: #0B1220; }
-  .stats .lbl { font-size: 9px; font-weight: 700; color: #4D4D4D; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 3px; }
-  .scn { padding: 0 28px 24px; }
-  .scn h3 { font-size: 11px; font-weight: 700; color: #245F73; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 10px; }
-  .scn table { width: 100%; font-size: 13px; border-collapse: collapse; }
-  .scn td { padding: 5px 0; }
-  .scn td.l { color: #4D4D4D; width: 40%; }
-  .scn td.v { font-weight: 600; color: #0B1220; text-align: right; }
-  .ftr { padding: 14px 28px; background: #FAFAF8; border-top: 1px solid #CBD5E1; font-size: 10px; color: #4D4D4D; line-height: 1.5; text-align: center; }
-  @media print { .noprint { display: none; } }
-</style></head>
-<body>
-<div class="wrap">
-  <div class="hdr">
-    <div class="eyebrow">TQL · Rate Quote</div>
-    <div class="title">${rate.programName}</div>
-    <div class="sub">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-  </div>
-  <div class="hero">
-    <div class="col">
-      <div class="num">${rate.rate.toFixed(3)}<span class="pct">%</span></div>
-      <div class="lbl">Interest Rate</div>
-    </div>
-    <div class="col">
-      <div class="num right" style="color:${rate.price >= 100 ? '#245F73' : '#0B1220'};">${rate.price.toFixed(3)}</div>
-      <div class="lbl right">Final Price</div>
-    </div>
-  </div>
-  <div class="stats">
-    <div class="col">
-      <div class="num">${rate.apr.toFixed(3)}%</div>
-      <div class="lbl">APR</div>
-    </div>
-    <div class="col">
-      <div class="num">${rate.payment > 0 ? fmtMoney(rate.payment) : '—'}</div>
-      <div class="lbl">Monthly P&amp;I</div>
-    </div>
-  </div>
-  <div class="scn">
-    <h3>Scenario</h3>
-    <table>
-      <tr><td class="l">Loan Amount</td><td class="v">${fmtMoney(scenario.loanAmount)}</td></tr>
-      <tr><td class="l">Property Value</td><td class="v">${fmtMoney(scenario.propertyValue)}</td></tr>
-      ${propertyLine ? `<tr><td class="l">Property</td><td class="v">${propertyLine}</td></tr>` : ''}
-      ${scenario.loanTerm ? `<tr><td class="l">Term · Amort</td><td class="v">${scenario.loanTerm}yr ${scenario.amortization || ''}</td></tr>` : ''}
-      ${scenario.documentationType ? `<tr><td class="l">Doc Type</td><td class="v">${scenario.documentationType}</td></tr>` : ''}
-      ${scenario.creditScore ? `<tr><td class="l">FICO</td><td class="v">${scenario.creditScore}</td></tr>` : ''}
-      ${rate.lockPeriod ? `<tr><td class="l">Lock Period</td><td class="v">${rate.lockPeriod} days</td></tr>` : ''}
-    </table>
-  </div>
-  ${rateStack.length > 0 ? `
-  <div class="scn" style="page-break-inside:avoid;">
-    <h3>All Rate / Price Options</h3>
-    <table style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#fff;">
-      <tr style="background:#FAFAF8;">
-        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;">Program</td>
-        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Rate</td>
-        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Price</td>
-        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">APR</td>
-        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">P&amp;I</td>
-      </tr>
-      ${rateStack.map(r => `
-        <tr>
-          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;color:#334155;">${r.programName}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;text-align:right;color:#0B1220;white-space:nowrap;">${r.rate.toFixed(3)}%</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;text-align:right;color:${r.price >= 100 ? '#245F73' : '#0B1220'};white-space:nowrap;">${r.price.toFixed(3)}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:right;color:#334155;white-space:nowrap;">${r.apr.toFixed(3)}%</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:right;color:#334155;white-space:nowrap;">${r.payment > 0 ? fmtMoney(r.payment) : '—'}</td>
-        </tr>`).join('')}
-    </table>
-  </div>` : ''}
-  <div class="ftr">Total Quality Lending · TotalPricer · Quote generated ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
-</div>
-<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
-</body></html>`
-  const w = window.open('', '_blank', 'noopener,width=820,height=1000')
-  if (!w) { alert('Please allow popups for TQL TotalPricer to print the PDF.'); return }
-  w.document.open(); w.document.write(html); w.document.close()
 }
 
 // Yes/No pill toggle used in the Flash Submit modal.
@@ -1908,8 +1826,8 @@ export default function App() {
   return (
     <div className="h-screen overflow-hidden bg-slate-50">
 
-      {/* ===== DESKTOP SIDEBAR (fixed, 200px) ===== */}
-      <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-[200px] bg-white border-r border-slate-200 z-50">
+      {/* ===== DESKTOP SIDEBAR — HIDDEN, replaced by top nav per ops directive ===== */}
+      <aside className="hidden flex-col fixed left-0 top-0 h-screen w-[200px] bg-white border-r border-slate-200 z-50">
         {/* Brand */}
         <div className="px-4 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2.5">
@@ -2071,12 +1989,44 @@ export default function App() {
       )}
 
       {/* ===== MAIN CONTENT ===== */}
-      <main className="lg:ml-[200px] h-screen flex flex-col overflow-hidden">
+      <main className="h-screen flex flex-col overflow-hidden">
 
-        {/* ===== DESKTOP TOP HEADER BAR ===== */}
-        <div className="hidden lg:block shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-end gap-2.5">
-            <div className="flex items-center gap-2.5">
+        {/* ===== DESKTOP TOP NAV (logo + nav + auth) — replaces the fixed sidebar ===== */}
+        <div className="hidden lg:flex shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm px-6 lg:px-8 py-4 items-center gap-6">
+          {/* Brand */}
+          <div className="flex items-center gap-2.5 mr-2 shrink-0">
+            <IconAtom className="w-7 h-7 text-black" />
+            <div className="leading-tight">
+              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Total</span><span className="tql-text-teal">Pricer</span></span>
+            </div>
+          </div>
+
+          {/* Primary nav */}
+          <nav className="flex items-center gap-1 ml-auto">
+            <button type="button" onClick={() => setShowUserChat(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:tql-text-teal transition-colors">
+              <User className="w-4 h-4" />
+              Chat Live Now
+            </button>
+            <button type="button" onClick={() => { setResult(null); window.scrollTo({ top: 0 }) }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:tql-text-teal transition-colors">
+              <IconNewScenario className="w-4 h-4" />
+              New Scenario
+            </button>
+            <button type="button" onClick={() => setCurrentView('submit')} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:tql-text-teal transition-colors">
+              <IconSubmitLoan className="w-4 h-4" />
+              Flash Submit
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAdminPasscodeInput(''); setAdminPasscodeError(false); setShowUserAdmin(true) }}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors ${showRawInvestor ? 'tql-text-teal hover:bg-slate-50' : 'text-slate-700 hover:bg-slate-50 hover:tql-text-teal'}`}
+            >
+              <Lock className="w-4 h-4" />
+              User Admin{showRawInvestor ? ' · Raw' : ''}
+            </button>
+          </nav>
+
+          {/* Auth cluster */}
+          <div className="flex items-center gap-2.5 shrink-0 pl-3 border-l border-slate-200">
             {isPartner && profile ? (
               <>
                 <span className="text-[12px] font-medium text-slate-500 mr-1">{profile.first_name} {profile.last_name}</span>
@@ -2090,27 +2040,14 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 border border-slate-300 hover:bg-slate-50 transition-all active:scale-[0.98]"
-                >
-                  <Sun className="w-3.5 h-3.5" />
-                  Guest Mode
-                </button>
-                {/* Partners Login — HIDDEN */}
-                <a
-                  href="https://brokerpack.tqltpo.com/broker-apply"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white tql-bg-teal transition-all active:scale-[0.98]"
-                >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Get Approved
-                </a>
-              </>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-slate-600 border border-slate-300 hover:bg-slate-50 transition-all active:scale-[0.98]"
+              >
+                <Sun className="w-3.5 h-3.5" />
+                Guest Mode
+              </button>
             )}
-            </div>
           </div>
         </div>
 
