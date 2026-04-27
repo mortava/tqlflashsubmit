@@ -1853,8 +1853,11 @@ export default function App() {
             <IconNewScenario className="w-[18px] h-[18px] shrink-0" />
             <span className="text-[13px] font-semibold truncate">New Scenario</span>
           </button>
-          {/* Chat with a Human — HIDDEN */}
-          {/* TRINITY AI DEAL DESK — HIDDEN */}
+          {/* Chat with a Human — Supabase-backed live chat */}
+          <button type="button" onClick={() => setShowUserChat(true)} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900">
+            <Mail className="w-[18px] h-[18px] shrink-0" />
+            <span className="text-[13px] truncate">Chat with a Human</span>
+          </button>
           {/* Submit a Loan — Encompass Flash Submit */}
           <button type="button" onClick={() => setCurrentView('submit')} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900">
             <IconSubmitLoan className="w-[18px] h-[18px] shrink-0" />
@@ -1939,8 +1942,11 @@ export default function App() {
                 <IconNewScenario className="w-[18px] h-[18px] shrink-0" />
                 <span className="text-[13px] font-semibold">New Scenario</span>
               </button>
-              {/* Chat with a Human — HIDDEN */}
-              {/* TRINITY AI DEAL DESK — HIDDEN */}
+              {/* Chat with a Human — Supabase-backed live chat */}
+              <button type="button" onClick={() => { setMobileMenuOpen(false); setShowUserChat(true) }} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900">
+                <Mail className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[13px]">Chat with a Human</span>
+              </button>
               {/* Submit a Loan — Encompass Flash Submit */}
               <button type="button" onClick={() => { setMobileMenuOpen(false); setCurrentView('submit') }} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left text-slate-900">
                 <IconSubmitLoan className="w-[18px] h-[18px] shrink-0" />
