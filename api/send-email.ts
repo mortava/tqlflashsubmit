@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Resend API key not configured' })
   }
 
-  const { to, subject, html } = req.body || {}
+  const { to, subject, html, from } = req.body || {}
 
   if (!to || !subject || !html) {
     return res.status(400).json({ error: 'Missing required fields: to, subject, html' })
@@ -24,6 +24,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Invalid email address' })
   }
 
+  // Caller-supplied FROM is allowed but only when it ends with one of TQL's
+  // verified Resend domains. Anything else falls back to the default sender.
+  const VERIFIED_DOMAINS = ['tqltpo.com', 'tqlend.com']
+  const isVerifiedFrom = (() => {
+    if (typeof from !== 'string' || !from) return false
+    const m = from.match(/<([^>]+)>/)
+    const addr = (m ? m[1] : from).trim().toLowerCase()
+    return VERIFIED_DOMAINS.some(d => addr.endsWith('@' + d) || addr.endsWith('.' + d))
+  })()
+  const fromAddress = isVerifiedFrom ? from : 'TQL Flash Submit <TPOSub@tqltpo.com>'
+
   try {
     const response = await fetch(RESEND_API_URL, {
       method: 'POST',
@@ -32,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'TQL Flash Submit <TPOSub@tqltpo.com>',
+        from: fromAddress,
         to: [to],
         subject,
         html,

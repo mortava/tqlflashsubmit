@@ -360,11 +360,14 @@ function QuinnGlow({ size = 18, withRing = true }: { size?: number; withRing?: b
 
 // Builds a mobile-friendly TQL-branded HTML email for a CLIENT rate quote.
 // LLPAs are intentionally stripped — the client never sees pricing adjustments.
+// Always renders the full 99.000–101.750 rate stack so the borrower can see
+// every rate/price combo we're offering.
 // Sent via /api/send-email; renders cleanly in Gmail / Apple Mail / Outlook.
 function buildRateQuoteEmail(
   rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
   borrowerName: string,
-  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string }
+  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string },
+  rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
 ): string {
   const fmtMoney = (n: string | number | undefined) => {
     if (n === undefined || n === '') return '—'
@@ -432,6 +435,27 @@ function buildRateQuoteEmail(
       </table>
     </td></tr>
     ${/* Pricing Adjustments intentionally omitted from the client-facing email. */ ''}
+    ${rateStack.length > 0 ? `
+    <tr><td style="padding:0 24px 16px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">All Rate / Price Options</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#ffffff;">
+        <tr style="background:#FAFAF8;">
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;">Program</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Rate</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Price</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">APR</td>
+          <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">P&amp;I</td>
+        </tr>
+        ${rateStack.map(r => `
+          <tr>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${r.programName}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:700;text-align:right;color:#0B1220;white-space:nowrap;">${r.rate.toFixed(3)}%</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:700;text-align:right;color:${r.price >= 100 ? '#245F73' : '#0B1220'};white-space:nowrap;">${r.price.toFixed(3)}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:#334155;white-space:nowrap;">${r.apr.toFixed(3)}%</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:#334155;white-space:nowrap;">${r.payment > 0 ? fmtMoney(r.payment) : '—'}</td>
+          </tr>`).join('')}
+      </table>
+    </td></tr>` : ''}
     <!-- CTA -->
     <tr><td style="padding:8px 24px 24px 24px;">
       <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open in TQL Flash Submit</a>
@@ -461,13 +485,8 @@ function buildFullQuoteEmail(
     const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
     return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
   }
-  const adj = highlight.adjustments || []
-  const totalAdj = adj.reduce((s, a) => s + (a.amount || 0), 0)
-  const adjRows = adj.map(a => `
-    <tr>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${a.description}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;font-weight:600;color:${a.amount >= 0 ? '#245F73' : '#EF4444'};text-align:right;white-space:nowrap;">${a.amount >= 0 ? '+' : ''}${a.amount.toFixed(3)}</td>
-    </tr>`).join('')
+  // LLPAs intentionally NOT rendered — both client and broker emails are
+  // adjustment-free per ops directive.
   const stackRows = rateStack.map(r => `
     <tr>
       <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;color:#334155;">${r.programName}</td>
@@ -532,13 +551,7 @@ function buildFullQuoteEmail(
         ${highlight.lockPeriod ? `<tr><td style="padding:4px 0;color:#4D4D4D;">Lock Period</td><td style="padding:4px 0;font-weight:600;color:#0B1220;text-align:right;">${highlight.lockPeriod} days</td></tr>` : ''}
       </table>
     </td></tr>
-    ${adjRows ? `
-    <tr><td style="padding:0 24px 16px 24px;">
-      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Pricing Adjustments</div>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#ffffff;">${adjRows}
-        <tr><td style="padding:8px;font-size:11px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;background:#FAFAF8;">Net Adjustment</td><td style="padding:8px;font-size:13px;font-weight:800;text-align:right;background:#FAFAF8;color:${totalAdj >= 0 ? '#245F73' : '#EF4444'};">${totalAdj >= 0 ? '+' : ''}${totalAdj.toFixed(3)}</td></tr>
-      </table>
-    </td></tr>` : ''}
+    ${/* LLPAs intentionally omitted from the broker-facing full quote per ops directive. */ ''}
     ${stackRows ? `
     <tr><td style="padding:0 24px 16px 24px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Full Rate Stack (99.000 – 101.750)</div>
@@ -570,12 +583,13 @@ function buildFullQuoteEmail(
 </body></html>`
 }
 
-// Opens a print-only window with a TQL-branded one-page rate card so the broker
-// can save it as a PDF (or actually print). Includes scenario summary; LLPAs
-// are intentionally omitted (matches the client-facing email convention).
+// Opens a print-only window with a TQL-branded rate card so the broker can save
+// it as a PDF or print. Includes the highlighted rate, scenario summary, and
+// the full TQL rate stack (99.000–101.750). LLPAs are intentionally omitted.
 function printRateCardPdf(
   rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
-  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string }
+  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string },
+  rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
 ) {
   const fmtMoney = (n: string | number | undefined) => {
     if (n === undefined || n === '') return '—'
@@ -655,6 +669,27 @@ function printRateCardPdf(
       ${rate.lockPeriod ? `<tr><td class="l">Lock Period</td><td class="v">${rate.lockPeriod} days</td></tr>` : ''}
     </table>
   </div>
+  ${rateStack.length > 0 ? `
+  <div class="scn" style="page-break-inside:avoid;">
+    <h3>All Rate / Price Options</h3>
+    <table style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#fff;">
+      <tr style="background:#FAFAF8;">
+        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;">Program</td>
+        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Rate</td>
+        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Price</td>
+        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">APR</td>
+        <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">P&amp;I</td>
+      </tr>
+      ${rateStack.map(r => `
+        <tr>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;color:#334155;">${r.programName}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;text-align:right;color:#0B1220;white-space:nowrap;">${r.rate.toFixed(3)}%</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;font-weight:700;text-align:right;color:${r.price >= 100 ? '#245F73' : '#0B1220'};white-space:nowrap;">${r.price.toFixed(3)}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:right;color:#334155;white-space:nowrap;">${r.apr.toFixed(3)}%</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:right;color:#334155;white-space:nowrap;">${r.payment > 0 ? fmtMoney(r.payment) : '—'}</td>
+        </tr>`).join('')}
+    </table>
+  </div>` : ''}
   <div class="ftr">Total Quality Lending · TotalPricer · Quote generated ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
 </div>
 <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
@@ -1372,23 +1407,37 @@ export default function App() {
     if (!result || !activeRowAction || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email) return
     setRowSending(true)
     setRowStatus('idle')
-    const { rate, price, payment, apr, description } = activeRowAction
-    const rateOverride = { rate, price, apr, payment, description }
+    const { rate, price, payment, apr, description, programName } = activeRowAction
+    // Lookup the RAW investor name from the program list. The reservation
+    // email going to the Lock Desk MUST show the underlying lender brand —
+    // not the TQL-masked name. Brokers never see this.
+    const sourceProg = result.programs?.find(p => (p.name || '') === programName)
+    const rawInvestorProgram = sourceProg?.rawName || description
+    const rawInvestor = sourceProg?.rawInvestor || ''
+    const programLabelForLockDesk = rawInvestor
+      ? `${rawInvestorProgram} · ${rawInvestor}`
+      : rawInvestorProgram
+    const rateOverride = { rate, price, apr, payment, description: programLabelForLockDesk }
     const html = buildFullPricingHtml([
-      { label: 'Name', value: rowReserveFields.name },
-      { label: 'Email', value: rowReserveFields.email },
+      { label: 'Broker Name', value: rowReserveFields.name },
+      { label: 'Broker Email', value: rowReserveFields.email },
       { label: 'Scenario Name', value: rowReserveFields.scenarioName || '—' },
       { label: 'Selected Rate', value: formatPercent(rate) },
       { label: 'Selected Price', value: price.toFixed(3) },
       { label: 'Selected APR', value: formatPercent(apr) },
       { label: 'Selected Payment', value: payment > 0 ? formatCurrency(payment) : '—' },
-      { label: 'Program', value: description },
+      { label: 'Investor Program (raw)', value: programLabelForLockDesk },
     ], 'NEW QUOTE RESERVATION REQUEST', rateOverride)
     try {
       const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: 'tposupport@tqlend.com', subject: `RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)}`, html }),
+        body: JSON.stringify({
+          from: 'TQL TPO Support <tposupport@tqlend.com>',
+          to: 'lockdesk@tqlend.com',
+          subject: `RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`,
+          html,
+        }),
       })
       if (res.ok) {
         setRowStatus('success')
@@ -1596,6 +1645,35 @@ export default function App() {
 
   // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
+
+  // ── Flat rate stack (99.000–101.750) for emails + PDF — masked TQL names ──
+  const collectFullRateStack = (programs: Program[] | undefined): Array<{
+    programName: string; rate: number; price: number; apr: number; payment: number
+  }> => {
+    if (!Array.isArray(programs) || programs.length === 0) return []
+    const out: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
+    for (const p of programs) {
+      if (!p?.rateOptions) continue
+      const programName = p.name || 'TQL Program'
+      for (const o of p.rateOptions) {
+        const pts = safeNumber(o.points)
+        const price = safeNumber(o.price) || (pts > 50 ? pts : 100 - pts)
+        if (price < 99.0 || price > 101.75) continue
+        const rate = safeNumber(o.rate)
+        if (rate <= 0) continue
+        out.push({ programName, rate, price, apr: safeNumber(o.apr), payment: safeNumber(o.payment) })
+      }
+    }
+    const seen = new Set<string>()
+    const unique = out.filter(r => {
+      const k = `${r.programName}|${r.rate.toFixed(3)}|${r.price.toFixed(3)}`
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    })
+    unique.sort((a, b) => a.rate - b.rate || b.price - a.price)
+    return unique
+  }
 
   // ── 2ND-BEST RATE: tier-2 broker-facing rate ──
   // Collects every qualifying rate option across every program in the
@@ -2723,7 +2801,7 @@ export default function App() {
                                           payment: safeNumber(opt.payment),
                                           lockPeriod: opt.lockPeriod,
                                           adjustments: opt.adjustments || [],
-                                        }, formData)
+                                        }, formData, collectFullRateStack(result?.programs))
                                       }}
                                       className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
                                     >
@@ -3553,7 +3631,7 @@ export default function App() {
                     if (!quoteRate) return
                     setQuoteSending(true)
                     setQuoteStatus('idle')
-                    const html = buildRateQuoteEmail(quoteRate, quoteBorrower, formData)
+                    const html = buildRateQuoteEmail(quoteRate, quoteBorrower, formData, collectFullRateStack(result?.programs))
                     const subject = `TQL Rate Quote — ${quoteRate.rate.toFixed(3)}% / ${quoteRate.price.toFixed(3)}${quoteBorrower ? ` — ${quoteBorrower}` : ''}`
                     try {
                       const r = await fetch('/api/send-email', {
