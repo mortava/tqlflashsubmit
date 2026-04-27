@@ -605,9 +605,6 @@ export default function App() {
   // Admin unlock controls BOTH raw investor reveal AND full price ladder
   // visibility. Default broker view = single tier-2 hero card only.
   const showFullResults = showRawInvestor
-  // Broker-facing "Expand Rate Options" — shows the masked TQL rate stack
-  // from 99.000 to 101.750 below the tier-2 hero card.
-  const [showRateStack, setShowRateStack] = useState(false)
   // Email Rate Quote — captures rate + recipient and sends a branded summary
   const [quoteRate, setQuoteRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -1379,72 +1376,6 @@ export default function App() {
 
   // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
-
-  // ── Best rate within a specific PPP family (used for DSCR companion cards) ──
-  const findBestPPPRate = (programs: Program[] | undefined, pppRegex: RegExp): {
-    program: Program; opt: RateOption; price: number
-  } | null => {
-    if (!Array.isArray(programs) || programs.length === 0) return null
-    let best: { program: Program; opt: RateOption; price: number } | null = null
-    for (const program of programs) {
-      if (!program || !pppRegex.test(program.name || '')) continue
-      if (!Array.isArray(program.rateOptions)) continue
-      for (const opt of program.rateOptions) {
-        if (!opt) continue
-        const pts = safeNumber(opt.points)
-        const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
-        if (price < 99.5 || price > 101.75) continue
-        const rate = safeNumber(opt.rate)
-        if (rate <= 0) continue
-        if (!best) { best = { program, opt, price }; continue }
-        if (rate < best.opt.rate - 1e-6) best = { program, opt, price }
-        else if (Math.abs(rate - best.opt.rate) < 1e-6 && price > best.price) best = { program, opt, price }
-      }
-    }
-    return best
-  }
-
-  // ── Consolidated TQL rate stack (99.000–101.750) for "Expand Rate Options" ──
-  // Pulls every qualifying rate option across every program, dedupes by
-  // (rate, price) so duplicates from the same masked program collapse,
-  // and sorts ascending by rate. Excludes the absolute best so brokers
-  // see the same tier-2-and-below picture as the hero card.
-  const buildRateStack = (programs: Program[] | undefined): Array<{
-    program: Program; opt: RateOption; price: number
-  }> => {
-    if (!Array.isArray(programs) || programs.length === 0) return []
-    const all: Array<{ program: Program; opt: RateOption; price: number }> = []
-    for (const program of programs) {
-      if (!program || !Array.isArray(program.rateOptions)) continue
-      for (const opt of program.rateOptions) {
-        if (!opt) continue
-        const pts = safeNumber(opt.points)
-        const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
-        if (price < 99.0 || price > 101.75) continue
-        const rate = safeNumber(opt.rate)
-        if (rate <= 0) continue
-        all.push({ program, opt, price })
-      }
-    }
-    // Dedupe by program-name + rate + price so the same masked combo doesn't repeat.
-    const seen = new Set<string>()
-    const unique = all.filter(c => {
-      const key = `${c.program.name}|${c.opt.rate.toFixed(3)}|${c.price.toFixed(3)}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    // Sort by rate ASC, then by price DESC (best price first within the same rate).
-    unique.sort((a, b) => {
-      if (Math.abs(a.opt.rate - b.opt.rate) > 1e-6) return a.opt.rate - b.opt.rate
-      return b.price - a.price
-    })
-    // Drop the absolute top (every entry tying it on rate AND price) so brokers
-    // see the same tier-2-and-below picture as the hero card.
-    if (unique.length === 0) return unique
-    const top = unique[0]
-    return unique.filter(c => Math.abs(c.opt.rate - top.opt.rate) > 1e-6 || Math.abs(c.price - top.price) > 1e-6)
-  }
 
   // ── 2ND-BEST RATE: tier-2 broker-facing rate ──
   // Collects every qualifying rate option across every program in the
@@ -2442,48 +2373,6 @@ export default function App() {
                       )}
                     </div>
 
-                    {/* ===== PRICING ADJUSTMENTS SCREEN ===== */}
-                    {targetPricing && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-5">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="text-base font-semibold tracking-wide text-slate-800">Pricing Adjustments</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">
-                              {targetPricing.programName} · {formatPercent(targetPricing.rate)} @ {targetPricing.price.toFixed(3)}
-                            </div>
-                          </div>
-                          {targetPricing.adjustments && targetPricing.adjustments.length > 0 && (() => {
-                            const net = targetPricing.adjustments.reduce((s, a) => s + (a.amount || 0), 0)
-                            return (
-                              <div className="text-right">
-                                <div className={`text-base font-bold tabular-nums ${net >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>Net {net >= 0 ? '+' : ''}{net.toFixed(3)}</div>
-                                <div className="text-[10px] text-slate-400 uppercase tracking-wider">{targetPricing.adjustments.length} LLPA{targetPricing.adjustments.length !== 1 ? 's' : ''}</div>
-                              </div>
-                            )
-                          })()}
-                        </div>
-                        {targetPricing.adjustments && targetPricing.adjustments.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                            {targetPricing.adjustments.map((adj, idx) => {
-                              const priceDisplay = adj.amount || 0
-                              return (
-                                <div key={idx} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-[color:var(--tql-bg)] border tql-border-steel">
-                                  <span className="text-[11px] tql-text-primary truncate" title={adj.description}>{adj.description}</span>
-                                  <span className={`text-[11px] font-semibold tabular-nums shrink-0 ${priceDisplay > 0 ? 'tql-text-link' : priceDisplay < 0 ? 'text-[#EF4444]' : 'text-slate-400'}`}>
-                                    {priceDisplay > 0 ? '+' : ''}{priceDisplay.toFixed(3)}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-[11px] text-slate-500 bg-[color:var(--tql-bg)] border tql-border-steel rounded-md px-3 py-2">
-                            No itemized LLPAs returned from Optimal Blue for this rate/price combination. The price shown already reflects any applicable adjustments.
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     {/* ===== EMAIL FORM ===== */}
                     {showEmailForm && (
                       <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -2517,227 +2406,10 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* ===== AI-SELECTED RATE (tier-2; always visible) ===== */}
-                    {Array.isArray(result.programs) && result.programs.length > 0 && (() => {
-                      const bestPick = findSecondBestRate(result.programs)
-                      // Count what the AI parsed for the helper line.
-                      const totalRateOpts = result.programs.reduce(
-                        (s, p) => s + (Array.isArray(p?.rateOptions) ? p.rateOptions.length : 0), 0
-                      )
-                      if (!bestPick) {
-                        return (
-                          <div className="bg-white border border-amber-200 rounded-xl p-5 text-[12px] tql-text-slate">
-                            AI scanned <span className="font-semibold">{totalRateOpts}</span> rate combinations across <span className="font-semibold">{result.programs.length}</span> programs but none landed in the 99.500 – 101.750 price band.
-                          </div>
-                        )
-                      }
-                      const { program, opt, price } = bestPick
-                      const programName = program.name || 'TQL Best Available Program'
-                      const adjustments = opt.adjustments || []
-                      const totalAdj = adjustments.reduce((s, a) => s + (a.amount || 0), 0)
-                      return (
-                        <div className="bg-white border-2 tql-border-teal rounded-xl shadow-[0_4px_20px_rgba(36,95,115,0.18)] overflow-hidden">
-                          <div className="tql-bg-teal text-white px-5 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <QuinnGlow size={20} />
-                              <div className="min-w-0">
-                                <div className="text-[11px] uppercase tracking-widest opacity-90 flex items-center gap-1.5">
-                                  <span>Quinn AI · Lowest Rate · Highest Price</span>
-                                </div>
-                                <div className="text-[14px] font-bold truncate tql-font-display">{showRawInvestor ? (program.rawName || programName) : programName}</div>
-                              </div>
-                            </div>
-                            <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-white/15 px-2 py-1 rounded-md backdrop-blur-sm">
-                              <QuinnGlow size={11} withRing={false} />AI Pick
-                            </span>
-                          </div>
-                          <div className="px-5 py-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                              <div>
-                                <div className="text-[24px] font-bold tql-text-primary tabular-nums">{safeNumber(opt.rate).toFixed(3)}%</div>
-                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">Rate</div>
-                              </div>
-                              <div>
-                                <div className={`text-[24px] font-bold tabular-nums ${price >= 100 ? 'tql-text-teal' : 'tql-text-primary'}`}>{price.toFixed(3)}</div>
-                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">Price</div>
-                              </div>
-                              <div>
-                                <div className="text-[24px] font-bold tql-text-primary tabular-nums">{safeNumber(opt.apr).toFixed(3)}%</div>
-                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">APR</div>
-                              </div>
-                              <div>
-                                <div className="text-[24px] font-bold tql-text-primary tabular-nums">{safeNumber(opt.payment) > 0 ? formatCurrency(safeNumber(opt.payment)) : '—'}</div>
-                                <div className="text-[10px] font-semibold tql-text-muted uppercase tracking-wider mt-0.5">P&amp;I Payment</div>
-                              </div>
-                            </div>
-                            {adjustments.length > 0 && (
-                              <div className="mt-4 pt-3 border-t tql-border-steel flex items-center justify-between">
-                                <div className="text-[11px] tql-text-muted uppercase tracking-wider">Net LLPA · {adjustments.length} item{adjustments.length !== 1 ? 's' : ''}</div>
-                                <div className={`text-[13px] font-bold tabular-nums ${totalAdj >= 0 ? 'tql-text-teal' : 'text-[#EF4444]'}`}>{totalAdj >= 0 ? '+' : ''}{totalAdj.toFixed(3)}</div>
-                              </div>
-                            )}
-                            <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setQuoteEmail(flashSubmitFields.brokerEmail || '')
-                                  setQuoteBorrower('')
-                                  setQuoteStatus('idle')
-                                  setQuoteRate({
-                                    programName,
-                                    rate: safeNumber(opt.rate),
-                                    price,
-                                    apr: safeNumber(opt.apr),
-                                    payment: safeNumber(opt.payment),
-                                    points: safeNumber(opt.points),
-                                    lockPeriod: opt.lockPeriod,
-                                    adjustments: opt.adjustments || [],
-                                  })
-                                }}
-                                className="flex-1 py-2.5 tql-bg-teal hover:opacity-90 text-white rounded-lg text-[12px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-opacity"
-                              >
-                                <Mail className="w-3.5 h-3.5" />Email This Quote
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setFlashSubmitError(null)
-                                  setFlashSubmitRate({
-                                    programName,
-                                    rate: safeNumber(opt.rate),
-                                    price,
-                                    apr: safeNumber(opt.apr),
-                                    payment: safeNumber(opt.payment),
-                                    points: safeNumber(opt.points),
-                                    lockPeriod: opt.lockPeriod,
-                                    adjustments: opt.adjustments || [],
-                                  })
-                                }}
-                                className="flex-1 py-2.5 bg-white border-2 tql-border-teal tql-text-teal hover:tql-bg-teal hover:text-white rounded-lg text-[12px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
-                              >
-                                <Zap className="w-3.5 h-3.5" />Flash Submit → 3.4
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })()}
-
-                    {/* ===== DSCR COMPANION CARDS — always show 5% PPP and 3% PPP picks ===== */}
-                    {formData.documentationType === 'dscr' && Array.isArray(result.programs) && result.programs.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {(['5', '3'] as const).map(pct => {
-                          const re = new RegExp(`\\b${pct}\\s*%\\s*PPP\\b`, 'i')
-                          const pick = findBestPPPRate(result.programs, re)
-                          if (!pick) return null
-                          const adj = pick.opt.adjustments || []
-                          const net = adj.reduce((s, a) => s + (a.amount || 0), 0)
-                          const display = showRawInvestor && pick.program.rawName ? pick.program.rawName : (pick.program.name || `TQL - ${pct}%PPP Program`)
-                          return (
-                            <div key={pct} className="bg-white border tql-border-steel rounded-xl overflow-hidden shadow-sm">
-                              <div className="px-4 py-2.5 flex items-center justify-between border-b tql-border-steel" style={{ background: 'rgba(56,189,248,0.08)' }}>
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <QuinnGlow size={14} withRing={false} />
-                                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#0284C7' }}>DSCR · {pct}% PPP</span>
-                                </div>
-                                <span className="text-[10px] font-medium tql-text-muted truncate ml-2" title={display}>{display}</span>
-                              </div>
-                              <div className="px-4 py-3 grid grid-cols-4 gap-2">
-                                <div>
-                                  <div className="text-[16px] font-bold tql-text-primary tabular-nums">{pick.opt.rate.toFixed(3)}%</div>
-                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">Rate</div>
-                                </div>
-                                <div>
-                                  <div className={`text-[16px] font-bold tabular-nums ${pick.price >= 100 ? 'tql-text-teal' : 'tql-text-primary'}`}>{pick.price.toFixed(3)}</div>
-                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">Price</div>
-                                </div>
-                                <div>
-                                  <div className="text-[16px] font-bold tql-text-primary tabular-nums">{safeNumber(pick.opt.apr).toFixed(3)}%</div>
-                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">APR</div>
-                                </div>
-                                <div>
-                                  <div className="text-[16px] font-bold tql-text-primary tabular-nums">{safeNumber(pick.opt.payment) > 0 ? formatCurrency(safeNumber(pick.opt.payment)) : '—'}</div>
-                                  <div className="text-[9px] font-semibold tql-text-muted uppercase tracking-wider">P&amp;I</div>
-                                </div>
-                              </div>
-                              {adj.length > 0 && (
-                                <div className="px-4 py-1.5 border-t tql-border-steel flex items-center justify-between text-[10px]">
-                                  <span className="tql-text-muted uppercase tracking-wider">Net LLPA · {adj.length}</span>
-                                  <span className={`font-bold tabular-nums ${net >= 0 ? 'tql-text-teal' : 'text-[#EF4444]'}`}>{net >= 0 ? '+' : ''}{net.toFixed(3)}</span>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* ===== EXPAND RATE OPTIONS — broker-facing masked rate stack 99.000–101.750 ===== */}
-                    {Array.isArray(result.programs) && result.programs.length > 0 && (() => {
-                      const stack = buildRateStack(result.programs)
-                      if (stack.length === 0) return null
-                      return (
-                        <div className="bg-white border tql-border-steel rounded-xl overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => setShowRateStack(v => !v)}
-                            className="w-full flex items-center justify-between px-5 py-3 hover:bg-[color:var(--tql-bg)] transition-colors"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <QuinnGlow size={14} withRing={false} />
-                              <span className="text-[12px] font-bold uppercase tracking-wider tql-text-primary tql-font-display">Expand Rate Options</span>
-                              <span className="hidden sm:inline-flex items-center text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>99.000 – 101.750</span>
-                              <span className="text-[10px] tql-text-muted whitespace-nowrap">· {stack.length} option{stack.length !== 1 ? 's' : ''}</span>
-                            </div>
-                            {showRateStack ? <ChevronUp className="w-4 h-4 tql-text-teal" /> : <ChevronDown className="w-4 h-4 tql-text-teal" />}
-                          </button>
-                          {showRateStack && (
-                            <div className="border-t tql-border-steel overflow-x-auto">
-                              <table className="w-full text-[11px]">
-                                <thead>
-                                  <tr className="tql-text-muted border-b tql-border-steel uppercase tracking-wider">
-                                    <th className="text-left py-2 px-4 font-medium">Program</th>
-                                    <th className="text-right py-2 px-2 font-medium">Rate</th>
-                                    <th className="text-right py-2 px-2 font-medium">Price</th>
-                                    <th className="text-right py-2 px-2 font-medium">APR</th>
-                                    <th className="text-right py-2 px-2 font-medium">P&amp;I</th>
-                                    <th className="text-right py-2 px-4 font-medium">Net LLPA</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {stack.map((row, i) => {
-                                    const adj = row.opt.adjustments || []
-                                    const net = adj.reduce((s, a) => s + (a.amount || 0), 0)
-                                    const display = showRawInvestor && row.program.rawName ? row.program.rawName : (row.program.name || 'TQL - Program')
-                                    return (
-                                      <tr key={`${row.program.name}-${i}`} className="border-b tql-border-steel last:border-b-0 hover:bg-[color:var(--tql-bg)]">
-                                        <td className="py-2 px-4 tql-text-primary truncate max-w-[280px]" title={display}>{display}</td>
-                                        <td className="py-2 px-2 text-right font-semibold tabular-nums tql-text-primary">{row.opt.rate.toFixed(3)}%</td>
-                                        <td className={`py-2 px-2 text-right font-semibold tabular-nums ${row.price >= 100 ? 'tql-text-teal' : 'tql-text-primary'}`}>{row.price.toFixed(3)}</td>
-                                        <td className="py-2 px-2 text-right tabular-nums tql-text-primary">{safeNumber(row.opt.apr).toFixed(3)}%</td>
-                                        <td className="py-2 px-2 text-right tabular-nums tql-text-primary">{safeNumber(row.opt.payment) > 0 ? formatCurrency(safeNumber(row.opt.payment)) : '—'}</td>
-                                        <td className={`py-2 px-4 text-right tabular-nums font-semibold ${adj.length === 0 ? 'tql-text-muted' : net >= 0 ? 'tql-text-teal' : 'text-[#EF4444]'}`}>
-                                          {adj.length === 0 ? '–' : `${net >= 0 ? '+' : ''}${net.toFixed(3)}`}
-                                        </td>
-                                      </tr>
-                                    )
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
-
-                    {/* ===== AVAILABLE PROGRAMS — full price ladder (default; admin can hide) ===== */}
-                    {showFullResults && Array.isArray(result.programs) && result.programs.length > 0 ? (() => {
-                      // Pre-compute renderable programs. DSCR 5% PPP is force-displayed
-                      // with its full ladder when DSCR is the selected Doc Type;
-                      // every other program still obeys the 99.000–101.750 filter.
-                      // The OB API returns one bucket per investor product (so admin
-                      // can reveal each), but the broker default view dedupes them by
-                      // masked name to avoid showing 3 cards labeled the same way.
+                    {/* ===== PRICING RESULTS — single broker card (or two for DSCR), full ladder for admin ===== */}
+                    {Array.isArray(result.programs) && result.programs.length > 0 ? (() => {
+                      // Step 1: dedupe by masked name when broker view (admin keeps every
+                      // investor as its own card so raw investor data stays distinct).
                       let sourcePrograms: Program[] = result.programs
                       if (!showRawInvestor) {
                         const byMasked: Record<string, Program> = {}
@@ -2755,7 +2427,10 @@ export default function App() {
                         }
                         sourcePrograms = Object.values(byMasked)
                       }
-                      const visiblePrograms = sourcePrograms
+
+                      // Step 2: filter rate options to the 99.000–101.750 band (DSCR 5%
+                      // PPP bypasses this so it always renders in DSCR mode).
+                      let visiblePrograms = sourcePrograms
                         .map((program) => {
                           if (!program || typeof program !== 'object') return null
                           const allRateOptions = Array.isArray(program.rateOptions) ? program.rateOptions : []
@@ -2766,6 +2441,39 @@ export default function App() {
                           return { program, programName, filteredRateOptions, pinned }
                         })
                         .filter((p): p is { program: Program; programName: string; filteredRateOptions: RateOption[]; pinned: boolean } => p !== null)
+
+                      // Step 3: BROKER VIEW — narrow to the tier-2 program (non-DSCR) or
+                      // the 5% PPP + user-selected-prepay-type pair (DSCR). ADMIN VIEW
+                      // sees every program with raw investor names.
+                      if (!showRawInvestor) {
+                        const isDSCR = formData.documentationType === 'dscr'
+                        if (isDSCR) {
+                          // Map the user's prepayType selection to a regex that matches
+                          // the masked program name (e.g. "5%PPP", "3%PPP").
+                          const prepayPctMap: Record<string, string> = {
+                            '5pct': '5', '3pct': '3', '5-3-3pct': '5', 'declining-5-1': '5', '1pct-oh-mi': '1',
+                          }
+                          const selectedPct = prepayPctMap[formData.prepayType] || '3'
+                          const wantedPpps = Array.from(new Set(['5', selectedPct]))
+                          const dscrPicks: typeof visiblePrograms = []
+                          for (const pct of wantedPpps) {
+                            const re = new RegExp(`\\b${pct}\\s*%\\s*PPP\\b`, 'i')
+                            const found = visiblePrograms.find(v => re.test(v.programName))
+                            if (found && !dscrPicks.includes(found)) dscrPicks.push(found)
+                          }
+                          if (dscrPicks.length > 0) visiblePrograms = dscrPicks
+                        } else {
+                          const tier2 = findSecondBestRate(sourcePrograms)
+                          if (tier2) {
+                            const target = tier2.program.name
+                            const match = visiblePrograms.find(v => v.programName === target)
+                            if (match) visiblePrograms = [match]
+                          } else if (visiblePrograms.length > 0) {
+                            visiblePrograms = [visiblePrograms[0]]
+                          }
+                        }
+                      }
+
                       // Pinned DSCR 5% PPP rides to the top when DSCR is selected.
                       visiblePrograms.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
                       return (
