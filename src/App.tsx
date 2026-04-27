@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock } from 'lucide-react'
+import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, CheckCircle, GripHorizontal, Lock, Printer } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -568,6 +568,100 @@ function buildFullQuoteEmail(
   </table>
 </div>
 </body></html>`
+}
+
+// Opens a print-only window with a TQL-branded one-page rate card so the broker
+// can save it as a PDF (or actually print). Includes scenario summary; LLPAs
+// are intentionally omitted (matches the client-facing email convention).
+function printRateCardPdf(
+  rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
+  scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string }
+) {
+  const fmtMoney = (n: string | number | undefined) => {
+    if (n === undefined || n === '') return '—'
+    const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
+    return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
+  }
+  const propertyLine = [scenario.propertyCity, scenario.propertyState, scenario.propertyZip].filter(Boolean).join(', ')
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>TQL Rate Quote · ${rate.programName}</title>
+<style>
+  @page { size: letter; margin: 0.5in; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0B1220; background: #FAFAF8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .wrap { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(15,23,42,0.08); }
+  .hdr { background: #245F73; color: #fff; padding: 22px 28px; }
+  .hdr .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.85; }
+  .hdr .title { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin-top: 4px; line-height: 1.2; }
+  .hdr .sub { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+  .hero { padding: 26px 28px 10px; display: flex; gap: 18px; }
+  .hero .col { flex: 1; }
+  .hero .num { font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -1px; color: #0B1220; }
+  .hero .num.right { text-align: right; }
+  .hero .num .pct { font-size: 20px; color: #245F73; }
+  .hero .lbl { font-size: 10px; font-weight: 700; color: #4D4D4D; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
+  .hero .lbl.right { text-align: right; }
+  .stats { margin: 8px 28px 20px; background: #FAFAF8; border-radius: 10px; display: flex; }
+  .stats .col { flex: 1; padding: 14px 16px; }
+  .stats .col + .col { border-left: 1px solid #CBD5E1; text-align: right; }
+  .stats .num { font-size: 18px; font-weight: 700; color: #0B1220; }
+  .stats .lbl { font-size: 9px; font-weight: 700; color: #4D4D4D; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 3px; }
+  .scn { padding: 0 28px 24px; }
+  .scn h3 { font-size: 11px; font-weight: 700; color: #245F73; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 10px; }
+  .scn table { width: 100%; font-size: 13px; border-collapse: collapse; }
+  .scn td { padding: 5px 0; }
+  .scn td.l { color: #4D4D4D; width: 40%; }
+  .scn td.v { font-weight: 600; color: #0B1220; text-align: right; }
+  .ftr { padding: 14px 28px; background: #FAFAF8; border-top: 1px solid #CBD5E1; font-size: 10px; color: #4D4D4D; line-height: 1.5; text-align: center; }
+  @media print { .noprint { display: none; } }
+</style></head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="eyebrow">TQL · Rate Quote</div>
+    <div class="title">${rate.programName}</div>
+    <div class="sub">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+  </div>
+  <div class="hero">
+    <div class="col">
+      <div class="num">${rate.rate.toFixed(3)}<span class="pct">%</span></div>
+      <div class="lbl">Interest Rate</div>
+    </div>
+    <div class="col">
+      <div class="num right" style="color:${rate.price >= 100 ? '#245F73' : '#0B1220'};">${rate.price.toFixed(3)}</div>
+      <div class="lbl right">Final Price</div>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="col">
+      <div class="num">${rate.apr.toFixed(3)}%</div>
+      <div class="lbl">APR</div>
+    </div>
+    <div class="col">
+      <div class="num">${rate.payment > 0 ? fmtMoney(rate.payment) : '—'}</div>
+      <div class="lbl">Monthly P&amp;I</div>
+    </div>
+  </div>
+  <div class="scn">
+    <h3>Scenario</h3>
+    <table>
+      <tr><td class="l">Loan Amount</td><td class="v">${fmtMoney(scenario.loanAmount)}</td></tr>
+      <tr><td class="l">Property Value</td><td class="v">${fmtMoney(scenario.propertyValue)}</td></tr>
+      ${propertyLine ? `<tr><td class="l">Property</td><td class="v">${propertyLine}</td></tr>` : ''}
+      ${scenario.loanTerm ? `<tr><td class="l">Term · Amort</td><td class="v">${scenario.loanTerm}yr ${scenario.amortization || ''}</td></tr>` : ''}
+      ${scenario.documentationType ? `<tr><td class="l">Doc Type</td><td class="v">${scenario.documentationType}</td></tr>` : ''}
+      ${scenario.creditScore ? `<tr><td class="l">FICO</td><td class="v">${scenario.creditScore}</td></tr>` : ''}
+      ${rate.lockPeriod ? `<tr><td class="l">Lock Period</td><td class="v">${rate.lockPeriod} days</td></tr>` : ''}
+    </table>
+  </div>
+  <div class="ftr">Total Quality Lending · TotalPricer · Quote generated ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+</div>
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
+</body></html>`
+  const w = window.open('', '_blank', 'noopener,width=820,height=1000')
+  if (!w) { alert('Please allow popups for TQL TotalPricer to print the PDF.'); return }
+  w.document.open(); w.document.write(html); w.document.close()
 }
 
 // Yes/No pill toggle used in the Flash Submit modal.
@@ -1743,7 +1837,7 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <IconAtom className="w-8 h-8 text-black" />
             <div className="leading-tight">
-              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="tql-text-link">Flash</span></span>
+              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Total</span><span className="tql-text-teal">Pricer</span></span>
               <div className="text-[9px] text-slate-400 tracking-wide mt-0.5">Total Quality Lending</div>
             </div>
           </div>
@@ -1812,7 +1906,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <IconAtom className="w-6 h-6 text-black" />
           <div className="leading-tight">
-            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL</span><span className="tql-text-link">Flash</span></span>
+            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Total</span><span className="tql-text-teal">Pricer</span></span>
             <div className="text-[8px] text-slate-400 tracking-wide">Total Quality Lending</div>
           </div>
         </div>
@@ -2363,7 +2457,8 @@ export default function App() {
               <button
                 type="submit"
                 form="pricing-form"
-                className="max-w-xs ml-auto h-12 px-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold text-base rounded-xl shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+                className="max-w-xs ml-auto h-12 px-8 text-white font-semibold text-base rounded-xl shadow-md hover:shadow-lg hover:opacity-90 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#38BDF8' }}
               >
                 Get Pricing
               </button>
@@ -2571,19 +2666,6 @@ export default function App() {
                       visiblePrograms.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
                       return (
                       <div className="space-y-3">
-                        {showRawInvestor && (
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">Master Investor Results</h3>
-                              <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>
-                                <Lock className="w-2.5 h-2.5" />Admin · Raw Investor View · No Filter
-                              </span>
-                            </div>
-                            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              {visiblePrograms.length} found
-                            </span>
-                          </div>
-                        )}
                         {visiblePrograms.map(({ program, programName, filteredRateOptions, pinned }, idx) => {
                           const bestRate = filteredRateOptions.reduce((best, opt) => {
                             const price = pointsToPrice(safeNumber(opt.points))
@@ -2620,6 +2702,27 @@ export default function App() {
                                     <div className="text-[11px] text-slate-400 mt-0.5">{filteredRateOptions.length} rate option{filteredRateOptions.length !== 1 ? 's' : ''}</div>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2 justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const opt = bestRate
+                                        if (!opt) return
+                                        const price = pointsToPrice(safeNumber(opt.points))
+                                        printRateCardPdf({
+                                          programName,
+                                          rate: safeNumber(opt.rate),
+                                          price,
+                                          apr: safeNumber(opt.apr),
+                                          payment: safeNumber(opt.payment),
+                                          lockPeriod: opt.lockPeriod,
+                                          adjustments: opt.adjustments || [],
+                                        }, formData)
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
+                                    >
+                                      <Printer className="w-3.5 h-3.5" />Print PDF
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={(e) => {
