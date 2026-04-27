@@ -35,11 +35,10 @@ export function LoginPage({ onBack, onSignUp }: LoginPageProps) {
           {/* Header */}
           <div className="text-center mb-6">
             <h1 className="font-['Montserrat'] text-2xl sm:text-3xl font-extrabold tracking-tight">
-              <span className="text-slate-900">DEFY </span>
-              <span className="tql-text-link">CLOUD</span>
+              <span className="text-slate-900">TQL </span>
+              <span className="tql-text-teal">BENCH</span>
             </h1>
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.25em] mt-1">Portal Access</p>
-            <p className="text-sm text-slate-500 mt-3 italic">Dare to Defy. Brokers Close Harder.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

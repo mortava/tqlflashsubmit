@@ -1766,11 +1766,7 @@ export default function App() {
             <IconSubmitLoan className="w-[18px] h-[18px] shrink-0" />
             <span className="text-[13px] truncate">Flash Submit</span>
           </button>
-          {/* Broker Package — greyed out */}
-          <a href="https://brokerpack.tqltpo.com/broker-apply" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed pointer-events-none">
-            <CheckCircle className="w-[18px] h-[18px] shrink-0" />
-            <span className="text-[13px] truncate">Broker Package</span>
-          </a>
+          {/* Broker Package — REMOVED per ops request */}
           {/* Help Desk — greyed out */}
           <button
             type="button"
@@ -1832,8 +1828,8 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <IconAtom className="w-6 h-6 text-black" />
                 <div className="leading-tight">
-                  <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Open</span><span className="tql-text-link">Price</span></span>
-                  <div className="text-[8px] text-slate-400 tracking-wide">Powered by DEFY TPO</div>
+                  <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL </span><span className="tql-text-teal">Pricer</span></span>
+                  <div className="text-[8px] text-slate-400 tracking-wide">Total Quality Lending</div>
                 </div>
               </div>
               <button type="button" onClick={() => setMobileMenuOpen(false)} className="p-1 text-slate-400 hover:text-slate-900">
@@ -1857,11 +1853,7 @@ export default function App() {
                 <span className="text-[13px]">Flash Submit</span>
               </button>
               {/* Rent AVM — HIDDEN */}
-              {/* Broker Package — greyed out */}
-              <span className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed">
-                <CheckCircle className="w-[18px] h-[18px] shrink-0" />
-                <span className="text-[13px]">Broker Package</span>
-              </span>
+              {/* Broker Package — REMOVED per ops request */}
               {/* Help Desk — greyed out */}
               <span className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-300 cursor-not-allowed">
                 <HelpCircle className="w-[18px] h-[18px] shrink-0" />

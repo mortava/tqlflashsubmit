@@ -132,7 +132,7 @@ function ChatLoginScreen({ onLogin, loading, error, onClose }: {
     <div className="flex flex-col bg-white min-h-full">
       {/* Back link top-left */}
       <div className="px-6 pt-5">
-        <button type="button" onClick={onClose} className="text-sm tql-text-link hover:text-blue-700 transition-colors">Back to OpenPrice</button>
+        <button type="button" onClick={onClose} className="text-sm tql-text-link hover:text-blue-700 transition-colors">Back to TQL Pricer</button>
       </div>
 
       <div className="flex-1 flex items-center justify-center">
