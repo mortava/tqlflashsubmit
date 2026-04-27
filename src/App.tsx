@@ -2429,14 +2429,18 @@ export default function App() {
                       }
 
                       // Step 2: filter rate options to the 99.000–101.750 band (DSCR 5%
-                      // PPP bypasses this so it always renders in DSCR mode).
+                      // PPP bypasses this so it always renders in DSCR mode). ADMIN view
+                      // bypasses the band entirely — admin needs to see every investor
+                      // product OB returned, regardless of price range.
                       let visiblePrograms = sourcePrograms
                         .map((program) => {
                           if (!program || typeof program !== 'object') return null
                           const allRateOptions = Array.isArray(program.rateOptions) ? program.rateOptions : []
                           const programName = program.name || 'Unknown'
                           const pinned = shouldPinDSCR5Pct(programName)
-                          const filteredRateOptions = pinned ? allRateOptions : filterRateOptionsByPrice(allRateOptions)
+                          const filteredRateOptions = (showRawInvestor || pinned)
+                            ? allRateOptions
+                            : filterRateOptionsByPrice(allRateOptions)
                           if (filteredRateOptions.length === 0) return null
                           return { program, programName, filteredRateOptions, pinned }
                         })
@@ -2480,9 +2484,13 @@ export default function App() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">More Pricing Options</h3>
+                            <h3 className="text-sm font-bold tql-text-primary tql-font-display tracking-tight">{showRawInvestor ? 'Master Investor Results' : 'More Pricing Options'}</h3>
                             <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: '#0284C7', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.38)' }}>
-                              <QuinnGlow size={10} withRing={false} />AI Filtered · 99.000–101.750
+                              {showRawInvestor ? (
+                                <><Lock className="w-2.5 h-2.5" />Admin · Raw Investor View · No Filter</>
+                              ) : (
+                                <><QuinnGlow size={10} withRing={false} />AI Filtered · 99.000–101.750</>
+                              )}
                             </span>
                           </div>
                           <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">
