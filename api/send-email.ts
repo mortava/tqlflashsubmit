@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const addr = (m ? m[1] : from).trim().toLowerCase()
     return VERIFIED_DOMAINS.some(d => addr.endsWith('@' + d) || addr.endsWith('.' + d))
   })()
-  const fromAddress = isVerifiedFrom ? from : 'TQL Flash Submit <TPOSub@tqltpo.com>'
+  const fromAddress = isVerifiedFrom ? from : 'TQL TotalPricer <TQLQuote@tqltpo.com>'
 
   try {
     const response = await fetch(RESEND_API_URL, {

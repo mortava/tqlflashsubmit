@@ -1351,7 +1351,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: 'TQL TPO Support <tposupport@tqlend.com>',
+          from: 'TQL TotalPricer <TQLQuote@tqltpo.com>',
           to: 'lockdesk@tqlend.com',
           subject: `RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`,
           html,
@@ -2730,6 +2730,8 @@ export default function App() {
                                         const opt = bestRate
                                         if (!opt) return
                                         const price = pointsToPrice(safeNumber(opt.points))
+                                        // Print PDF carries ONLY the single rate the broker is on.
+                                        // No rate stack, no investor names beyond the masked TQL one.
                                         printRateCardPdf({
                                           programName,
                                           rate: safeNumber(opt.rate),
@@ -2738,7 +2740,7 @@ export default function App() {
                                           payment: safeNumber(opt.payment),
                                           lockPeriod: opt.lockPeriod,
                                           adjustments: opt.adjustments || [],
-                                        }, formData, collectFullRateStack(result?.programs))
+                                        }, formData, [])
                                       }}
                                       className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
                                     >
@@ -3452,7 +3454,7 @@ export default function App() {
                   {flashSubmitSending ? 'Sending…' : 'Confirm & Go to 3.4 Upload'}
                 </button>
                 <p className="text-[11px] tql-text-muted text-center leading-relaxed">
-                  A summary PDF + pricing detail will be emailed from <span className="tql-text-teal font-semibold">Flash@tqltpo.com</span> to <span className="tql-text-teal font-semibold">disclosuredesk@tqlend.com</span> with you cc'd.
+                  A summary PDF + pricing detail will be emailed from <span className="tql-text-teal font-semibold">TQLQuote@tqltpo.com</span> to <span className="tql-text-teal font-semibold">disclosuredesk@tqlend.com</span> with you cc'd.
                 </p>
               </div>
             </div>

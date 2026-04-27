@@ -284,7 +284,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'TQL Flash Submit <Flash@tqltpo.com>',
+        from: 'TQL TotalPricer <TQLQuote@tqltpo.com>',
         to: ['disclosuredesk@tqlend.com'],
         cc,
         subject,
