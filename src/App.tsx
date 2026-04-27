@@ -2058,19 +2058,19 @@ export default function App() {
                   </div>
                   <div className="col-span-1 sm:col-span-2 md:col-span-2 lg:col-span-5 flex flex-wrap items-end gap-2 pb-0.5">
                     <label htmlFor="isRuralProperty" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isRuralProperty ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="isRuralProperty" name="isRuralProperty" className="sr-only" checked={formData.isRuralProperty} onChange={(e) => handleInputChange('isRuralProperty', e.target.checked)} />
+                      <input type="checkbox" id="isRuralProperty" name="isRuralProperty" className="sr-only" tabIndex={-1} checked={formData.isRuralProperty} onChange={(e) => handleInputChange('isRuralProperty', e.target.checked)} />
                       Rural Property
                     </label>
                     <label htmlFor="isNonWarrantableProject" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isNonWarrantableProject ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="isNonWarrantableProject" name="isNonWarrantableProject" className="sr-only" checked={formData.isNonWarrantableProject} onChange={(e) => handleInputChange('isNonWarrantableProject', e.target.checked)} />
+                      <input type="checkbox" id="isNonWarrantableProject" name="isNonWarrantableProject" className="sr-only" tabIndex={-1} checked={formData.isNonWarrantableProject} onChange={(e) => handleInputChange('isNonWarrantableProject', e.target.checked)} />
                       Non-Warrantable
                     </label>
                     <label htmlFor="isMixedUsePML" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isMixedUsePML ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="isMixedUsePML" name="isMixedUsePML" className="sr-only" checked={formData.isMixedUsePML} onChange={(e) => handleInputChange('isMixedUsePML', e.target.checked)} />
+                      <input type="checkbox" id="isMixedUsePML" name="isMixedUsePML" className="sr-only" tabIndex={-1} checked={formData.isMixedUsePML} onChange={(e) => handleInputChange('isMixedUsePML', e.target.checked)} />
                       Mixed Use
                     </label>
                     <label htmlFor="is5PlusUnits" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.is5PlusUnits ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="is5PlusUnits" name="is5PlusUnits" className="sr-only" checked={formData.is5PlusUnits} onChange={(e) => handleInputChange('is5PlusUnits', e.target.checked)} />
+                      <input type="checkbox" id="is5PlusUnits" name="is5PlusUnits" className="sr-only" tabIndex={-1} checked={formData.is5PlusUnits} onChange={(e) => handleInputChange('is5PlusUnits', e.target.checked)} />
                       5+ Units
                     </label>
                   </div>
@@ -2129,15 +2129,15 @@ export default function App() {
                   </div>
                   <div className="col-span-full flex flex-wrap gap-2">
                     <label htmlFor="isSelfEmployed" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isSelfEmployed ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="isSelfEmployed" name="isSelfEmployed" className="sr-only" checked={formData.isSelfEmployed} onChange={(e) => handleInputChange('isSelfEmployed', e.target.checked)} />
+                      <input type="checkbox" id="isSelfEmployed" name="isSelfEmployed" className="sr-only" tabIndex={-1} checked={formData.isSelfEmployed} onChange={(e) => handleInputChange('isSelfEmployed', e.target.checked)} />
                       Self Employed
                     </label>
                     <label htmlFor="isFTHB" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isFTHB ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="isFTHB" name="isFTHB" className="sr-only" checked={formData.isFTHB} onChange={(e) => handleInputChange('isFTHB', e.target.checked)} />
+                      <input type="checkbox" id="isFTHB" name="isFTHB" className="sr-only" tabIndex={-1} checked={formData.isFTHB} onChange={(e) => handleInputChange('isFTHB', e.target.checked)} />
                       FTHB
                     </label>
                     <label htmlFor="hasITIN" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.hasITIN ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                      <input type="checkbox" id="hasITIN" name="hasITIN" className="sr-only" checked={formData.hasITIN} onChange={(e) => handleInputChange('hasITIN', e.target.checked)} />
+                      <input type="checkbox" id="hasITIN" name="hasITIN" className="sr-only" tabIndex={-1} checked={formData.hasITIN} onChange={(e) => handleInputChange('hasITIN', e.target.checked)} />
                       Has ITIN
                     </label>
                   </div>
@@ -2226,13 +2226,13 @@ export default function App() {
                     )}
                     <div className="col-span-full flex flex-wrap gap-2">
                       <label htmlFor="isSeasonalProperty" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${(formData.isSeasonalProperty || formData.isShortTermRental) ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                        <input type="checkbox" id="isSeasonalProperty" name="isSeasonalProperty" className="sr-only" checked={formData.isSeasonalProperty || formData.isShortTermRental}
+                        <input type="checkbox" id="isSeasonalProperty" name="isSeasonalProperty" className="sr-only" tabIndex={-1} checked={formData.isSeasonalProperty || formData.isShortTermRental}
                           onChange={(e) => { handleInputChange('isSeasonalProperty', e.target.checked); handleInputChange('isShortTermRental', e.target.checked) }}
                         />
                         Seasonal / STR
                       </label>
                       <label htmlFor="isCrossCollateralized" className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isCrossCollateralized ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                        <input type="checkbox" id="isCrossCollateralized" name="isCrossCollateralized" className="sr-only" checked={formData.isCrossCollateralized} onChange={(e) => handleInputChange('isCrossCollateralized', e.target.checked)} />
+                        <input type="checkbox" id="isCrossCollateralized" name="isCrossCollateralized" className="sr-only" tabIndex={-1} checked={formData.isCrossCollateralized} onChange={(e) => handleInputChange('isCrossCollateralized', e.target.checked)} />
                         Cross-Collateralized
                       </label>
                     </div>
