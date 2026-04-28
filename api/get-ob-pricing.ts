@@ -132,17 +132,27 @@ function buildOBRequest(f: any): any {
     '2unit': 'TwoToFourUnit',
     '3unit': 'TwoToFourUnit',
     '4unit': 'TwoToFourUnit',
+    '5-8unit': 'FiveToEightUnit',
     '5-9unit': 'FiveToEightUnit',
   }
-  const unitMap: Record<string, string> = {
-    sfr: 'OneUnit',
-    condo: 'OneUnit',
-    townhouse: 'OneUnit',
-    '2unit': 'TwoUnits',
-    '3unit': 'ThreeUnits',
-    '4unit': 'FourUnits',
-    '5-9unit': 'FiveToEightUnits',
+  // Explicit Number of Units → OB enum. The form passes this value directly
+  // (defaults to '1'). When the broker selects 2/3/4, OB needs both this
+  // numberOfUnits enum AND a TwoToFourUnit propertyType to return 2-4-unit
+  // pricing — even if the propertyType dropdown is still on Single Family.
+  const unitsToEnum: Record<string, string> = {
+    '1': 'OneUnit',
+    '2': 'TwoUnits',
+    '3': 'ThreeUnits',
+    '4': 'FourUnits',
   }
+  const unitsRaw = String(f.numberOfUnits || '1')
+  const numberOfUnitsEnum = unitsToEnum[unitsRaw] || 'OneUnit'
+  const isMultiUnit = unitsRaw === '2' || unitsRaw === '3' || unitsRaw === '4'
+  // Resolve propertyType: explicit Number of Units 2/3/4 forces TwoToFourUnit
+  // regardless of the propertyType dropdown so OB returns 2-4-unit programs.
+  const resolvedPropertyType = isMultiUnit
+    ? 'TwoToFourUnit'
+    : (propTypeMap[f.propertyType] || 'SingleFamily')
 
   const propertyInformation: any = {
     appraisedValue: propertyValue,
@@ -151,11 +161,11 @@ function buildOBRequest(f: any): any {
     zipCode: f.propertyZip || '',
     county: f.propertyCounty || '',
     city: f.propertyCity || '',
-    propertyType: propTypeMap[f.propertyType] || 'SingleFamily',
+    propertyType: resolvedPropertyType,
     corporateRelocation: false,
     salesPrice: isPurchase ? propertyValue : 0,
     numberOfStories: 1,
-    numberOfUnits: unitMap[f.propertyType] || 'OneUnit',
+    numberOfUnits: numberOfUnitsEnum,
   }
 
   // ---- loanInformation (LoanPricingCriteria) ----

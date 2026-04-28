@@ -62,6 +62,7 @@ interface LoanData {
   // Property Details
   occupancyType: string
   propertyType: string
+  numberOfUnits: string
   structureType: string
   isRuralProperty: boolean
   isNonWarrantableProject: boolean
@@ -298,6 +299,7 @@ const DEFAULT_FORM_DATA: LoanData = {
   propertyCity: 'Beverly Hills',
   occupancyType: 'primary',
   propertyType: 'sfr',
+  numberOfUnits: '1',
   structureType: 'detached',
   isRuralProperty: false,
   isNonWarrantableProject: false,
@@ -2372,6 +2374,21 @@ export default function App() {
                       </SelectContent>
                     </Select>
                     {hasError('propertyType') && <p className="text-[10px] text-[#EF4444]">{validationErrors.propertyType}</p>}
+                  </div>
+                  {/* Number of Units — explicit field that flows to the OB
+                      API as `numberOfUnits` so the engine returns valid
+                      2-4 unit pricing. Defaults to 1. */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="numberOfUnits" className="block text-sm font-medium text-slate-900">Number of Units</label>
+                    <Select name="numberOfUnits" value={formData.numberOfUnits} onValueChange={(v) => handleInputChange('numberOfUnits', v)}>
+                      <SelectTrigger id="numberOfUnits" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <label htmlFor="propertyZip" className={`block text-sm font-medium ${hasError('propertyZip') ? 'text-[#EF4444]' : 'text-slate-900'}`}>
