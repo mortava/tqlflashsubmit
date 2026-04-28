@@ -763,13 +763,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!response.ok) {
-      const errorMsg = responseData.detail || responseData.message || responseData.title || `HTTP ${response.status}`
-      console.error('[OB] API error:', response.status, JSON.stringify(responseData).substring(0, 500))
+      // ASP.NET Core ProblemDetails envelope:
+      //   { title: "One or more validation errors occurred.", errors: { "loanInformation.someField": ["error1"], ... } }
+      // The actual cause lives in `errors`. Flatten it into a human-readable
+      // string so the UI can show which field(s) OB rejected.
+      const fieldErrors: string[] = []
+      if (responseData?.errors && typeof responseData.errors === 'object') {
+        for (const [path, msgs] of Object.entries(responseData.errors)) {
+          const cleanPath = String(path).replace(/^request\./, '')
+          if (Array.isArray(msgs)) {
+            for (const m of msgs) fieldErrors.push(`${cleanPath}: ${m}`)
+          } else {
+            fieldErrors.push(`${cleanPath}: ${String(msgs)}`)
+          }
+        }
+      }
+
+      const baseMsg = responseData.detail || responseData.message || responseData.title || `HTTP ${response.status}`
+      const errorMsg = fieldErrors.length > 0
+        ? `${baseMsg} — ${fieldErrors.slice(0, 4).join('; ')}${fieldErrors.length > 4 ? ` (+${fieldErrors.length - 4} more)` : ''}`
+        : baseMsg
+
+      console.error('[OB] API error:', response.status, 'fieldErrors:', JSON.stringify(fieldErrors), 'request:', JSON.stringify(obRequest).substring(0, 1500))
       return res.json({
         success: false,
         error: `Optimal Blue: ${errorMsg}`,
         debug: {
           statusCode: response.status,
+          fieldErrors,
           response: responseData,
           authMethod: 'azure-ad-bearer',
           apiUrl,
