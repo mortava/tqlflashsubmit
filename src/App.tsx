@@ -1023,6 +1023,12 @@ export default function App() {
   // Per-program SHARE QUOTE collapsible — keyed by program name. Holds the
   // open program, null = nothing expanded.
   const [openShareProgram, setOpenShareProgram] = useState<string | null>(null)
+  // STR dropdown UI state — tristate so "Select / No / Yes" are all distinct
+  // visually. Underlying boolean flags drive pricing; this just remembers the
+  // user's explicit choice. Initialized from formData on first render.
+  const [strChoice, setStrChoice] = useState<'' | 'yes' | 'no'>(
+    () => (DEFAULT_FORM_DATA.isShortTermRental ? 'yes' : '')
+  )
   // Flash Submit popup — captures broker/borrower details before kicking off the 3.4 upload
   const [flashSubmitRate, setFlashSubmitRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -2548,9 +2554,43 @@ export default function App() {
                         </div>
                       </>
                     )}
+                    {/* Short Term Rental (STR) — dropdown replaces the legacy
+                        Seasonal/STR pill. Selecting Yes flips both the
+                        underlying isShortTermRental and isSeasonalProperty
+                        flags so downstream OB pricing logic is unchanged. */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental (STR)</label>
+                      <Select
+                        name="isShortTermRental"
+                        value={strChoice}
+                        onValueChange={(v) => {
+                          const choice = v === 'yes' ? 'yes' : 'no'
+                          setStrChoice(choice)
+                          const yes = choice === 'yes'
+                          handleInputChange('isShortTermRental', yes)
+                          handleInputChange('isSeasonalProperty', yes)
+                        }}
+                      >
+                        <SelectTrigger id="isShortTermRental" className="h-11 text-sm border-slate-300 focus:ring-blue-500">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no">No</SelectItem>
+                          <SelectItem value="yes">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="col-span-full flex flex-wrap gap-2">
-                      <button type="button" id="isSeasonalProperty" aria-pressed={formData.isSeasonalProperty || formData.isShortTermRental} onClick={() => { const v = !(formData.isSeasonalProperty || formData.isShortTermRental); handleInputChange('isSeasonalProperty', v); handleInputChange('isShortTermRental', v) }} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${(formData.isSeasonalProperty || formData.isShortTermRental) ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>Seasonal / STR</button>
-                      <button type="button" id="isCrossCollateralized" aria-pressed={formData.isCrossCollateralized} onClick={() => handleInputChange('isCrossCollateralized', !formData.isCrossCollateralized)} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isCrossCollateralized ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>Cross-Collateralized</button>
+                      <button
+                        type="button"
+                        id="isCrossCollateralized"
+                        disabled
+                        aria-disabled
+                        title="Cross-Collateralized — coming soon"
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+                      >
+                        Cross-Collateralized
+                      </button>
                     </div>
                   </div>
                 )}
