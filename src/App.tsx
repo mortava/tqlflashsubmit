@@ -2730,8 +2730,8 @@ export default function App() {
                                         const opt = bestRate
                                         if (!opt) return
                                         const price = pointsToPrice(safeNumber(opt.points))
-                                        // Print PDF carries ONLY the single rate the broker is on.
-                                        // No rate stack, no investor names beyond the masked TQL one.
+                                        // Print PDF includes the full TQL-masked rate stack so the
+                                        // broker has the complete pricing ladder in the file.
                                         printRateCardPdf({
                                           programName,
                                           rate: safeNumber(opt.rate),
@@ -2740,7 +2740,7 @@ export default function App() {
                                           payment: safeNumber(opt.payment),
                                           lockPeriod: opt.lockPeriod,
                                           adjustments: opt.adjustments || [],
-                                        }, formData, [])
+                                        }, formData, collectFullRateStack(result?.programs))
                                       }}
                                       className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
                                     >
