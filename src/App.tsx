@@ -617,6 +617,174 @@ async function printRateCardPdf(
   }
 }
 
+// Builds the RATE RESERVATION email going to lockdesk@tqlend.com. Uses the
+// same TQL brand language as the client / full-quote emails but is admin-
+// flavoured: shows the RAW investor product name (broker-facing UI never
+// sees this), every form field input, and the rate ladder for the program
+// being reserved. NO LLPAs.
+function buildReserveRequestEmail(
+  highlight: { programName: string; rawProgramName?: string; rawInvestor?: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string },
+  broker: { name: string; email: string; scenarioName?: string },
+  scenario: Record<string, string | undefined>,
+  rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }>
+): string {
+  const fmtMoney = (n: string | number | undefined) => {
+    if (n === undefined || n === '' || n === null) return '—'
+    const num = typeof n === 'string' ? parseFloat(String(n).replace(/[^\d.-]/g, '')) : n
+    return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
+  }
+  const v = (s: string | undefined) => (s && String(s).trim() !== '' ? String(s) : '—')
+  const labelPrettyMap: Record<string, string> = {
+    lienPosition: 'Lien Position', ltv: 'LTV %', cltv: 'CLTV %', loanAmount: 'Loan Amount',
+    propertyValue: 'Property Value', loanType: 'Loan Type', loanPurpose: 'Loan Purpose',
+    cashoutAmount: 'Cashout Amount', loanTerm: 'Term (yrs)', amortization: 'Amortization',
+    paymentType: 'Payment Type', impoundType: 'Impound', lockPeriod: 'Requested Lock (days)',
+    propertyState: 'Property State', propertyZip: 'Property ZIP', propertyCounty: 'Property County',
+    propertyCity: 'Property City', occupancyType: 'Occupancy', propertyType: 'Property Type',
+    structureType: 'Structure', creditScore: 'FICO', dti: 'DTI %', citizenship: 'Citizenship',
+    documentationType: 'Doc Type', isSelfEmployed: 'Self-Employed', isFTHB: 'First-Time Buyer',
+    hasITIN: 'Has ITIN', isRuralProperty: 'Rural Property', isNonWarrantableProject: 'Non-Warrantable',
+    isMixedUsePML: 'Mixed Use', is5PlusUnits: '5+ Units', isSeasonalProperty: 'Seasonal',
+    isShortTermRental: 'Short-Term Rental', isCrossCollateralized: 'Cross-Collateralized',
+    isVestedInLLCOrCorp: 'Vested in LLC/Corp', prepayPeriod: 'Prepay Period',
+    prepayType: 'Prepay Type', dscrEntityType: 'DSCR Entity', dscrRatio: 'DSCR Range',
+    dscrManualInput: 'DSCR %', presentHousingExpense: 'Present Housing Expense',
+    grossRent: 'Gross Rent', loanOriginatorPaidBy: 'LO Paid By',
+  }
+  const formatScenarioValue = (key: string, value: string | undefined): string => {
+    if (typeof value === 'undefined' || value === null || value === '') return '—'
+    if (value === 'true') return 'Yes'
+    if (value === 'false') return 'No'
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+    if (key === 'loanAmount' || key === 'propertyValue' || key === 'cashoutAmount' || key === 'presentHousingExpense' || key === 'grossRent') {
+      return fmtMoney(value)
+    }
+    return String(value)
+  }
+  const scenarioRows = Object.entries(scenario)
+    .filter(([k, val]) => k !== 'product' && typeof val !== 'undefined' && val !== null && val !== '' && !(typeof val === 'boolean' && val === false))
+    .map(([k, val]) => {
+      const v2 = typeof val === 'boolean' ? (val ? 'true' : 'false') : String(val ?? '')
+      return [labelPrettyMap[k] || k, formatScenarioValue(k, v2)] as [string, string]
+    })
+    .filter(([, value]) => value !== '—' && value !== '' && value !== 'No')
+
+  const rawDisplay = highlight.rawProgramName
+    ? `${highlight.rawProgramName}${highlight.rawInvestor ? ` · ${highlight.rawInvestor}` : ''}`
+    : highlight.programName
+
+  const stackRows = rateStack.map(r => `
+    <tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #E2E8F0;font-size:12px;color:#334155;">${r.programName}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E2E8F0;font-size:12px;font-weight:700;text-align:right;color:#0B1220;white-space:nowrap;">${r.rate.toFixed(3)}%</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E2E8F0;font-size:12px;font-weight:700;text-align:right;color:${r.price >= 100 ? '#2180CF' : '#0B1220'};white-space:nowrap;">${r.price.toFixed(3)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E2E8F0;font-size:12px;text-align:right;color:#334155;white-space:nowrap;">${r.apr.toFixed(3)}%</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E2E8F0;font-size:12px;font-weight:700;text-align:right;color:#0B1220;white-space:nowrap;">${r.payment > 0 ? fmtMoney(r.payment) : '—'}</td>
+    </tr>`).join('')
+
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>Rate Reservation Request</title>
+</head>
+<body style="margin:0;padding:0;background:#FAFAF8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
+<div style="background:#FAFAF8;padding:18px 12px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);border:1px solid #CBD5E1;">
+    <!-- Header -->
+    <tr><td style="background:#245F73;padding:22px 26px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.9;">TQL · LOCK DESK</div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">Rate Reservation Request</div>
+      <div style="font-size:13px;opacity:0.9;margin-top:6px;line-height:1.4;">Submitted ${new Date().toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+    </td></tr>
+
+    <!-- Hero rate / price -->
+    <tr><td style="padding:22px 26px 8px 26px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="padding:6px 4px;text-align:left;vertical-align:top;">
+            <div style="font-size:34px;font-weight:800;color:#0B1220;line-height:1;letter-spacing:-1px;">${highlight.rate.toFixed(3)}<span style="font-size:18px;color:#245F73;">%</span></div>
+            <div style="font-size:10px;font-weight:700;color:#4D4D4D;letter-spacing:1.5px;text-transform:uppercase;margin-top:5px;">Reserved Rate</div>
+          </td>
+          <td width="50%" style="padding:6px 4px;text-align:right;vertical-align:top;">
+            <div style="font-size:34px;font-weight:800;color:${highlight.price >= 100 ? '#245F73' : '#0B1220'};line-height:1;letter-spacing:-1px;">${highlight.price.toFixed(3)}</div>
+            <div style="font-size:10px;font-weight:700;color:#4D4D4D;letter-spacing:1.5px;text-transform:uppercase;margin-top:5px;">Reserved Price</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- APR + P&I -->
+    <tr><td style="padding:8px 26px 18px 26px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF8;border:1px solid #CBD5E1;border-radius:10px;">
+        <tr>
+          <td width="50%" style="padding:14px 18px;text-align:left;border-right:1px solid #CBD5E1;">
+            <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${highlight.apr.toFixed(3)}%</div>
+            <div style="font-size:9px;font-weight:700;color:#4D4D4D;letter-spacing:1.4px;text-transform:uppercase;margin-top:3px;">APR</div>
+          </td>
+          <td width="50%" style="padding:14px 18px;text-align:right;">
+            <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${highlight.payment > 0 ? fmtMoney(highlight.payment) : '—'}</div>
+            <div style="font-size:9px;font-weight:700;color:#4D4D4D;letter-spacing:1.4px;text-transform:uppercase;margin-top:3px;">Monthly P&amp;I</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- Investor (raw, ADMIN view) -->
+    <tr><td style="padding:0 26px 16px 26px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Investor Program (raw)</div>
+      <div style="background:#FAFAF8;border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;font-size:13px;color:#0B1220;font-weight:600;">${rawDisplay}${highlight.lockPeriod ? `<span style="color:#4D4D4D;font-weight:500;"> · ${highlight.lockPeriod} days lock</span>` : ''}</div>
+    </td></tr>
+
+    <!-- Broker contact -->
+    <tr><td style="padding:0 26px 16px 26px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Broker Contact</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;border:1px solid #CBD5E1;border-radius:10px;border-collapse:separate;background:#ffffff;">
+        <tr><td style="padding:8px 12px;color:#4D4D4D;width:38%;background:#F8FAFC;">Name</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;">${v(broker.name)}</td></tr>
+        <tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Email</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;">${v(broker.email)}</td></tr>
+        ${broker.scenarioName ? `<tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Scenario</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;">${v(broker.scenarioName)}</td></tr>` : ''}
+      </table>
+    </td></tr>
+
+    <!-- Scenario inputs (every form field that has a value) -->
+    <tr><td style="padding:0 26px 16px 26px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Scenario Inputs</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;border:1px solid #CBD5E1;border-radius:10px;border-collapse:separate;background:#ffffff;">
+        ${scenarioRows.map((row, i) => `
+          <tr${i % 2 === 1 ? ' style="background:#F8FAFC;"' : ''}>
+            <td style="padding:7px 12px;color:#4D4D4D;width:48%;${i === 0 ? '' : 'border-top:1px solid #E2E8F0;'}">${row[0]}</td>
+            <td style="padding:7px 12px;font-weight:600;color:#0B1220;text-align:right;${i === 0 ? '' : 'border-top:1px solid #E2E8F0;'}">${row[1]}</td>
+          </tr>`).join('')}
+      </table>
+    </td></tr>
+
+    ${stackRows ? `
+    <tr><td style="padding:0 26px 18px 26px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Rate Ladder for ${rawDisplay}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:10px;border-collapse:separate;background:#ffffff;overflow:hidden;">
+        <tr style="background:#FAFAF8;">
+          <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;">Program/PPP</td>
+          <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;text-align:right;">Rate</td>
+          <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;text-align:right;">Price</td>
+          <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;text-align:right;">APR</td>
+          <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;text-align:right;">Payment</td>
+        </tr>
+        ${stackRows}
+      </table>
+    </td></tr>` : ''}
+
+    <tr><td style="padding:6px 26px 22px 26px;">
+      <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open Pricing in TotalPricer</a>
+    </td></tr>
+
+    <tr><td style="padding:14px 26px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;letter-spacing:0.3px;">
+      Total Quality Lending · TotalPricer · NMLS #1234567 · Equal Housing Lender
+    </td></tr>
+  </table>
+</div>
+</body></html>`
+}
+
 // Yes/No pill toggle used in the Flash Submit modal.
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -1325,27 +1493,54 @@ export default function App() {
     if (!result || !activeRowAction || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email) return
     setRowSending(true)
     setRowStatus('idle')
-    const { rate, price, payment, apr, description, programName } = activeRowAction
-    // Lookup the RAW investor name from the program list. The reservation
-    // email going to the Lock Desk MUST show the underlying lender brand —
-    // not the TQL-masked name. Brokers never see this.
+    const { rate, price, payment, apr, programName } = activeRowAction
+    // Lookup the RAW investor name from the program list. Lock Desk sees the
+    // underlying lender brand; broker UI never does.
     const sourceProg = result.programs?.find(p => (p.name || '') === programName)
-    const rawInvestorProgram = sourceProg?.rawName || description
+    const rawInvestorProgram = sourceProg?.rawName || programName
     const rawInvestor = sourceProg?.rawInvestor || ''
-    const programLabelForLockDesk = rawInvestor
-      ? `${rawInvestorProgram} · ${rawInvestor}`
-      : rawInvestorProgram
-    const rateOverride = { rate, price, apr, payment, description: programLabelForLockDesk }
-    const html = buildFullPricingHtml([
-      { label: 'Broker Name', value: rowReserveFields.name },
-      { label: 'Broker Email', value: rowReserveFields.email },
-      { label: 'Scenario Name', value: rowReserveFields.scenarioName || '—' },
-      { label: 'Selected Rate', value: formatPercent(rate) },
-      { label: 'Selected Price', value: price.toFixed(3) },
-      { label: 'Selected APR', value: formatPercent(apr) },
-      { label: 'Selected Payment', value: payment > 0 ? formatCurrency(payment) : '—' },
-      { label: 'Investor Program (raw)', value: programLabelForLockDesk },
-    ], 'NEW QUOTE RESERVATION REQUEST', rateOverride)
+
+    // Rate ladder for THIS program only (the one being reserved). Use raw
+    // names so Lock Desk sees the actual investor product per row.
+    const ladder: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
+    if (sourceProg?.rateOptions) {
+      for (const o of sourceProg.rateOptions) {
+        const pts = safeNumber(o.points)
+        const p = safeNumber(o.price) || (pts > 50 ? pts : 100 - pts)
+        if (p < 99.0 || p > 101.75) continue
+        const r = safeNumber(o.rate)
+        if (r <= 0) continue
+        ladder.push({ programName: rawInvestorProgram, rate: r, price: p, apr: safeNumber(o.apr), payment: safeNumber(o.payment) })
+      }
+      const seen = new Set<string>()
+      for (let i = ladder.length - 1; i >= 0; i--) {
+        const k = `${ladder[i].rate.toFixed(3)}|${ladder[i].price.toFixed(3)}`
+        if (seen.has(k)) ladder.splice(i, 1); else seen.add(k)
+      }
+      ladder.sort((a, b) => a.rate - b.rate || b.price - a.price)
+    }
+
+    // Surface every form field the broker filled out — the builder filters
+    // out empty / falsey values and pretty-labels each field.
+    const scenarioForEmail: Record<string, string> = {}
+    for (const [k, val] of Object.entries(formData)) {
+      if (typeof val === 'boolean') scenarioForEmail[k] = val ? 'true' : 'false'
+      else if (val !== undefined && val !== null) scenarioForEmail[k] = String(val)
+    }
+
+    const html = buildReserveRequestEmail(
+      {
+        programName,
+        rawProgramName: rawInvestorProgram,
+        rawInvestor,
+        rate, price, apr, payment,
+        lockPeriod: formData.lockPeriod,
+      },
+      { name: rowReserveFields.name, email: rowReserveFields.email, scenarioName: rowReserveFields.scenarioName || undefined },
+      scenarioForEmail,
+      ladder
+    )
+
     try {
       const res = await fetch('/api/send-email', {
         method: 'POST',
@@ -1353,7 +1548,7 @@ export default function App() {
         body: JSON.stringify({
           from: 'TQL TotalPricer <TQLQuote@tqltpo.com>',
           to: 'lockdesk@tqlend.com',
-          subject: `RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`,
+          subject: `RATE RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`,
           html,
         }),
       })
@@ -1564,22 +1759,27 @@ export default function App() {
   // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
 
-  // ── Flat rate stack (99.000–101.750) for emails + PDF — masked TQL names ──
-  const collectFullRateStack = (programs: Program[] | undefined): Array<{
-    programName: string; rate: number; price: number; apr: number; payment: number
-  }> => {
-    if (!Array.isArray(programs) || programs.length === 0) return []
+  // ── Rate stack for a SINGLE masked program (99.000–101.750) ──
+  // Used by Print PDF + Send Full Quote so the broker / client gets the rate
+  // ladder for the program they're looking at — NOT every investor across the
+  // whole result set. Programs that mask to the same TQL name have already
+  // been merged upstream, so their combined ladder lives under one entry.
+  const collectProgramRateStack = (
+    programs: Program[] | undefined,
+    targetProgramName: string,
+  ): Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> => {
+    if (!Array.isArray(programs) || programs.length === 0 || !targetProgramName) return []
     const out: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
     for (const p of programs) {
       if (!p?.rateOptions) continue
-      const programName = p.name || 'TQL Program'
+      if ((p.name || '') !== targetProgramName) continue
       for (const o of p.rateOptions) {
         const pts = safeNumber(o.points)
         const price = safeNumber(o.price) || (pts > 50 ? pts : 100 - pts)
         if (price < 99.0 || price > 101.75) continue
         const rate = safeNumber(o.rate)
         if (rate <= 0) continue
-        out.push({ programName, rate, price, apr: safeNumber(o.apr), payment: safeNumber(o.payment) })
+        out.push({ programName: p.name || 'TQL Program', rate, price, apr: safeNumber(o.apr), payment: safeNumber(o.payment) })
       }
     }
     const seen = new Set<string>()
@@ -2740,7 +2940,7 @@ export default function App() {
                                           payment: safeNumber(opt.payment),
                                           lockPeriod: opt.lockPeriod,
                                           adjustments: opt.adjustments || [],
-                                        }, formData, collectFullRateStack(result?.programs))
+                                        }, formData, collectProgramRateStack(result?.programs, programName))
                                       }}
                                       className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
                                     >
@@ -3570,7 +3770,7 @@ export default function App() {
                     if (!quoteRate) return
                     setQuoteSending(true)
                     setQuoteStatus('idle')
-                    const html = buildRateQuoteEmail(quoteRate, quoteBorrower, formData, collectFullRateStack(result?.programs))
+                    const html = buildRateQuoteEmail(quoteRate, quoteBorrower, formData, collectProgramRateStack(result?.programs, quoteRate.programName))
                     const subject = `TQL Rate Quote — ${quoteRate.rate.toFixed(3)}% / ${quoteRate.price.toFixed(3)}${quoteBorrower ? ` — ${quoteBorrower}` : ''}`
                     try {
                       const r = await fetch('/api/send-email', {
@@ -3711,8 +3911,12 @@ export default function App() {
                       setFullQuoteStatus('idle')
                       const noteSafe = fullQuoteNote
                         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      // Limit the rate stack to the selected program's own ladder
+                      // so brokers/clients don't get every investor's rates.
                       const stackForEmail = fullQuoteIncludeStack
-                        ? allCandidates.map(c => ({ programName: c.programName, rate: c.rate, price: c.price, apr: c.apr, payment: c.payment }))
+                        ? allCandidates
+                            .filter(c => c.programName === selected.programName)
+                            .map(c => ({ programName: c.programName, rate: c.rate, price: c.price, apr: c.apr, payment: c.payment }))
                         : []
                       const html = buildFullQuoteEmail(selected, fullQuoteBorrower, formData, noteSafe, stackForEmail)
                       try {
