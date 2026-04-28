@@ -2407,11 +2407,48 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-1 sm:col-span-2 md:col-span-2 lg:col-span-5 flex flex-wrap items-end gap-2 pb-0.5">
-                    <button type="button" id="isRuralProperty" aria-pressed={formData.isRuralProperty} onClick={() => handleInputChange('isRuralProperty', !formData.isRuralProperty)} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isRuralProperty ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>Rural Property</button>
-                    <button type="button" id="isNonWarrantableProject" aria-pressed={formData.isNonWarrantableProject} onClick={() => handleInputChange('isNonWarrantableProject', !formData.isNonWarrantableProject)} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isNonWarrantableProject ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>Non-Warrantable</button>
-                    <button type="button" id="isMixedUsePML" aria-pressed={formData.isMixedUsePML} onClick={() => handleInputChange('isMixedUsePML', !formData.isMixedUsePML)} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isMixedUsePML ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>Mixed Use</button>
-                    <button type="button" id="is5PlusUnits" aria-pressed={formData.is5PlusUnits} onClick={() => handleInputChange('is5PlusUnits', !formData.is5PlusUnits)} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.is5PlusUnits ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>5+ Units</button>
+                  {/* Property unique-feature flags — converted from pill toggles
+                      to Yes/No dropdowns. All default to "No" so the OB API
+                      receives explicit values on every quote. */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="isRuralProperty" className="block text-sm font-medium text-slate-900">Rural Property</label>
+                    <Select name="isRuralProperty" value={formData.isRuralProperty ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isRuralProperty', v === 'yes')}>
+                      <SelectTrigger id="isRuralProperty" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="isNonWarrantableProject" className="block text-sm font-medium text-slate-900">Non-Warrantable</label>
+                    <Select name="isNonWarrantableProject" value={formData.isNonWarrantableProject ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isNonWarrantableProject', v === 'yes')}>
+                      <SelectTrigger id="isNonWarrantableProject" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="isMixedUsePML" className="block text-sm font-medium text-slate-900">Mixed Use</label>
+                    <Select name="isMixedUsePML" value={formData.isMixedUsePML ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isMixedUsePML', v === 'yes')}>
+                      <SelectTrigger id="isMixedUsePML" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="is5PlusUnits" className="block text-sm font-medium text-slate-900">5+ Units</label>
+                    <Select name="is5PlusUnits" value={formData.is5PlusUnits ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('is5PlusUnits', v === 'yes')}>
+                      <SelectTrigger id="is5PlusUnits" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
