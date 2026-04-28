@@ -125,20 +125,27 @@ function buildOBRequest(f: any): any {
     secondary: 'SecondHome',
     investment: 'InvestmentProperty',
   }
+  // OB v4 PropertyType enum is a SHORT list — verified via
+  // scripts/ob-probe-propertytype.mjs. Only these values are accepted:
+  //   SingleFamily, Condo, Townhouse, PUD, Modular, Condotel
+  // There is NO multi-family enum value. Multi-unit properties are
+  // expressed entirely through `numberOfUnits` while propertyType stays
+  // as the architectural style (typically SingleFamily for 2-4-unit
+  // detached buildings).
   const propTypeMap: Record<string, string> = {
     sfr: 'SingleFamily',
     condo: 'Condo',
-    townhouse: 'Townhome',
-    '2unit': 'TwoToFourUnit',
-    '3unit': 'TwoToFourUnit',
-    '4unit': 'TwoToFourUnit',
-    '5-8unit': 'FiveToEightUnit',
-    '5-9unit': 'FiveToEightUnit',
+    townhouse: 'Townhouse',
+    '2unit': 'SingleFamily',
+    '3unit': 'SingleFamily',
+    '4unit': 'SingleFamily',
+    '5-8unit': 'SingleFamily',
+    '5-9unit': 'SingleFamily',
   }
   // Explicit Number of Units → OB enum. The form passes this value directly
-  // (defaults to '1'). When the broker selects 2/3/4, OB needs both this
-  // numberOfUnits enum AND a TwoToFourUnit propertyType to return 2-4-unit
-  // pricing — even if the propertyType dropdown is still on Single Family.
+  // (defaults to '1'). 2/3/4 send TwoUnits/ThreeUnits/FourUnits and OB
+  // returns the appropriate 2-4-unit pricing automatically — without any
+  // propertyType change.
   const unitsToEnum: Record<string, string> = {
     '1': 'OneUnit',
     '2': 'TwoUnits',
@@ -147,12 +154,7 @@ function buildOBRequest(f: any): any {
   }
   const unitsRaw = String(f.numberOfUnits || '1')
   const numberOfUnitsEnum = unitsToEnum[unitsRaw] || 'OneUnit'
-  const isMultiUnit = unitsRaw === '2' || unitsRaw === '3' || unitsRaw === '4'
-  // Resolve propertyType: explicit Number of Units 2/3/4 forces TwoToFourUnit
-  // regardless of the propertyType dropdown so OB returns 2-4-unit programs.
-  const resolvedPropertyType = isMultiUnit
-    ? 'TwoToFourUnit'
-    : (propTypeMap[f.propertyType] || 'SingleFamily')
+  const resolvedPropertyType = propTypeMap[f.propertyType] || 'SingleFamily'
 
   const propertyInformation: any = {
     appraisedValue: propertyValue,
