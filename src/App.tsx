@@ -3798,12 +3798,16 @@ export default function App() {
 
       {/* ═════════ SEND FULL QUOTE MODAL (sales-rep → broker) ═════════ */}
       {fullQuoteRate && (() => {
-        // Build the candidate rate list across every program (filtered to 99-101.75
-        // band) so the rep can pick which rate the email highlights.
+        // Candidate list is restricted to the SELECTED PROGRAM's own rate
+        // ladder — never every program. The rep clicked Send Full Quote on a
+        // specific masked program; only that program's rates are eligible
+        // for highlighting + included in the email rate stack.
+        const targetProgramName = fullQuoteRate.programName
         const allCandidates: Array<{ key: string; programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> }> = []
         if (result?.programs) {
           for (const p of result.programs) {
             if (!p?.rateOptions) continue
+            if ((p.name || '') !== targetProgramName) continue
             for (const o of p.rateOptions) {
               const pts = safeNumber(o.points)
               const price = safeNumber(o.price) || (pts > 50 ? pts : 100 - pts)

@@ -215,12 +215,15 @@ async function buildPDF(body: RequestBody): Promise<Uint8Array> {
     page.drawLine({ start: { x: MARGIN, y: y - 5 }, end: { x: PAGE_W - MARGIN, y: y - 5 }, thickness: 0.6, color: COLOR.rule })
     y -= 18
 
-    // Column geometry
-    const COL_PROGRAM = MARGIN + 8
-    const COL_RATE_R = MARGIN + 280
-    const COL_PRICE_R = MARGIN + 360
-    const COL_APR_R = MARGIN + 440
-    const COL_PMT_R = PAGE_W - MARGIN - 8
+    // Column geometry — inset 14px on each side so text never sits flush
+    // against the shaded row edge. Right-aligned columns sit at right-edge
+    // less their inset.
+    const TABLE_INSET = 14
+    const COL_PROGRAM = MARGIN + TABLE_INSET
+    const COL_PMT_R = PAGE_W - MARGIN - TABLE_INSET
+    const COL_APR_R = COL_PMT_R - 78
+    const COL_PRICE_R = COL_APR_R - 70
+    const COL_RATE_R = COL_PRICE_R - 70
     const ROW_H = 18
 
     const drawTableHeader = () => {

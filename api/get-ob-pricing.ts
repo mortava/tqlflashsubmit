@@ -238,12 +238,16 @@ function buildOBRequest(f: any): any {
     mortgageLatesx120_12Mos: 0,
     mortgageLatesx120_13to24Mos: 0,
     debtConsolidation: false,
-    uniqueProperty: false,
-    entityVesting: f.isVestedInLLCOrCorp || false,
-    firstTimeInvestor: false,
-    ruralProperty: f.isRuralProperty || false,
-    shortTermRental: f.isShortTermRental || false,
-    vacantUnleased: false,
+    // uniqueProperty fires when ANY of the "specialty property" pills is on —
+    // OB uses this flag to surface its specialty-property eligibility tier.
+    uniqueProperty: !!(f.isNonWarrantableProject || f.isMixedUsePML || f.is5PlusUnits),
+    entityVesting: !!f.isVestedInLLCOrCorp,
+    firstTimeInvestor: !!f.isFirstTimeInvestor,
+    ruralProperty: !!f.isRuralProperty,
+    shortTermRental: !!f.isShortTermRental,
+    // vacantUnleased mirrors the Seasonal/STR pill — second-home / vacation /
+    // STR scenarios route through this flag for OB's underwriting overlays.
+    vacantUnleased: !!f.isSeasonalProperty,
   }
 
   // DSCR ratio — required in expandedGuidelines when incomeVerificationType is

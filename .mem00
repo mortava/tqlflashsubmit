@@ -1,93 +1,94 @@
 # Session Memory — tqlflashsubmit
-**Date**: 2026-04-26 (rolled forward from earlier 2026-04-20 → 2026-04-23 work)
+**Date**: 2026-04-27 (active arc started 2026-04-25; rolled forward from 2026-04-20–04-26)
 **Branch**: master
-**Session Focus**: Strict TQL investor masking + Quinn AI experience layer + Flash Submit / 3.4 upload polish + Encompass field-305 hardening.
+**Session Focus**: TotalPricer rebrand (no Defy / OpenPrice), top-nav layout (sidebar hidden), strict program-scoped rate stacks across all email + PDF outputs, enterprise-grade Print PDF + Reserve email rebuild, direct PDF download via /api/rate-quote-pdf, Quinn AI accents on /tql-brand.
 
 ## Status
 - **Completed:**
-  - **Strict masking is live** in `api/get-ob-pricing.ts`. `maskProgramName()` strips ~25 investor brands (Ascend, Elevate, Peek, TOTAL, TPO-VRS, Deephaven, Verus, Rocket TPO, AD Mortgage, LoanStream, Planet Mortgage, Champions, Lima One, Acra, Velocity, Visio, Newrez, Citadel, Angel Oak, A&D, FOA, Quontic, Sprout, Carrington, plus pre-existing TQL prefixes) and tier suffixes (`- EG`, `- Tier N`, `- Standard/Plus/Premier/Select/Premium/Core/Prime`, `(EG)`). PPP qualifier extracted and re-emitted as `5%PPP / 3%PPP / 1%PPP / 5yrPPP / NoPPP`. Format: `TQL - <doc> <term>yr <amort>[ <ppp>]`.
-  - Programs ship `name`/`programName` (masked) **plus** `rawName`/`rawInvestor`/`rawProgramName`/`rawInvestorName` (admin-only). `investor`/`investorName` forced `"TQL"`.
-  - **Admin reveals raw** — passcode `TQLFAITH` (case + space insensitive) flips `showRawInvestor`. Sidebar "User Admin · Raw Investor View"; modal CTAs "Reveal Master Investor Results" / "Re-Mask · Hide Raw Investor Names".
-  - Full price ladder always visible to brokers; `showFullResults` is now a constant `true`. Removed all "Hide Full Results" copy/state.
-  - **Quinn AI flair**: new `<QuinnGlow>` component (glowing **Q**, Sky Signal `#38BDF8`). Hero card: `Quinn AI · Lowest Rate · Highest Price` + corner "AI Pick" chip with mini Q. Loading: "Quinn AI · Price Search…". "More Pricing Options" pill: sky-blue `AI Filtered · 99.000–101.750`.
-  - Encompass field 305 (Lender Case #) — retries up to 4× with 350ms backoff reading fields 305 / 4 / 364, then writes loan number into 305 via `/fieldReader`+`/fieldWriter`. Returns 317-prefixed number, never the GUID.
-  - Submit Complete page: 3 CTAs (Submit a New Loan, Go to TQLTPO Site, Log into Bench Loan Hub) + Lender Tracking # surfaced.
-  - Flash Submit confirmation modal + `/api/flash-submit-request` endpoint sends PDF (pdf-lib) email from `Flash@tqltpo.com` → `disclosuredesk@tqlend.com` cc broker.
-  - Email Rate Quote modal + `buildRateQuoteEmail()` (mobile-first, system-font stack, max-width 600px, viewport meta).
-  - DSCR 5% PPP pinned + price-band-bypassed when Doc Type = DSCR.
-  - ErrorBoundary at `<main>` root prevents blank-screen crashes.
-- **Next Up:** Validate live DSCR end-to-end on `submit.tqltpo.com`; manually confirm passcode unlock (controlled-input limitation in headless tests).
+  - **TotalPricer brand** lock — every "Defy / DEFY / OpenPrice / DEFY CLOUD / Dare to Defy / Brokers Close Harder / Powered by DEFY TPO" string stripped from src/. Login + signup hero now reads "TQL BENCH". Mobile drawer header reads "TQL Pricer · Total Quality Lending". Desktop wordmark is "TotalPricer" (Pricer in TQL teal).
+  - **Top nav layout (sidebar hidden)** — desktop sidebar (`hidden lg:flex` → `hidden`), `<main>` no longer has `lg:ml-[200px]`. Top header rebuilt with logo + 4 nav buttons (Chat Live Now, New Scenario, Flash Submit, User Admin) + auth cluster on far right behind a divider. Mobile drawer kept as-is.
+  - **Print PDF** auto-downloads via `/api/rate-quote-pdf` (no print preview, no popup window). Server-side PDF built with pdf-lib — full /tql-brand: 90px teal header band + 3px Sky Signal stripe, 44pt hero rate/price, APR + P&I stats card, scenario block with alternating row tints, multi-page rate-stack table. fitText() truncates with ellipsis. Footer shows NMLS + page N of M.
+  - **Rate stacks scoped to ONE program** across Print PDF, Email Client Quote, and Send Full Quote. New `collectProgramRateStack(programs, name)` replaces `collectFullRateStack` everywhere user-facing. Send Full Quote modal filters `allCandidates` by `selected.programName` before passing through.
+  - **Reserve Rate email rebuilt** with `buildReserveRequestEmail()`. Same TQL design language as the other emails (teal header band + Sky Signal stripe, hero rate/price, APR + P&I, raw investor block, broker contact, scenario inputs alternating-row table, rate ladder for the program, NMLS footer). Goes FROM `TQL TotalPricer <TQLQuote@tqltpo.com>` TO `lockdesk@tqlend.com`. Subject `RATE RESERVATION — <rate>% @ <price> — <raw investor program>`. Lock Desk sees raw investor names; broker UI never does.
+  - **FROM sender unified** as `TQLQuote@tqltpo.com` across `api/send-email.ts` (default), `api/flash-submit-request.ts`, and `handleRowReserve` override. Verified-domain guard on `tqltpo.com` / `tqlend.com`.
+  - **Direct PDF download endpoint** — `api/rate-quote-pdf.ts` returns `application/pdf` with `Content-Disposition: attachment; filename="TQL-Quote-<program>-<rate>-<price>.pdf"`. Frontend hits it via fetch + Blob + hidden `<a download>` click.
+  - **Pill-toggle blank-screen bug** killed for good — replaced every `<label><input sr-only></label>` with plain `<button type="button" aria-pressed={...}>`. Chrome no longer focus-scrolls into an absolute-positioned hidden input. Verified live with gstack: `documentElement.scrollTop` stays at 0 after every pill click.
+  - **Chat with a Human** restored to both desktop top nav + mobile drawer (Supabase-backed live chat panel was already wired in the modal stack but unreachable).
+  - **GEMINI_API_KEY** rotated in Vercel production (mirrors `.env.local`).
+  - **Mobile polish** — quote modals use `text-base sm:text-sm` (>= 16px font on mobile to prevent iOS auto-zoom on focus), `inputMode="email"`, `autoCapitalize="none"`, `autoCorrect="off"`, `py-3` tap targets.
+- **Next Up:** Validate live PDF + email rendering with a real DSCR scenario; gut-check the Lock Desk reservation email body.
 - **Blockers:** None.
 
-## Change Tree (cumulative this session arc)
+## Change Tree (this session arc)
 ```
-modified:  api/get-ob-pricing.ts        Comprehensive maskProgramName() + rawName/rawInvestor passthrough; per-product detail fetch; lock-period filter; LLPA prefix scrub; DSCR ratio + customFields 110.
-modified:  api/encompass-submit.ts      getLenderTrackingNumber() with retries + fieldReader/fieldWriter + multi-field fallback (305/4/364).
-modified:  api/encompass-upload.ts      ENCOMPASS_API_BASE_URL prefix.
-modified:  api/_lib/encompass-token.ts  ENCOMPASS_* env vars, legacy fallback.
-added:     api/flash-submit-request.ts  pdf-lib summary + Resend send to disclosure desk.
-modified:  src/App.tsx                  showRawInvestor + QuinnGlow + admin modal rewrite + masked vs raw program rendering + best-rate hero + email quote modal + Flash Submit modal + ToggleRow + criteria pills.
-added:     src/components/ErrorBoundary.tsx
-modified:  src/main.tsx                 Wrapped app in <ErrorBoundary>.
-modified:  src/index.css                .tql-border-teal / .tql-dot-teal utilities.
-modified:  src/pages/SubmitLoanPage.tsx Skipped Loan Setup form step; "General Submission Docs" default; 3 Complete CTAs; Lender Tracking # surfaced.
-deleted:   public/monarch_tql.svg
-modified:  package.json                 + pdf-lib ^1.17.1.
-modified:  .env.local                   Master values for ENCOMPASS_* / OB_* / Resend / Gemini / Supabase / Browserless.
+modified:  src/App.tsx                       Top nav rebuild; sidebar hidden; pill-toggle button refactor (9 sites); collectProgramRateStack helper; buildReserveRequestEmail builder; handleRowReserve rewrite (raw investor + scenario passthrough); printRateCardPdf async fetch+Blob+download; Email Client Quote / Send Full Quote rate-stack scoping; rate-stack-only-for-selected-program filter in modal; aria-pressed on every pill; Mail icon for Chat Live Now; sky-blue Get Pricing button.
+modified:  src/components/auth/LoginPage.tsx  "DEFY CLOUD" → "TQL BENCH"; tagline removed.
+modified:  src/components/auth/SignUpPage.tsx "DEFY CLOUD" → "TQL BENCH" with TQL teal accent.
+modified:  src/components/chat-admin-panel.tsx "Back to OpenPrice" → "Back to TQL Pricer".
+modified:  api/send-email.ts                 Optional `from` field with verified-domain guard; default fallback flipped to TQL TotalPricer <TQLQuote@tqltpo.com>.
+modified:  api/flash-submit-request.ts       FROM swapped to TQLQuote@tqltpo.com.
+added:     api/rate-quote-pdf.ts             pdf-lib enterprise-grade rate-quote PDF endpoint.
+modified:  .env.local                        New GEMINI_API_KEY mirrored.
 ```
 
-## Key Rules (NON-NEGOTIABLE)
-- **Investor masking is permanent.** Every broker / borrower / email / PDF / quote surface MUST display `name`. Only the admin-gated `rawName` may surface for internal audit.
-- **Investor field is forced to `"TQL"`.** Never display the underlying lender brand on broker-facing surfaces.
-- **Admin passcode is `TQLFAITH`** (lowercased + whitespace stripped before comparison).
-
-## OB Channel 165481 Reference
-- Accepted `incomeVerificationType` enums: `FullDoc | WrittenVOE | Stated | NoIncomeVerification | InvestorDscr` (no hyphen). Map: full → FullDoc, dscr → InvestorDscr, everything alt-doc → WrittenVOE, noRatio → NoIncomeVerification.
-- Required `customFields` (else 0 products): `CustomProductFilter01..04 = '110'` mapped to `CustomLenderField4/5/7/8`.
-- DSCR products require `expandedGuidelines.debtServiceCoverageRatio` populated.
-- Product search returns NO LLPAs — must call detail endpoint per product:
-  `GET /full/api/businesschannels/{bcId}/originators/{origId}/productsearch/{searchId}/products/{productId}` → `{ quotes[], adjustments: [{reason, adjustor (string), type}] }`. Filter quotes by `desiredLockPeriod`.
-
-## Encompass Reference
-- Token: `POST /oauth2/v1/token` with `username@encompass:{instanceId}` smart user, password grant.
-- Field 305 (Lender Case #) — populate via `PATCH /encompass/v3/loans/{loanId}/fieldWriter` body `[{fieldId:"305", value:"…"}]`.
-- Field 4 (Loan Number) — Encompass auto-generates 317-prefixed.
-- Current creds (live in Vercel + .env.local): `ENCOMPASS_USERNAME=Jbeach`, `ENCOMPASS_PASSWORD=enPlantshop25$`, `ENCOMPASS_INSTANCE_ID=BE11223549`.
+## Key Decisions
+- **One unified card UI for results** — same "EXPAND PRICING OPTIONS" card style for broker default (1 or 2 cards) and admin unlocked (every program with `Raw · Admin` chip). Hero / companion / stack-table cards from earlier iterations all removed.
+- **Admin gate is a single passcode (`TQLFAITH`)** that flips `showRawInvestor` — toggles raw investor names AND skips the 99.000–101.750 price-band filter so admins see every product regardless of band.
+- **Rate stack scope** is always the SELECTED program's own ladder. Multi-investor leakage was the #1 brand risk and is now eliminated everywhere user-facing.
+- **Reserve email is the sole place RAW investor data ships** — and only because it goes to Lock Desk, never to the broker.
+- **Print PDF is server-side** (pdf-lib via `/api/rate-quote-pdf`) — keeps the bundle slim and the layout pixel-precise; bypasses print preview.
 
 ## Commands
 ```bash
-npm run dev                 # vite dev
+npm run dev                 # vite dev (port 5173)
 npm run build               # tsc -b && vite build
 git push origin master
 npx vercel --prod --yes
 npx vercel env pull .env.local --environment=production --yes
 ```
 
-## Recent Commits (latest 8)
+## Technical Notes
+- **Pill toggles must NOT be `<label><input sr-only></label>`**. Chrome focus-scrolls absolute-positioned hidden inputs into view, which corrupts overflow:hidden body layout. Always use `<button type="button" aria-pressed={...}>`.
+- **Email FROM domain whitelist** in `api/send-email.ts` — only `tqltpo.com` / `tqlend.com` pass the verified check; anything else falls back to default. Resend rejects unverified senders.
+- **OB pricing pipeline** unchanged from earlier session: per-product detail fetch → `collectProgramRateStack` (broker) or full ladder (admin) → render as a single card with EXPAND PRICING OPTIONS. DSCR 5% PPP pinning + 3% PPP companion still in place.
+- **Encompass field 305 / loan number retry** logic untouched (4× backoff via `/fieldReader` then `/fieldWriter`).
+- **PDF generation**: pdf-lib only — letter-size 612x792, margin 44, multi-page support via ensureRoom() with continuation header. Fonts limited to Helvetica / HelveticaBold (built-in StandardFonts).
+- **Mobile-friendly emails**: max-width 600px tables, system-font stack only (Manrope / Inter not safe across Outlook/Gmail), inline styles, viewport meta.
+
+## Active Brand / Routing Quick Refs
+- TQL teal CTA: `#245F73` (.tql-bg-teal / .tql-text-teal / .tql-border-teal)
+- Sky Signal (Quinn AI / Get Pricing button): `#38BDF8`
+- Trust Blue (price ≥ 100): `#2180CF`
+- Canvas: `#FAFAF8`
+- Steel borders: `#CBD5E1`
+- Default font display: Manrope (.tql-font-display); body: Inter
+- Email FROM: `TQL TotalPricer <TQLQuote@tqltpo.com>`
+- Reserve TO: `lockdesk@tqlend.com`
+- Flash Submit TO: `disclosuredesk@tqlend.com`, broker cc'd
+- Admin passcode: `TQLFAITH` (case + space insensitive)
+
+## Recent Commits (this arc)
 ```
-aa0074a feat: Strict TQL masking + Admin reveal raw investor + Quinn AI flair
-59d0b66 feat(results): TQL-masked program names + AI Best Pick on top + admin hides ladder
-57cdf2c feat: Best-rate-only view + User Admin gate, Email Quote, Lender # retry, Submit CTAs
-320fdca feat(submit): Skip Loan Setup form, drop doc type picker, default to General
-a0a617c fix: Wrap app in ErrorBoundary so render crashes don't blank the screen
-264eb2d feat(results): Always show DSCR 5% PPP when Doc Type is DSCR
-bcd8404 fix: Populate field 305 + remove duplicate TQL Flash wordmark
-e3589f4 feat(flash-submit): Confirmation modal + PDF email to disclosure desk
+15b911b fix(emails+pdf): Scope rate stack to selected program; rebuild Reserve email
+ce1494d feat(pdf): Enterprise-grade rate quote — full TQL brand + multi-page rate stack
+32105a0 fix: Unify FROM sender as TQLQuote@tqltpo.com; Print PDF strips rate stack
+3131658 fix(build): Drop unused CheckCircle import that broke Vercel TS strict build
+b6562ee feat(ui): Direct PDF download + top-nav layout (sidebar hidden)
+a7f95d5 feat(quotes+reserve): Full rate stack on email/PDF; Lock Desk gets raw investor
+4f0e9bf feat(ui): Restore "Chat with a Human" sidebar entry; sync GEMINI_API_KEY
+f064be0 feat(ui): TotalPricer wordmark, sky-blue Get Pricing, Print PDF, drop admin header
+c3c247a chore(brand): Strip Defy / OpenPrice references; remove Broker Package nav
+4b72941 feat(results): Drop "More Pricing Options" header + dual quote flow + mobile polish
+9ac7cda fix(critical): Replace sr-only checkbox pills with plain <button> elements
+97b9bb0 fix(admin): Skip 99.000-101.750 price-band filter when User Admin is unlocked
+74b8845 fix: tabIndex={-1} on sr-only pill checkboxes — stops blank-screen on click
 ```
 
 ## Uncommitted
 ```
 None — all committed.
-Untracked: nested ./tqlflashsubmit/ directory (stale embedded checkout, intentionally excluded from every git add via `git reset HEAD tqlflashsubmit`).
+Untracked: nested ./tqlflashsubmit/ stale embedded checkout (intentionally excluded via `git reset HEAD tqlflashsubmit`).
 ```
 
 ## Latest Prod URL
-https://tqlflashsubmit-9bulzbtqw-james-projects-d94c6754.vercel.app → `submit.tqltpo.com`
-
-## Routing & Brand Quick Refs
-- Quinn AI Sky Signal: `#38BDF8` (with rgba(56,189,248,…) gradients)
-- TQL teal CTA: `#245F73` (.tql-bg-teal / .tql-text-teal / .tql-border-teal)
-- Canvas bg: `#FAFAF8` (--tql-bg)
-- Steel borders: `#CBD5E1` (.tql-border-steel)
-- Default font display: Manrope (.tql-font-display); body: Inter
-- Email templates: system-font stack only (Manrope/Inter not safe across Outlook/Gmail).
+https://tqlflashsubmit-kg9vkgyka-james-projects-d94c6754.vercel.app → `submit.tqltpo.com`
