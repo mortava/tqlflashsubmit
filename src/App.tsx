@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, GripHorizontal, Lock, Printer } from 'lucide-react'
+import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, GripHorizontal, Lock, Printer, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -367,7 +367,8 @@ function buildRateQuoteEmail(
   rate: { programName: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string; adjustments?: Array<{ description: string; amount: number; rateAdj?: number }> },
   borrowerName: string,
   scenario: { loanAmount?: string; propertyValue?: string; propertyState?: string; propertyZip?: string; propertyCity?: string; loanTerm?: string; amortization?: string; documentationType?: string; creditScore?: string; lockPeriod?: string },
-  rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = []
+  rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }> = [],
+  contact: { companyName?: string; contactName?: string; contactPhone?: string; contactEmail?: string } = {}
 ): string {
   const fmtMoney = (n: string | number | undefined) => {
     if (n === undefined || n === '') return '—'
@@ -386,8 +387,9 @@ function buildRateQuoteEmail(
 <div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
     <!-- Header -->
-    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL Flash Submit</div>
+    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+      <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL · Rate Quote</div>
       <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${headline}</div>
       <div style="font-size:13px;opacity:0.85;margin-top:6px;line-height:1.4;">${rate.programName}</div>
     </td></tr>
@@ -435,6 +437,16 @@ function buildRateQuoteEmail(
       </table>
     </td></tr>
     ${/* Pricing Adjustments intentionally omitted from the client-facing email. */ ''}
+    ${(contact.companyName || contact.contactName || contact.contactPhone || contact.contactEmail) ? `
+    <tr><td style="padding:0 24px 16px 24px;">
+      <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Your Loan Officer</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:13px;border:1px solid #CBD5E1;border-radius:10px;border-collapse:separate;background:#ffffff;">
+        ${contact.companyName ? `<tr><td style="padding:8px 12px;color:#4D4D4D;width:38%;background:#F8FAFC;">Company</td><td style="padding:8px 12px;font-weight:700;color:#0B1220;text-align:right;">${contact.companyName}</td></tr>` : ''}
+        ${contact.contactName ? `<tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Contact</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;">${contact.contactName}</td></tr>` : ''}
+        ${contact.contactPhone ? `<tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Phone</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;"><a href="tel:${contact.contactPhone.replace(/[^0-9+]/g, '')}" style="color:#245F73;text-decoration:none;">${contact.contactPhone}</a></td></tr>` : ''}
+        ${contact.contactEmail ? `<tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Email</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;"><a href="mailto:${contact.contactEmail}" style="color:#245F73;text-decoration:none;">${contact.contactEmail}</a></td></tr>` : ''}
+      </table>
+    </td></tr>` : ''}
     ${rateStack.length > 0 ? `
     <tr><td style="padding:0 24px 16px 24px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">All Rate / Price Options</div>
@@ -506,8 +518,9 @@ function buildFullQuoteEmail(
 <body style="margin:0;padding:0;background:#F5F4F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
 <div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
-    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL Flash Submit · Full Quote</div>
+    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+      <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL · Full Quote</div>
       <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${headline}</div>
       <div style="font-size:13px;opacity:0.85;margin-top:6px;line-height:1.4;">${highlight.programName}</div>
     </td></tr>
@@ -624,7 +637,7 @@ async function printRateCardPdf(
 // being reserved. NO LLPAs.
 function buildReserveRequestEmail(
   highlight: { programName: string; rawProgramName?: string; rawInvestor?: string; rate: number; price: number; apr: number; payment: number; lockPeriod?: number | string },
-  broker: { name: string; email: string; scenarioName?: string },
+  broker: { name: string; email: string; scenarioName?: string; loanNumber?: string },
   scenario: Record<string, string | undefined>,
   rateStack: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }>
 ): string {
@@ -693,8 +706,9 @@ function buildReserveRequestEmail(
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);border:1px solid #CBD5E1;">
     <!-- Header -->
     <tr><td style="background:#245F73;padding:22px 26px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+      <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.9;">TQL · LOCK DESK</div>
-      <div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">Rate Reservation Request</div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${broker.loanNumber ? 'Rate Lock Confirmation' : 'Rate Reservation Request'}</div>
       <div style="font-size:13px;opacity:0.9;margin-top:6px;line-height:1.4;">Submitted ${new Date().toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
     </td></tr>
 
@@ -743,6 +757,7 @@ function buildReserveRequestEmail(
         <tr><td style="padding:8px 12px;color:#4D4D4D;width:38%;background:#F8FAFC;">Name</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;">${v(broker.name)}</td></tr>
         <tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Email</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;">${v(broker.email)}</td></tr>
         ${broker.scenarioName ? `<tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">Scenario</td><td style="padding:8px 12px;font-weight:600;color:#0B1220;text-align:right;border-top:1px solid #E2E8F0;">${v(broker.scenarioName)}</td></tr>` : ''}
+        ${broker.loanNumber ? `<tr><td style="padding:8px 12px;color:#4D4D4D;background:#F8FAFC;border-top:1px solid #E2E8F0;">TQL Loan #</td><td style="padding:8px 12px;font-weight:700;color:#245F73;text-align:right;border-top:1px solid #E2E8F0;">${v(broker.loanNumber)}</td></tr>` : ''}
       </table>
     </td></tr>
 
@@ -940,6 +955,12 @@ export default function App() {
   } | null>(null)
   const [quoteEmail, setQuoteEmail] = useState('')
   const [quoteBorrower, setQuoteBorrower] = useState('')
+  // Optional company/contact metadata that flows into the rate-quote email
+  // header so brokers can personalize the client-facing email.
+  const [quoteCompanyName, setQuoteCompanyName] = useState('')
+  const [quoteContactName, setQuoteContactName] = useState('')
+  const [quoteContactPhone, setQuoteContactPhone] = useState('')
+  const [quoteContactEmail, setQuoteContactEmail] = useState('')
   const [quoteSending, setQuoteSending] = useState(false)
   const [quoteStatus, setQuoteStatus] = useState<'idle' | 'success' | 'error'>('idle')
   // Full Quote (sales-rep → broker) — supports custom subject/body, optional rate stack
@@ -968,7 +989,6 @@ export default function App() {
   const [result, setResult] = useState<PricingResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
-  const [expandedProgram, setExpandedProgram] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [lpResult, setLpResult] = useState<any>(null)
@@ -994,10 +1014,15 @@ export default function App() {
     apr: number
     description: string
   } | null>(null)
-  const [rowReserveFields, setRowReserveFields] = useState({ name: '', email: '', scenarioName: '', confirmed: false })
-  const [rowLockFields, setRowLockFields] = useState({ name: '', email: '', loanNumber: '' })
+  // Combined Reserve/Lock fields — single form (loanNumber is optional). When
+  // populated, it triggers the lock-confirm path; otherwise it sends a plain
+  // 48-hour reservation.
+  const [rowReserveFields, setRowReserveFields] = useState({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false })
   const [rowSending, setRowSending] = useState(false)
   const [rowStatus, setRowStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  // Per-program SHARE QUOTE collapsible — keyed by program name. Holds the
+  // open program, null = nothing expanded.
+  const [openShareProgram, setOpenShareProgram] = useState<string | null>(null)
   // Flash Submit popup — captures broker/borrower details before kicking off the 3.4 upload
   const [flashSubmitRate, setFlashSubmitRate] = useState<{
     programName: string; rate: number; price: number; apr: number; payment: number;
@@ -1165,7 +1190,7 @@ export default function App() {
     if (result) {
       setResult(null)
       setLpResult(null)
-      setExpandedProgram(null)
+      setOpenShareProgram(null)
     }
 
     setFormData(prev => {
@@ -1395,99 +1420,6 @@ export default function App() {
     }
   }
 
-  const buildFullPricingHtml = (extraFields: { label: string; value: string }[], headerTitle: string, rateOverride?: { rate: number; price: number; apr: number; payment: number; description: string }) => {
-    // Use rateOverride (from per-row action) if provided, otherwise fall back to targetPricing/result
-    const rate = rateOverride ? formatPercent(rateOverride.rate) : targetPricing ? formatPercent(targetPricing.rate) : formatPercent(safeNumber(result?.rate))
-    const price = rateOverride ? rateOverride.price.toFixed(3) : targetPricing ? targetPricing.price.toFixed(3) : '100.000'
-    const apr = rateOverride ? formatPercent(rateOverride.apr) : targetPricing ? formatPercent(targetPricing.apr) : formatPercent(safeNumber(result?.apr))
-    const payment = rateOverride ? (rateOverride.payment > 0 ? formatCurrency(rateOverride.payment) : '—') : targetPricing && targetPricing.payment > 0 ? formatCurrency(targetPricing.payment) : formatCurrency(safeNumber(result?.monthlyPayment))
-    const points = rateOverride ? (100 - rateOverride.price).toFixed(3) : targetPricing ? targetPricing.points.toFixed(3) : safeNumber(result?.points).toFixed(3)
-    const ltv = safeNumber(result?.ltvRatio).toFixed(1) + '%'
-
-    const adjHtml = !rateOverride && targetPricing?.adjustments?.length
-      ? `<table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;">
-          <tr style="background:#f8fafc;"><th style="text-align:left;padding:6px 10px;color:#64748b;font-weight:600;">Description</th><th style="text-align:right;padding:6px 10px;color:#64748b;font-weight:600;">Adj</th></tr>
-          ${targetPricing.adjustments.map(adj => {
-            const val = adj.amount || 0
-            const color = val > 0 ? '#059669' : val < 0 ? '#dc2626' : '#475569'
-            return `<tr style="border-top:1px solid #e2e8f0;"><td style="padding:6px 10px;color:#334155;">${adj.description}</td><td style="padding:6px 10px;text-align:right;font-weight:600;color:${color};">${val > 0 ? '+' : ''}${val.toFixed(3)}</td></tr>`
-          }).join('')}
-        </table>` : ''
-
-    const extraFieldsHtml = extraFields.map(f =>
-      `<tr><td style="padding:6px 10px;color:#64748b;font-weight:600;white-space:nowrap;">${f.label}</td><td style="padding:6px 10px;color:#0f172a;font-weight:700;">${f.value}</td></tr>`
-    ).join('')
-
-    const loanInputs = [
-      { label: 'Loan Amount', value: formatCurrency(Number(formData.loanAmount) || 0) },
-      { label: 'Property Value', value: formatCurrency(Number(formData.propertyValue) || 0) },
-      { label: 'Credit Score', value: formData.creditScore },
-      { label: 'ZIP / State', value: `${formData.propertyZip} / ${formData.propertyState}` },
-      { label: 'County / City', value: `${formData.propertyCounty || '—'} / ${formData.propertyCity || '—'}` },
-      { label: 'Occupancy', value: formData.occupancyType },
-      { label: 'Property Type', value: formData.propertyType },
-      { label: 'Loan Purpose', value: formData.loanPurpose },
-      { label: 'Doc Type', value: formData.documentationType },
-      { label: 'DTI', value: formData.dti ? formData.dti + '%' : '—' },
-      { label: 'Loan Term', value: formData.loanTerm },
-      { label: 'Lock Period', value: formData.lockPeriod + ' days' },
-      { label: 'Impound', value: formData.impoundType },
-      { label: 'Citizenship', value: formData.citizenship },
-    ]
-    if (formData.documentationType === 'dscr') {
-      loanInputs.push({ label: 'DSCR Ratio', value: formData.dscrRatio || formData.dscrManualInput || '—' })
-    }
-    if (formData.occupancyType === 'investment') {
-      loanInputs.push({ label: 'Prepay Period', value: formData.prepayPeriod })
-      loanInputs.push({ label: 'Cross-Coll', value: formData.isCrossCollateralized ? 'Yes' : 'No' })
-    }
-    if (formData.loanPurpose === 'cashout') {
-      loanInputs.push({ label: 'Cashout Amount', value: formatCurrency(Number(formData.cashoutAmount) || 0) })
-    }
-
-    const inputsHtml = loanInputs.map(f =>
-      `<tr style="border-top:1px solid #f1f5f9;"><td style="padding:5px 10px;color:#64748b;font-size:11px;">${f.label}</td><td style="padding:5px 10px;color:#334155;font-size:11px;font-weight:600;">${f.value}</td></tr>`
-    ).join('')
-
-    return `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:640px;margin:0 auto;background:#ffffff;">
-        <div style="background:#1e40af;border-radius:12px 12px 0 0;padding:20px 24px;">
-          <div style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.01em;">${headerTitle}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;">Generated ${new Date().toLocaleString()}</div>
-        </div>
-        <div style="padding:20px 24px;border:1px solid #e2e8f0;border-top:none;">
-          <div style="font-size:12px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Request Details</div>
-          <table style="width:100%;border-collapse:collapse;">${extraFieldsHtml}</table>
-        </div>
-        <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:24px;color:white;">
-          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Pricing Result</div>
-          <div style="font-size:36px;font-weight:800;letter-spacing:-0.02em;margin-bottom:2px;">${rate}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;">Interest Rate</div>
-          <table style="width:100%;margin-top:16px;border-collapse:collapse;">
-            <tr>
-              <td style="text-align:center;padding:10px 6px;background:rgba(255,255,255,0.06);border-radius:8px;"><div style="font-size:16px;font-weight:700;color:white;">${price}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;margin-top:2px;">Price</div></td>
-              <td style="width:6px;"></td>
-              <td style="text-align:center;padding:10px 6px;background:rgba(255,255,255,0.06);border-radius:8px;"><div style="font-size:16px;font-weight:700;color:white;">${apr}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;margin-top:2px;">APR</div></td>
-              <td style="width:6px;"></td>
-              <td style="text-align:center;padding:10px 6px;background:rgba(255,255,255,0.06);border-radius:8px;"><div style="font-size:16px;font-weight:700;color:white;">${payment}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;margin-top:2px;">Payment</div></td>
-              <td style="width:6px;"></td>
-              <td style="text-align:center;padding:10px 6px;background:rgba(255,255,255,0.06);border-radius:8px;"><div style="font-size:16px;font-weight:700;color:white;">${points}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;margin-top:2px;">Points</div></td>
-              <td style="width:6px;"></td>
-              <td style="text-align:center;padding:10px 6px;background:rgba(255,255,255,0.06);border-radius:8px;"><div style="font-size:16px;font-weight:700;color:white;">${ltv}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;margin-top:2px;">LTV</div></td>
-            </tr>
-          </table>
-        </div>
-        ${adjHtml ? `<div style="padding:16px 24px;border:1px solid #e2e8f0;border-top:none;">${adjHtml}</div>` : ''}
-        <div style="padding:16px 24px;border:1px solid #e2e8f0;border-top:none;background:#fafbfc;">
-          <div style="font-size:12px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Loan Inputs</div>
-          <table style="width:100%;border-collapse:collapse;">${inputsHtml}</table>
-        </div>
-        <div style="padding:16px 24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;">
-          <div style="font-size:9px;color:#94a3b8;line-height:1.5;">&copy; OpenBroker Labs &amp; Qualr. B2B technology platform. Not a lender or broker. AI may be inaccurate.</div>
-        </div>
-      </div>`
-  }
-
   // Per-row Reserve: sends the specific rate option's data
   const handleRowReserve = async () => {
     if (!result || !activeRowAction || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email) return
@@ -1528,6 +1460,8 @@ export default function App() {
       else if (val !== undefined && val !== null) scenarioForEmail[k] = String(val)
     }
 
+    const isLockConfirm = !!rowReserveFields.loanNumber.trim()
+
     const html = buildReserveRequestEmail(
       {
         programName,
@@ -1536,10 +1470,19 @@ export default function App() {
         rate, price, apr, payment,
         lockPeriod: formData.lockPeriod,
       },
-      { name: rowReserveFields.name, email: rowReserveFields.email, scenarioName: rowReserveFields.scenarioName || undefined },
+      {
+        name: rowReserveFields.name,
+        email: rowReserveFields.email,
+        scenarioName: rowReserveFields.scenarioName || undefined,
+        loanNumber: rowReserveFields.loanNumber || undefined,
+      },
       scenarioForEmail,
       ladder
     )
+
+    const subject = isLockConfirm
+      ? `LOCK CONFIRM (TQL #${rowReserveFields.loanNumber}) — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`
+      : `RATE RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`
 
     try {
       const res = await fetch('/api/send-email', {
@@ -1548,44 +1491,13 @@ export default function App() {
         body: JSON.stringify({
           from: 'TQL TotalPricer <TQLQuote@tqltpo.com>',
           to: 'lockdesk@tqlend.com',
-          subject: `RATE RESERVATION — ${formatPercent(rate)} @ ${price.toFixed(3)} — ${rawInvestorProgram}`,
+          subject,
           html,
         }),
       })
       if (res.ok) {
         setRowStatus('success')
-        setTimeout(() => { setActiveRowAction(null); setRowStatus('idle'); setRowReserveFields({ name: '', email: '', scenarioName: '', confirmed: false }) }, 2500)
-      } else { setRowStatus('error') }
-    } catch { setRowStatus('error') }
-    finally { setRowSending(false) }
-  }
-
-  // Per-row Lock: sends the specific rate option's data
-  const handleRowLock = async () => {
-    if (!result || !activeRowAction || !rowLockFields.name || !rowLockFields.email || !rowLockFields.loanNumber) return
-    setRowSending(true)
-    setRowStatus('idle')
-    const { rate, price, payment, apr, description } = activeRowAction
-    const rateOverride = { rate, price, apr, payment, description }
-    const html = buildFullPricingHtml([
-      { label: 'Name', value: rowLockFields.name },
-      { label: 'Email', value: rowLockFields.email },
-      { label: 'TQL Loan Number', value: rowLockFields.loanNumber },
-      { label: 'Selected Rate', value: formatPercent(rate) },
-      { label: 'Selected Price', value: price.toFixed(3) },
-      { label: 'Selected APR', value: formatPercent(apr) },
-      { label: 'Selected Payment', value: payment > 0 ? formatCurrency(payment) : '—' },
-      { label: 'Program', value: description },
-    ], 'RATE LOCK REQUEST', rateOverride)
-    try {
-      const res = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: 'tposupport@tqlend.com', subject: `LOCK REQUEST — ${formatPercent(rate)} @ ${price.toFixed(3)}`, html }),
-      })
-      if (res.ok) {
-        setRowStatus('success')
-        setTimeout(() => { setActiveRowAction(null); setRowStatus('idle'); setRowLockFields({ name: '', email: '', loanNumber: '' }) }, 2500)
+        setTimeout(() => { setActiveRowAction(null); setRowStatus('idle'); setRowReserveFields({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false }) }, 2500)
       } else { setRowStatus('error') }
     } catch { setRowStatus('error') }
     finally { setRowSending(false) }
@@ -2894,7 +2806,6 @@ export default function App() {
                             return Math.abs(price - 100) < Math.abs(bestPrice - 100) ? opt : best
                           }, filteredRateOptions[0])
                           const bestPayment = bestRate ? safeNumber(bestRate.payment) : 0
-                          const isExpanded = expandedProgram === programName
                           const isSelectedPrepay = formData.occupancyType === 'investment' && programMatchesPrepay(programName, formData.prepayPeriod)
                           // Admin-only raw investor reveal — broker view stays masked.
                           // Show "<rawProduct>" · "<rawInvestor>" so all underlying
@@ -2903,8 +2814,9 @@ export default function App() {
                             ? `${program.rawName}${program.rawInvestor ? ` · ${program.rawInvestor}` : ''}`
                             : programName
 
+                          const isShareOpen = openShareProgram === programName
                           return (
-                            <div key={idx} className={`rounded-xl overflow-hidden border transition-all bg-white ${pinned ? 'tql-border-teal shadow-[0_2px_12px_rgba(36,95,115,0.15)]' : isSelectedPrepay ? 'border-slate-900 shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : isExpanded ? 'border-[#D1D5DB] shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-slate-200'}`}>
+                            <div key={idx} className={`rounded-xl overflow-hidden border transition-all bg-white ${pinned ? 'tql-border-teal shadow-[0_2px_12px_rgba(36,95,115,0.15)]' : isSelectedPrepay ? 'border-slate-900 shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-slate-200'}`}>
                               <div className="px-4 py-3">
                                 <div className="flex items-center justify-between mb-2.5">
                                   <div className="min-w-0 flex-1">
@@ -2923,6 +2835,23 @@ export default function App() {
                                     <div className="text-[11px] text-slate-400 mt-0.5">{filteredRateOptions.length} rate option{filteredRateOptions.length !== 1 ? 's' : ''}</div>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2 justify-end">
+                                    {/* SHARE QUOTE OPTIONS — collapsible trigger */}
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenShareProgram(isShareOpen ? null : programName)}
+                                      aria-expanded={isShareOpen}
+                                      className={`inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm ${isShareOpen ? 'text-white tql-bg-teal border tql-border-teal shadow-[0_2px_8px_rgba(36,95,115,0.25)]' : 'tql-text-teal bg-white border-2 tql-border-teal hover:tql-bg-teal hover:text-white'}`}
+                                    >
+                                      <Share2 className="w-4 h-4" />
+                                      Share Quote Options
+                                      {isShareOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* SHARE QUOTE — expanded action row */}
+                                {isShareOpen && (
+                                  <div className="mt-2 mb-3 px-3 py-2.5 bg-[color:var(--tql-bg)] rounded-lg border tql-border-steel flex flex-wrap items-center gap-2">
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -2930,8 +2859,6 @@ export default function App() {
                                         const opt = bestRate
                                         if (!opt) return
                                         const price = pointsToPrice(safeNumber(opt.points))
-                                        // Print PDF includes the full TQL-masked rate stack so the
-                                        // broker has the complete pricing ladder in the file.
                                         printRateCardPdf({
                                           programName,
                                           rate: safeNumber(opt.rate),
@@ -2954,6 +2881,10 @@ export default function App() {
                                         if (!opt) return
                                         setQuoteEmail('')
                                         setQuoteBorrower('')
+                                        setQuoteCompanyName('')
+                                        setQuoteContactName('')
+                                        setQuoteContactPhone('')
+                                        setQuoteContactEmail('')
                                         setQuoteStatus('idle')
                                         setQuoteRate({
                                           programName,
@@ -2995,20 +2926,12 @@ export default function App() {
                                           adjustments: opt.adjustments || [],
                                         })
                                       }}
-                                      className="inline-flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white tql-bg-teal rounded-lg shadow-[0_1px_3px_rgba(36,95,115,0.3)] hover:opacity-90 transition-opacity"
+                                      className="inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-white tql-bg-teal rounded-lg shadow-[0_1px_3px_rgba(36,95,115,0.3)] hover:opacity-90 transition-opacity"
                                     >
                                       <Send className="w-3.5 h-3.5" />Send Full Quote
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedProgram(isExpanded ? null : programName)}
-                                      className={`inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm ${isExpanded ? 'text-white tql-bg-teal border tql-border-teal shadow-[0_2px_8px_rgba(36,95,115,0.25)]' : 'tql-text-teal bg-white border-2 tql-border-teal hover:tql-bg-teal hover:text-white'}`}
-                                    >
-                                      EXPAND PRICING OPTIONS
-                                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                    </button>
                                   </div>
-                                </div>
+                                )}
                                 <div className="grid grid-cols-4 gap-2">
                                   <div>
                                     <div className="text-lg font-bold text-slate-900 tabular-nums">{bestRate ? safeNumber(bestRate.rate).toFixed(3) : '-'}%</div>
@@ -3029,8 +2952,8 @@ export default function App() {
                                 </div>
                               </div>
 
-                              {/* Expanded Rate Options — full 99.000–101.750 ladder per program */}
-                              {isExpanded && filteredRateOptions.length > 0 && (() => {
+                              {/* Rate Options table — always rendered, no expand gate */}
+                              {filteredRateOptions.length > 0 && (() => {
                                 const optionsToShow = filteredRateOptions
                                 return (
                                 <div className="border-t tql-border-steel">
@@ -3094,35 +3017,15 @@ export default function App() {
                                                           rate: safeNumber(opt.rate), price, payment,
                                                           apr: safeNumber(opt.apr), description: opt.description || programName
                                                         })
-                                                        setRowReserveFields({ name: '', email: '', scenarioName: '', confirmed: false })
+                                                        setRowReserveFields({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false })
                                                         setRowStatus('idle')
                                                         setOpenActionDropdown(null)
                                                       }}
                                                       className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                     >
                                                       <Lock className="w-3.5 h-3.5" />
-                                                      Reserve Pricing
+                                                      Reserve / Lock Rate
                                                     </button>
-                                                    {isPartner && (
-                                                      <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                          e.stopPropagation()
-                                                          setActiveRowAction(isActiveRow && activeRowAction?.type === 'lock' ? null : {
-                                                            type: 'lock', programName, optIdx,
-                                                            rate: safeNumber(opt.rate), price, payment,
-                                                            apr: safeNumber(opt.apr), description: opt.description || programName
-                                                          })
-                                                          setRowLockFields({ name: '', email: '', loanNumber: '' })
-                                                          setRowStatus('idle')
-                                                          setOpenActionDropdown(null)
-                                                        }}
-                                                        className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
-                                                      >
-                                                        <ShieldCheck className="w-3.5 h-3.5" />
-                                                        Request Lock
-                                                      </button>
-                                                    )}
                                                     <button
                                                       type="button"
                                                       onClick={(e) => {
@@ -3143,7 +3046,7 @@ export default function App() {
                                                       className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
                                                     >
                                                       <Zap className="w-3.5 h-3.5" />
-                                                      FLASH SUBMIT → UPLOAD 3.4
+                                                      Flash Upload 3.4 File
                                                     </button>
                                                   </div>,
                                                   document.body
@@ -3195,61 +3098,64 @@ export default function App() {
                                     </table>
                                   </div>
 
-                                  {/* Per-row action form */}
+                                  {/* Per-row Reserve / Lock Rate form — combined Reserve+Lock with optional TQL Loan # */}
                                   {activeRowAction && activeRowAction.programName === programName && (
                                     <div className="mx-4 mb-3 mt-1 border border-slate-200 rounded-xl p-4 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                                      <div className="flex items-center justify-between mb-3">
-                                        <div>
-                                          <div className="text-sm font-bold text-slate-900">
-                                            {activeRowAction.type === 'reserve' ? 'Reserve Rate & Pricing' : 'Request Rate Lock'}
-                                          </div>
-                                          <div className="text-[11px] text-slate-500 mt-0.5">
+                                      <div className="flex items-start justify-between mb-3 gap-3">
+                                        <div className="min-w-0">
+                                          <div className="text-sm font-bold text-slate-900">Reserve Rate / Request Rate Lock</div>
+                                          <div className="text-[12px] text-slate-500 mt-0.5">
                                             {formatPercent(activeRowAction.rate)} @ {activeRowAction.price.toFixed(3)} &mdash; {activeRowAction.description}
                                           </div>
                                         </div>
-                                        <button type="button" onClick={() => { setActiveRowAction(null); setRowStatus('idle') }} className="p-1 text-slate-400 hover:text-slate-900 transition-colors">
+                                        <button type="button" onClick={() => { setActiveRowAction(null); setRowStatus('idle') }} className="shrink-0 p-1 text-slate-400 hover:text-slate-900 transition-colors">
                                           <X className="w-4 h-4" />
                                         </button>
                                       </div>
 
-                                      {activeRowAction.type === 'reserve' ? (
-                                        <div className="space-y-3">
-                                          <p className="text-xs text-slate-500 leading-relaxed max-w-md">
-                                            Confirm you would like to reserve this Rate &amp; Pricing. This quote expires after 48 hours unless a full file is submitted.
-                                          </p>
-                                          <label className="flex items-start gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={rowReserveFields.confirmed} onChange={(e) => setRowReserveFields(prev => ({ ...prev, confirmed: e.target.checked }))} className="mt-0.5 w-4 h-4 rounded border-[#D1D5DB] text-slate-900 focus:ring-[#245F73]" />
-                                            <span className="text-xs text-slate-900 leading-relaxed">I confirm and understand the 48-hour expiration policy</span>
-                                          </label>
-                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            <input type="text" placeholder="Your Name *" value={rowReserveFields.name} onChange={(e) => setRowReserveFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
-                                            <input type="email" placeholder="Email *" value={rowReserveFields.email} onChange={(e) => setRowReserveFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
-                                            <input type="text" placeholder="Scenario Name" value={rowReserveFields.scenarioName} onChange={(e) => setRowReserveFields(prev => ({ ...prev, scenarioName: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
-                                          </div>
-                                          <div className="flex items-center gap-3">
-                                            <button type="button" onClick={handleRowReserve} disabled={rowSending || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white tql-bg-teal rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                              {rowSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : rowStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
-                                              {rowSending ? 'Sending...' : rowStatus === 'success' ? 'Sent!' : 'Send Reservation'}
-                                            </button>
-                                            {rowStatus === 'error' && <p className="text-xs text-[#EF4444]">Failed to send. Please try again.</p>}
-                                          </div>
+                                      <div className="space-y-3">
+                                        <p className="text-[13px] text-slate-600 leading-relaxed max-w-2xl">
+                                          Confirm you would like to reserve this Rate &amp; Pricing. This quote expires after 48 hours unless a full file is submitted.
+                                        </p>
+                                        <label className="flex items-start gap-2 cursor-pointer">
+                                          <input type="checkbox" checked={rowReserveFields.confirmed} onChange={(e) => setRowReserveFields(prev => ({ ...prev, confirmed: e.target.checked }))} className="mt-0.5 w-4 h-4 rounded border-[#D1D5DB] text-slate-900 focus:ring-[#245F73]" />
+                                          <span className="text-[13px] text-slate-900 leading-relaxed">I confirm and understand the 48-hour expiration policy</span>
+                                        </label>
+
+                                        {/* Required fields */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                          <input type="text" placeholder="Your Name *" value={rowReserveFields.name} onChange={(e) => setRowReserveFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                                          <input type="email" placeholder="Email *" value={rowReserveFields.email} onChange={(e) => setRowReserveFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                                          <input type="text" placeholder="Scenario Name *" value={rowReserveFields.scenarioName} onChange={(e) => setRowReserveFields(prev => ({ ...prev, scenarioName: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
                                         </div>
-                                      ) : (
-                                        <div className="space-y-3">
-                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                            <input type="text" placeholder="Your Name *" value={rowLockFields.name} onChange={(e) => setRowLockFields(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
-                                            <input type="email" placeholder="Email *" value={rowLockFields.email} onChange={(e) => setRowLockFields(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
-                                            <input type="text" placeholder="TQL Loan Number *" value={rowLockFields.loanNumber} onChange={(e) => setRowLockFields(prev => ({ ...prev, loanNumber: e.target.value }))} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
-                                          </div>
-                                          <div className="flex items-center gap-3">
-                                            <button type="button" onClick={handleRowLock} disabled={rowSending || !rowLockFields.name || !rowLockFields.email || !rowLockFields.loanNumber} className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-semibold text-white tql-bg-teal rounded-lg hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                              {rowSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : rowStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
-                                              {rowSending ? 'Sending...' : rowStatus === 'success' ? 'Sent!' : 'Send Lock Request'}
-                                            </button>
-                                            {rowStatus === 'error' && <p className="text-xs text-[#EF4444]">Failed to send. Please try again.</p>}
-                                          </div>
+
+                                        {/* Optional Lock Rate — Confirm TQL Loan # + submit */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+                                          <input
+                                            type="text"
+                                            placeholder="Lock Rate Confirm TQL Loan #"
+                                            value={rowReserveFields.loanNumber}
+                                            onChange={(e) => setRowReserveFields(prev => ({ ...prev, loanNumber: e.target.value }))}
+                                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={handleRowReserve}
+                                            disabled={rowSending || !rowReserveFields.confirmed || !rowReserveFields.name || !rowReserveFields.email || !rowReserveFields.scenarioName}
+                                            className="inline-flex items-center justify-center gap-1.5 px-7 py-2 text-[13px] font-semibold text-white bg-slate-400 hover:tql-bg-teal rounded-full enabled:tql-bg-teal disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            {rowSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : rowStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
+                                            {rowSending ? 'Sending…' : rowStatus === 'success' ? 'Sent!' : 'Submit Request'}
+                                          </button>
                                         </div>
-                                      )}
+
+                                        {rowReserveFields.loanNumber.trim() && (
+                                          <div className="text-[11px] tql-text-teal font-semibold tracking-wide">
+                                            ▸ Will submit as <span className="font-bold">LOCK CONFIRM</span> for TQL Loan #{rowReserveFields.loanNumber.trim()}
+                                          </div>
+                                        )}
+                                        {rowStatus === 'error' && <p className="text-xs text-[#EF4444]">Failed to send. Please try again.</p>}
+                                      </div>
                                     </div>
                                   )}
 
@@ -3314,34 +3220,15 @@ export default function App() {
                                                       rate: safeNumber(opt.rate), price, payment,
                                                       apr: safeNumber(opt.apr), description: opt.description || programName
                                                     })
-                                                    setRowReserveFields({ name: '', email: '', scenarioName: '', confirmed: false })
+                                                    setRowReserveFields({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false })
                                                     setRowStatus('idle')
                                                     setOpenActionDropdown(null)
                                                   }}
                                                   className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                 >
                                                   <Lock className="w-3.5 h-3.5" />
-                                                  Reserve Pricing
+                                                  Reserve / Lock Rate
                                                 </button>
-                                                {isPartner && (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                      setActiveRowAction({
-                                                        type: 'lock', programName, optIdx,
-                                                        rate: safeNumber(opt.rate), price, payment,
-                                                        apr: safeNumber(opt.apr), description: opt.description || programName
-                                                      })
-                                                      setRowLockFields({ name: '', email: '', loanNumber: '' })
-                                                      setRowStatus('idle')
-                                                      setOpenActionDropdown(null)
-                                                    }}
-                                                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
-                                                  >
-                                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                                    Request Lock
-                                                  </button>
-                                                )}
                                                 <button
                                                   type="button"
                                                   onClick={() => {
@@ -3361,7 +3248,7 @@ export default function App() {
                                                   className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
                                                 >
                                                   <Zap className="w-3.5 h-3.5" />
-                                                  FLASH SUBMIT → UPLOAD 3.4
+                                                  Flash Upload 3.4 File
                                                 </button>
                                               </div>,
                                               document.body
@@ -3393,7 +3280,7 @@ export default function App() {
                                 )
                               })()}
 
-                              {isExpanded && filteredRateOptions.length === 0 && (
+                              {filteredRateOptions.length === 0 && (
                                 <div className="bg-slate-50 px-4 py-3 text-xs text-slate-400 border-t border-slate-200">
                                   No rate options in price range (99.000 – 101.750)
                                 </div>
@@ -3742,10 +3629,10 @@ export default function App() {
         <>
           <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => !quoteSending && setQuoteRate(null)} />
           <div className="fixed inset-0 z-[301] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
-            <div className="w-full max-w-[480px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
-              <div className="tql-bg-teal px-5 py-4 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Mail className="w-5 h-5 text-white shrink-0" />
+            <div className="w-full max-w-[560px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
+              <div className="tql-bg-teal px-5 py-4 sm:px-6 flex items-center justify-between border-b-[3px] border-[#38BDF8]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img src="/tql-tpo-logo.svg" alt="TQL TPO" className="h-7 w-auto shrink-0" />
                   <div className="min-w-0">
                     <div className="text-[15px] font-bold text-white tracking-tight">Email Client Quote</div>
                     <div className="text-[11px] text-white/80 mt-0.5 truncate">{quoteRate.programName} · {quoteRate.rate.toFixed(3)}% @ {quoteRate.price.toFixed(3)}</div>
@@ -3754,15 +3641,31 @@ export default function App() {
                 <button type="button" onClick={() => !quoteSending && setQuoteRate(null)} className="p-1 text-white/80 hover:text-white shrink-0"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-5 py-5 sm:px-6 space-y-4">
-                <p className="text-[11px] tql-text-muted leading-relaxed">Sends a clean rate summary to the client. <span className="tql-text-teal font-semibold">Pricing adjustments are NOT included</span> — this is the borrower-facing version.</p>
-                <div>
-                  <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Borrower Name (optional)</label>
-                  <input type="text" value={quoteBorrower} onChange={(e) => setQuoteBorrower(e.target.value)} placeholder="John Smith" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                <p className="text-[12px] tql-text-muted leading-relaxed">Sends a clean rate summary to your client. <span className="tql-text-teal font-semibold">Pricing adjustments are NOT included</span>. Add your contact info below so the client knows who to call.</p>
+
+                {/* Recipient */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Borrower / Client Name</label>
+                    <input type="text" value={quoteBorrower} onChange={(e) => setQuoteBorrower(e.target.value)} placeholder="John Smith" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Send To Email *</label>
+                    <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={quoteEmail} onChange={(e) => setQuoteEmail(e.target.value)} placeholder="recipient@example.com" className="w-full px-3 py-2.5 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold tql-text-slate uppercase tracking-wider mb-1">Send To Email *</label>
-                  <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={quoteEmail} onChange={(e) => setQuoteEmail(e.target.value)} placeholder="recipient@example.com" className="w-full px-3 py-3 bg-[color:var(--tql-bg)] border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+
+                {/* Loan Officer / Company contact card — surfaced in the email header */}
+                <div className="rounded-lg border tql-border-steel bg-[color:var(--tql-bg)] px-3 py-3">
+                  <div className="text-[10px] font-bold tql-text-teal uppercase tracking-widest mb-2">Your Loan Officer / Company</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="text" value={quoteCompanyName} onChange={(e) => setQuoteCompanyName(e.target.value)} placeholder="Company Name" className="w-full px-3 py-2.5 bg-white border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    <input type="text" value={quoteContactName} onChange={(e) => setQuoteContactName(e.target.value)} placeholder="Contact Name" className="w-full px-3 py-2.5 bg-white border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    <input type="tel" inputMode="tel" value={quoteContactPhone} onChange={(e) => setQuoteContactPhone(e.target.value)} placeholder="Contact Phone" className="w-full px-3 py-2.5 bg-white border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                    <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={quoteContactEmail} onChange={(e) => setQuoteContactEmail(e.target.value)} placeholder="Contact Email" className="w-full px-3 py-2.5 bg-white border tql-border-steel rounded-lg text-base sm:text-sm tql-text-primary focus:outline-none focus:ring-2 focus:ring-[#245F73] focus:border-transparent" />
+                  </div>
                 </div>
+
                 <button
                   type="button"
                   disabled={!quoteEmail || quoteSending}
@@ -3770,7 +3673,18 @@ export default function App() {
                     if (!quoteRate) return
                     setQuoteSending(true)
                     setQuoteStatus('idle')
-                    const html = buildRateQuoteEmail(quoteRate, quoteBorrower, formData, collectProgramRateStack(result?.programs, quoteRate.programName))
+                    const html = buildRateQuoteEmail(
+                      quoteRate,
+                      quoteBorrower,
+                      formData,
+                      collectProgramRateStack(result?.programs, quoteRate.programName),
+                      {
+                        companyName: quoteCompanyName.trim() || undefined,
+                        contactName: quoteContactName.trim() || undefined,
+                        contactPhone: quoteContactPhone.trim() || undefined,
+                        contactEmail: quoteContactEmail.trim() || undefined,
+                      }
+                    )
                     const subject = `TQL Rate Quote — ${quoteRate.rate.toFixed(3)}% / ${quoteRate.price.toFixed(3)}${quoteBorrower ? ` — ${quoteBorrower}` : ''}`
                     try {
                       const r = await fetch('/api/send-email', {

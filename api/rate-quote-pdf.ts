@@ -28,7 +28,7 @@ interface RequestBody {
   rateStack?: Array<{ programName: string; rate: number; price: number; apr: number; payment: number }>
 }
 
-// ── TQL 2026 Brand Palette (per /tql-brand) ──
+// ── TQL 2026 Brand Palette ──
 const COLOR = {
   canvas:    rgb(0.980, 0.980, 0.973),  // #FAFAF8 Soft Canvas
   white:     rgb(1, 1, 1),
@@ -38,11 +38,11 @@ const COLOR = {
   sky:       rgb(0.219, 0.741, 0.972),  // #38BDF8 Sky Signal
   link:      rgb(0.129, 0.502, 0.811),  // #2180CF Trust Blue
   card:      rgb(0.972, 0.980, 0.988),  // #F8FAFC Cloud
-  tableFill: rgb(0.886, 0.910, 0.941),  // #E2E8F0
   rule:      rgb(0.796, 0.835, 0.882),  // #CBD5E1 Steel
   slate:     rgb(0.200, 0.255, 0.333),  // #334155 Secondary Slate
   muted:     rgb(0.302, 0.302, 0.302),  // #4D4D4D Muted
   red:       rgb(0.937, 0.267, 0.267),  // #EF4444
+  headerSubtle: rgb(0.82, 0.93, 0.96),  // muted sky on teal band
 }
 
 function fmtMoney(n: string | number | undefined): string {
@@ -51,8 +51,6 @@ function fmtMoney(n: string | number | undefined): string {
   return isFinite(num) ? `$${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'
 }
 
-// Truncate a string to fit inside a max width at given font/size by cutting
-// characters and appending an ellipsis.
 function fitText(text: string, font: PDFFont, size: number, maxWidth: number): string {
   if (font.widthOfTextAtSize(text, size) <= maxWidth) return text
   const ell = '…'
@@ -101,70 +99,99 @@ async function buildPDF(body: RequestBody): Promise<Uint8Array> {
     }
   }
 
+  // Draw the TQL TPO logo (white) on the header band — house glyph + wordmark.
+  // Native vector primitives so it stays crisp at any zoom and adds no bytes.
+  const drawLogo = (p: PDFPage, x: number, baseY: number) => {
+    const COLOR_W = COLOR.white
+    // ── House glyph ──  ~22w x 22h
+    const gx = x
+    const gy = baseY                // baseline of base rect
+    const W = 22
+    const H = 18
+    // Roof line: triangle peak via two lines (stroke width 2)
+    p.drawLine({ start: { x: gx,         y: gy + H * 0.55 }, end:   { x: gx + W / 2, y: gy + H }, thickness: 2.0, color: COLOR_W })
+    p.drawLine({ start: { x: gx + W / 2, y: gy + H        }, end:   { x: gx + W,     y: gy + H * 0.55 }, thickness: 2.0, color: COLOR_W })
+    // House left/right walls
+    p.drawLine({ start: { x: gx,         y: gy + H * 0.55 }, end:   { x: gx,         y: gy }, thickness: 2.0, color: COLOR_W })
+    p.drawLine({ start: { x: gx + W,     y: gy + H * 0.55 }, end:   { x: gx + W,     y: gy }, thickness: 2.0, color: COLOR_W })
+    // Floor
+    p.drawLine({ start: { x: gx,         y: gy            }, end:   { x: gx + W,     y: gy }, thickness: 2.0, color: COLOR_W })
+    // Door (centered small rect)
+    const doorW = 5, doorH = 8
+    p.drawLine({ start: { x: gx + W / 2 - doorW / 2, y: gy            }, end:   { x: gx + W / 2 - doorW / 2, y: gy + doorH }, thickness: 1.6, color: COLOR_W })
+    p.drawLine({ start: { x: gx + W / 2 + doorW / 2, y: gy            }, end:   { x: gx + W / 2 + doorW / 2, y: gy + doorH }, thickness: 1.6, color: COLOR_W })
+    p.drawLine({ start: { x: gx + W / 2 - doorW / 2, y: gy + doorH    }, end:   { x: gx + W / 2 + doorW / 2, y: gy + doorH }, thickness: 1.6, color: COLOR_W })
+
+    // ── Wordmark "TQL TPO" ──
+    drawText(p, 'TQL TPO', gx + W + 10, gy + 2, { size: 20, bold: true, color: COLOR_W, letterSpacing: 1.6 })
+  }
+
   const drawFooter = (p: PDFPage, pageNum: number, totalPages: number) => {
     const fy = MARGIN - 10
     p.drawLine({ start: { x: MARGIN, y: fy + 14 }, end: { x: PAGE_W - MARGIN, y: fy + 14 }, thickness: 0.4, color: COLOR.rule })
-    drawText(p, 'TOTAL QUALITY LENDING · TotalPricer · NMLS #1234567 · Equal Housing Lender', MARGIN, fy, { size: 7, color: COLOR.muted, letterSpacing: 0.4 })
+    drawText(
+      p,
+      'INTENDED FOR MORTGAGE PROFESSIONALS ONLY · TOTAL QUALITY LENDING · TotalPricer · RATES SUBJECT TO CHANGE',
+      MARGIN, fy,
+      { size: 7, color: COLOR.muted, letterSpacing: 0.4 }
+    )
     drawText(p, `Page ${pageNum} of ${totalPages}`, 0, fy, { size: 7, color: COLOR.muted, alignRight: PAGE_W - MARGIN, bold: true, letterSpacing: 0.4 })
   }
 
-  const newPage = () => { page = doc.addPage([PAGE_W, PAGE_H]); y = PAGE_H }
+  // Header band (used on first page + continuation pages)
+  const HEADER_H = 92
+  const drawHeader = (p: PDFPage, opts: { continued?: boolean } = {}) => {
+    p.drawRectangle({ x: 0, y: PAGE_H - HEADER_H, width: PAGE_W, height: HEADER_H, color: COLOR.teal })
+    p.drawRectangle({ x: 0, y: PAGE_H - HEADER_H - 3, width: PAGE_W, height: 3, color: COLOR.sky })
+    // Logo (top-left)
+    drawLogo(p, MARGIN, PAGE_H - 38)
+    // Program title under the logo
+    const programTitle = fitText(
+      opts.continued ? `${body.rate.programName} — continued` : body.rate.programName,
+      helvBold, 14, CONTENT_W - 200
+    )
+    drawText(p, programTitle, MARGIN, PAGE_H - 70, { size: 14, bold: true, color: COLOR.white })
+
+    // Right column — date + confidential flag
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    drawText(p, dateStr, 0, PAGE_H - 38, { size: 9, color: COLOR.headerSubtle, alignRight: PAGE_W - MARGIN })
+    drawText(p, 'CONFIDENTIAL · TPO PRICING', 0, PAGE_H - 56, { size: 8, color: COLOR.headerSubtle, alignRight: PAGE_W - MARGIN, letterSpacing: 1.5 })
+  }
+
+  drawHeader(page)
+  y = PAGE_H - HEADER_H - 32
+
+  const newPage = () => { page = doc.addPage([PAGE_W, PAGE_H]); y = PAGE_H; drawHeader(page, { continued: true }); y = PAGE_H - HEADER_H - 32 }
   const ensureRoom = (h: number) => {
     if (y - h < MARGIN + 26) {
       newPage()
-      // header band on continuation pages
-      page.drawRectangle({ x: 0, y: PAGE_H - 36, width: PAGE_W, height: 36, color: COLOR.teal })
-      drawText(page, 'TQL · RATE QUOTE — continued', MARGIN, PAGE_H - 24, { size: 9, bold: true, color: COLOR.white, letterSpacing: 1.2 })
-      drawText(page, fitText(body.rate.programName, helv, 9, CONTENT_W * 0.5), 0, PAGE_H - 24, { size: 9, color: COLOR.white, alignRight: PAGE_W - MARGIN })
-      y = PAGE_H - 56
     }
   }
 
-  // ─────────── HEADER BAND ───────────
-  const HEADER_H = 90
-  page.drawRectangle({ x: 0, y: PAGE_H - HEADER_H, width: PAGE_W, height: HEADER_H, color: COLOR.teal })
-  page.drawRectangle({ x: 0, y: PAGE_H - HEADER_H - 3, width: PAGE_W, height: 3, color: COLOR.sky })
-
-  drawText(page, 'TQL · RATE QUOTE', MARGIN, PAGE_H - 30, { size: 10, bold: true, color: COLOR.white, letterSpacing: 2 })
-  const programTitle = fitText(body.rate.programName, helvBold, 22, CONTENT_W - 130)
-  drawText(page, programTitle, MARGIN, PAGE_H - 56, { size: 22, bold: true, color: COLOR.white })
-  const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-  drawText(page, dateStr, 0, PAGE_H - 30, { size: 9, color: rgb(0.82, 0.93, 0.96), alignRight: PAGE_W - MARGIN, letterSpacing: 0.4 })
-  drawText(page, 'CONFIDENTIAL · TPO PRICING', 0, PAGE_H - 56, { size: 8, color: rgb(0.82, 0.93, 0.96), alignRight: PAGE_W - MARGIN, letterSpacing: 1.5 })
-
-  y = PAGE_H - HEADER_H - 28
-
-  // ─────────── HERO RATE / PRICE ───────────
-  ensureRoom(96)
-  // Rate (left)
-  const rateStr = body.rate.rate.toFixed(3)
-  drawText(page, rateStr, MARGIN, y - 36, { size: 44, bold: true, color: COLOR.ink })
-  const rateW = helvBold.widthOfTextAtSize(rateStr, 44)
-  drawText(page, '%', MARGIN + rateW + 4, y - 22, { size: 20, bold: true, color: COLOR.teal })
-  drawText(page, 'INTEREST RATE', MARGIN, y - 58, { size: 8, bold: true, color: COLOR.muted, letterSpacing: 1.6 })
-
-  // Price (right)
-  const priceStr = body.rate.price.toFixed(3)
-  const priceColor = body.rate.price >= 100 ? COLOR.teal : COLOR.ink
-  drawText(page, priceStr, 0, y - 36, { size: 44, bold: true, color: priceColor, alignRight: PAGE_W - MARGIN })
-  drawText(page, 'FINAL PRICE', 0, y - 58, { size: 8, bold: true, color: COLOR.muted, alignRight: PAGE_W - MARGIN, letterSpacing: 1.6 })
-
-  y -= 92
-
-  // ─────────── STATS CARD (APR + P&I) ───────────
-  ensureRoom(74)
-  const statsH = 60
+  // ─────────── HERO STATS CARD: 3 columns INTEREST RATE | FINAL PRICE | MONTHLY P&I ───────────
+  ensureRoom(86)
+  const statsH = 70
   page.drawRectangle({ x: MARGIN, y: y - statsH, width: CONTENT_W, height: statsH, color: COLOR.canvas, borderColor: COLOR.rule, borderWidth: 0.6, opacity: 1 })
-  // vertical divider
-  page.drawLine({ start: { x: PAGE_W / 2, y: y - 8 }, end: { x: PAGE_W / 2, y: y - statsH + 8 }, thickness: 0.5, color: COLOR.rule })
-  // APR (left half)
-  drawText(page, `${body.rate.apr.toFixed(3)}%`, MARGIN + 22, y - 30, { size: 18, bold: true, color: COLOR.ink })
-  drawText(page, 'APR', MARGIN + 22, y - 48, { size: 7.5, bold: true, color: COLOR.muted, letterSpacing: 1.5 })
-  // P&I (right half)
+  // 2 vertical dividers split into 3 columns
+  const colW = CONTENT_W / 3
+  page.drawLine({ start: { x: MARGIN + colW, y: y - 10 }, end: { x: MARGIN + colW, y: y - statsH + 10 }, thickness: 0.5, color: COLOR.rule })
+  page.drawLine({ start: { x: MARGIN + colW * 2, y: y - 10 }, end: { x: MARGIN + colW * 2, y: y - statsH + 10 }, thickness: 0.5, color: COLOR.rule })
+
+  const STAT_LABEL_GAP = 16
+  // RATE
+  const rateStr = body.rate.rate.toFixed(3)
+  drawText(page, rateStr, MARGIN + 22, y - 32, { size: 28, bold: true, color: COLOR.ink })
+  drawText(page, 'INTEREST RATE', MARGIN + 22, y - 32 - STAT_LABEL_GAP, { size: 8, bold: true, color: COLOR.muted, letterSpacing: 1.5 })
+  // PRICE
+  const priceStr = body.rate.price.toFixed(3)
+  drawText(page, priceStr, MARGIN + colW + 22, y - 32, { size: 28, bold: true, color: COLOR.ink })
+  drawText(page, 'FINAL PRICE', MARGIN + colW + 22, y - 32 - STAT_LABEL_GAP, { size: 8, bold: true, color: COLOR.muted, letterSpacing: 1.5 })
+  // P&I
   const piStr = body.rate.payment > 0 ? fmtMoney(body.rate.payment) : '—'
-  drawText(page, piStr, 0, y - 30, { size: 18, bold: true, color: COLOR.ink, alignRight: PAGE_W - MARGIN - 22 })
-  drawText(page, 'MONTHLY P&I', 0, y - 48, { size: 7.5, bold: true, color: COLOR.muted, alignRight: PAGE_W - MARGIN - 22, letterSpacing: 1.5 })
-  y -= statsH + 24
+  drawText(page, piStr, MARGIN + colW * 2 + 22, y - 32, { size: 28, bold: true, color: COLOR.ink })
+  drawText(page, 'MONTHLY P&I', MARGIN + colW * 2 + 22, y - 32 - STAT_LABEL_GAP, { size: 8, bold: true, color: COLOR.muted, letterSpacing: 1.5 })
+
+  y -= statsH + 28
 
   // ─────────── SCENARIO ───────────
   const scenarioRows: Array<[string, string]> = [
@@ -179,25 +206,25 @@ async function buildPDF(body: RequestBody): Promise<Uint8Array> {
   if (body.scenario.creditScore) scenarioRows.push(['FICO', String(body.scenario.creditScore)])
   if (body.rate.lockPeriod) scenarioRows.push(['Lock Period', `${body.rate.lockPeriod} days`])
 
-  ensureRoom(28 + scenarioRows.length * 16)
+  ensureRoom(28 + scenarioRows.length * 18)
   drawText(page, 'SCENARIO', MARGIN, y, { size: 10, bold: true, color: COLOR.teal, letterSpacing: 1.6 })
-  page.drawLine({ start: { x: MARGIN, y: y - 5 }, end: { x: PAGE_W - MARGIN, y: y - 5 }, thickness: 0.6, color: COLOR.rule })
-  y -= 18
+  page.drawLine({ start: { x: MARGIN, y: y - 6 }, end: { x: PAGE_W - MARGIN, y: y - 6 }, thickness: 0.6, color: COLOR.rule })
+  y -= 22
 
   for (let i = 0; i < scenarioRows.length; i++) {
-    ensureRoom(16)
+    ensureRoom(18)
     const [label, value] = scenarioRows[i]
     if (i % 2 === 0) {
-      page.drawRectangle({ x: MARGIN, y: y - 3, width: CONTENT_W, height: 14, color: COLOR.card })
+      page.drawRectangle({ x: MARGIN, y: y - 5, width: CONTENT_W, height: 18, color: COLOR.card })
     }
-    drawText(page, label, MARGIN + 6, y, { size: 10, color: COLOR.slate })
+    drawText(page, label, MARGIN + 10, y, { size: 10, color: COLOR.slate })
     const fittedValue = fitText(value, helvBold, 10, CONTENT_W * 0.55)
-    drawText(page, fittedValue, 0, y, { size: 10, bold: true, color: COLOR.ink, alignRight: PAGE_W - MARGIN - 6 })
-    y -= 16
+    drawText(page, fittedValue, 0, y, { size: 10, bold: true, color: COLOR.ink, alignRight: PAGE_W - MARGIN - 10 })
+    y -= 18
   }
-  y -= 18
+  y -= 22
 
-  // ─────────── ALL RATE / PRICE OPTIONS (table, deduped) ───────────
+  // ─────────── ALL RATE / PRICE OPTIONS ───────────
   if (Array.isArray(body.rateStack) && body.rateStack.length > 0) {
     // Dedupe + sort
     const seen = new Set<string>()
@@ -210,31 +237,33 @@ async function buildPDF(body: RequestBody): Promise<Uint8Array> {
       })
       .sort((a, b) => a.rate - b.rate || b.price - a.price)
 
-    ensureRoom(40)
+    ensureRoom(46)
     drawText(page, 'ALL RATE / PRICE OPTIONS', MARGIN, y, { size: 10, bold: true, color: COLOR.teal, letterSpacing: 1.6 })
-    page.drawLine({ start: { x: MARGIN, y: y - 5 }, end: { x: PAGE_W - MARGIN, y: y - 5 }, thickness: 0.6, color: COLOR.rule })
-    y -= 18
+    page.drawLine({ start: { x: MARGIN, y: y - 6 }, end: { x: PAGE_W - MARGIN, y: y - 6 }, thickness: 0.6, color: COLOR.rule })
+    y -= 22
 
     // Column geometry — inset 14px on each side so text never sits flush
-    // against the shaded row edge. Right-aligned columns sit at right-edge
-    // less their inset.
+    // against the shaded row edge.
     const TABLE_INSET = 14
     const COL_PROGRAM = MARGIN + TABLE_INSET
     const COL_PMT_R = PAGE_W - MARGIN - TABLE_INSET
     const COL_APR_R = COL_PMT_R - 78
     const COL_PRICE_R = COL_APR_R - 70
     const COL_RATE_R = COL_PRICE_R - 70
-    const ROW_H = 18
+    const ROW_H = 20
 
     const drawTableHeader = () => {
-      page.drawRectangle({ x: MARGIN, y: y - 14, width: CONTENT_W, height: 22, color: COLOR.canvas })
-      page.drawLine({ start: { x: MARGIN, y: y - 14 }, end: { x: PAGE_W - MARGIN, y: y - 14 }, thickness: 0.6, color: COLOR.rule })
+      // Header row band — sits ABOVE the y baseline so it never overlaps the
+      // section title above it.
+      page.drawRectangle({ x: MARGIN, y: y - 6, width: CONTENT_W, height: 22, color: COLOR.canvas })
+      // Bottom rule of the header
+      page.drawLine({ start: { x: MARGIN, y: y - 6 }, end: { x: PAGE_W - MARGIN, y: y - 6 }, thickness: 0.6, color: COLOR.rule })
       drawText(page, 'PROGRAM/PPP', COL_PROGRAM, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4 })
-      drawText(page, 'RATE', 0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_RATE_R })
-      drawText(page, 'PRICE', 0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_PRICE_R })
-      drawText(page, 'APR', 0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_APR_R })
+      drawText(page, 'RATE',    0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_RATE_R })
+      drawText(page, 'PRICE',   0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_PRICE_R })
+      drawText(page, 'APR',     0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_APR_R })
       drawText(page, 'PAYMENT', 0, y, { size: 8, bold: true, color: COLOR.teal, letterSpacing: 1.4, alignRight: COL_PMT_R })
-      y -= 18
+      y -= 22
     }
     drawTableHeader()
 
@@ -242,20 +271,15 @@ async function buildPDF(body: RequestBody): Promise<Uint8Array> {
     for (const r of stack) {
       if (y - ROW_H < MARGIN + 26) {
         newPage()
-        // continuation header
-        page.drawRectangle({ x: 0, y: PAGE_H - 36, width: PAGE_W, height: 36, color: COLOR.teal })
-        drawText(page, 'TQL · RATE QUOTE — continued', MARGIN, PAGE_H - 24, { size: 9, bold: true, color: COLOR.white, letterSpacing: 1.2 })
-        drawText(page, fitText(body.rate.programName, helv, 9, CONTENT_W * 0.5), 0, PAGE_H - 24, { size: 9, color: COLOR.white, alignRight: PAGE_W - MARGIN })
-        y = PAGE_H - 56
         drawText(page, 'ALL RATE / PRICE OPTIONS (cont.)', MARGIN, y, { size: 10, bold: true, color: COLOR.teal, letterSpacing: 1.6 })
-        page.drawLine({ start: { x: MARGIN, y: y - 5 }, end: { x: PAGE_W - MARGIN, y: y - 5 }, thickness: 0.6, color: COLOR.rule })
-        y -= 18
+        page.drawLine({ start: { x: MARGIN, y: y - 6 }, end: { x: PAGE_W - MARGIN, y: y - 6 }, thickness: 0.6, color: COLOR.rule })
+        y -= 22
         drawTableHeader()
       }
 
-      // Alternating row tint
+      // Alternating row tint — sits flush behind the row text, height === ROW_H
       if (rowIndex % 2 === 1) {
-        page.drawRectangle({ x: MARGIN, y: y - 5, width: CONTENT_W, height: 18, color: COLOR.card })
+        page.drawRectangle({ x: MARGIN, y: y - 6, width: CONTENT_W, height: ROW_H, color: COLOR.card })
       }
 
       const fittedProgram = fitText(r.programName, helv, 10, COL_RATE_R - COL_PROGRAM - 18)
@@ -265,12 +289,16 @@ async function buildPDF(body: RequestBody): Promise<Uint8Array> {
       drawText(page, `${r.apr.toFixed(3)}%`, 0, y, { size: 10, color: COLOR.slate, alignRight: COL_APR_R })
       drawText(page, r.payment > 0 ? fmtMoney(r.payment) : '—', 0, y, { size: 10.5, bold: true, color: COLOR.ink, alignRight: COL_PMT_R })
 
-      // bottom rule
-      page.drawLine({ start: { x: MARGIN, y: y - 5 }, end: { x: PAGE_W - MARGIN, y: y - 5 }, thickness: 0.3, color: COLOR.rule })
+      // Bottom rule of the row
+      page.drawLine({ start: { x: MARGIN, y: y - 6 }, end: { x: PAGE_W - MARGIN, y: y - 6 }, thickness: 0.3, color: COLOR.rule })
       y -= ROW_H
       rowIndex++
     }
   }
+
+  // ─────────── tqltpo.com mark, bottom-right above the footer ───────────
+  // Push down to baseline area above footer rule.
+  drawText(page, 'tqltpo.com', 0, MARGIN + 16, { size: 22, bold: true, color: COLOR.teal, alignRight: PAGE_W - MARGIN, letterSpacing: 0.5 })
 
   // ─────────── FOOTER on every page ───────────
   const pages = doc.getPages()
