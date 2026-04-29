@@ -2650,6 +2650,28 @@ export default function App() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {/* Rental Survey Type — disabled placeholder; investor logic
+                        will wire up once underwriting confirms the doc matrix. */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="rentalSurveyType" className="block text-sm font-medium text-slate-400">Rental Survey Type</label>
+                      <select
+                        id="rentalSurveyType"
+                        name="rentalSurveyType"
+                        disabled
+                        aria-disabled
+                        title="Rental Survey Type — coming soon"
+                        defaultValue=""
+                        className="w-full h-11 px-3 text-sm rounded-md border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60 appearance-none"
+                      >
+                        <option value="" disabled>Select…</option>
+                        <option value="ltr-1007">LTR 1007</option>
+                        <option value="str-1007">STR 1007</option>
+                        <option value="str-rental-survey">STR Rental Survey</option>
+                        <option value="ltr-str-actuals">LTR/STR Actuals</option>
+                        <option value="airdna-purchase">AirDNA (Purchase)</option>
+                        <option value="airdna-w-survey">AirDNA w/Survey</option>
+                      </select>
+                    </div>
                     <div className="col-span-full flex flex-wrap gap-2">
                       <button
                         type="button"
