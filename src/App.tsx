@@ -3123,28 +3123,6 @@ export default function App() {
                                                       <Lock className="w-3.5 h-3.5" />
                                                       Reserve / Lock Rate
                                                     </button>
-                                                    <button
-                                                      type="button"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setOpenActionDropdown(null)
-                                                        setFlashSubmitError(null)
-                                                        setFlashSubmitRate({
-                                                          programName,
-                                                          rate: safeNumber(opt.rate),
-                                                          price,
-                                                          apr: safeNumber(opt.apr),
-                                                          payment,
-                                                          points: safeNumber(opt.points),
-                                                          lockPeriod: opt.lockPeriod,
-                                                          adjustments: opt.adjustments || [],
-                                                        })
-                                                      }}
-                                                      className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
-                                                    >
-                                                      <Zap className="w-3.5 h-3.5" />
-                                                      Flash Upload 3.4 File
-                                                    </button>
                                                   </div>,
                                                   document.body
                                                 )}
@@ -3325,27 +3303,6 @@ export default function App() {
                                                 >
                                                   <Lock className="w-3.5 h-3.5" />
                                                   Reserve / Lock Rate
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setOpenActionDropdown(null)
-                                                    setFlashSubmitError(null)
-                                                    setFlashSubmitRate({
-                                                      programName,
-                                                      rate: safeNumber(opt.rate),
-                                                      price,
-                                                      apr: safeNumber(opt.apr),
-                                                      payment,
-                                                      points: safeNumber(opt.points),
-                                                      lockPeriod: opt.lockPeriod,
-                                                      adjustments: opt.adjustments || [],
-                                                    })
-                                                  }}
-                                                  className="flex items-center gap-2 w-full text-left px-4 py-2.5 mt-1 text-[12px] font-bold uppercase tracking-wide text-white tql-bg-teal hover:opacity-90 transition-colors"
-                                                >
-                                                  <Zap className="w-3.5 h-3.5" />
-                                                  Flash Upload 3.4 File
                                                 </button>
                                               </div>,
                                               document.body
