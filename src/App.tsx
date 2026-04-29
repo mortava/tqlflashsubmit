@@ -940,6 +940,15 @@ function DraggablePanel({ children, onClose, title, defaultX, defaultY, width, h
 export default function App() {
   const { user, profile, isPartner, signOut } = useAuth()
   const [currentView, setCurrentView] = useState<'pricing' | 'login' | 'signup' | 'submit'>('pricing')
+  // Embed mode — when ?embed=1 (or path /embed) is present, hide the global
+  // header/nav so this app can be iframed cleanly inside another site.
+  const isEmbed = (() => {
+    if (typeof window === 'undefined') return false
+    const sp = new URLSearchParams(window.location.search)
+    if (sp.get('embed') === '1' || sp.get('embed') === 'true') return true
+    if (window.location.pathname.startsWith('/embed')) return true
+    return false
+  })()
   // Help Desk state
   const [showHelpDesk, setShowHelpDesk] = useState(false)
   // User Admin — passcode reveals the RAW investor names (Master Investor
@@ -2016,6 +2025,7 @@ export default function App() {
       </aside>
 
       {/* ===== MOBILE HEADER (lg:hidden) ===== */}
+      {!isEmbed && (
       <header className="lg:hidden sticky top-0 z-40 h-12 bg-white/90 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-4">
         <button
           type="button"
@@ -2034,6 +2044,7 @@ export default function App() {
         </div>
         <div className="w-8" />
       </header>
+      )}
 
       {/* ===== MOBILE DRAWER ===== */}
       {mobileMenuOpen && (
@@ -2115,6 +2126,7 @@ export default function App() {
       <main className="h-screen flex flex-col overflow-hidden">
 
         {/* ===== DESKTOP TOP NAV (logo + nav + auth) — replaces the fixed sidebar ===== */}
+        {!isEmbed && (
         <div className="hidden lg:flex shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm px-6 lg:px-8 py-4 items-center gap-6">
           {/* Brand */}
           <div className="flex items-center gap-2.5 mr-2 shrink-0">
@@ -2173,6 +2185,7 @@ export default function App() {
             )}
           </div>
         </div>
+        )}
 
         {/* ===== STICKY RESULTS SUMMARY BAR ===== */}
         {result && targetPricing && (
