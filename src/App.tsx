@@ -173,7 +173,10 @@ interface PricingResult {
 
 type ValidationErrors = Partial<Record<keyof LoanData, string>>
 
-const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+// TQL TPO state licensing — all 50 states minus the channel's
+// non-licensed/non-eligible jurisdictions (Alaska, Hawaii, Nevada,
+// South Dakota, Utah).
+const US_STATES = ['AL','AZ','AR','CA','CO','CT','DE','FL','GA','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','TN','TX','VT','VA','WA','WV','WI','WY']
 
 const REQUIRED_FIELDS: (keyof LoanData)[] = ['loanPurpose', 'loanAmount', 'propertyValue', 'propertyZip', 'propertyState', 'propertyType', 'occupancyType', 'creditScore', 'dti', 'loanTerm']
 
