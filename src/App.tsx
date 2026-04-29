@@ -1163,26 +1163,26 @@ export default function App() {
         return
       }
 
-      // Fetch from Zippopotam.us API (free, no key required)
+      // Fetch from our internal ZIP lookup, backed by the GeoNames
+      // US postal-code dataset (40,979 entries). This returns a REAL
+      // county name (Zippopotam never did) which Optimal Blue requires.
       const fetchZipData = async () => {
         setZipLoading(true)
         try {
-          const response = await fetch(`https://api.zippopotam.us/us/${formData.propertyZip}`)
+          const response = await fetch(`/api/zip-lookup?zip=${formData.propertyZip}`)
           if (response.ok) {
             const data = await response.json()
-            if (data.places && data.places.length > 0) {
-              const place = data.places[0]
+            if (data.success) {
               setFormData(prev => ({
                 ...prev,
-                propertyCity: place['place name'] || '',
-                propertyCounty: place['county'] || place['place name'] || '',
-                propertyState: place['state abbreviation'] || ''
+                propertyCity: data.city || '',
+                propertyCounty: data.county || '',
+                propertyState: data.state || ''
               }))
-              // Cache the result
               ZIP_LOOKUP[formData.propertyZip] = {
-                city: place['place name'] || '',
-                county: place['county'] || place['place name'] || '',
-                state: place['state abbreviation'] || ''
+                city: data.city || '',
+                county: data.county || '',
+                state: data.state || ''
               }
             }
           }
