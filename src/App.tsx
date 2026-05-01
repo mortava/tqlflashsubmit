@@ -97,6 +97,8 @@ interface LoanData {
   isVestedInLLCOrCorp: boolean
   hasITIN: boolean
   documentationType: string
+  acreage: string
+  isVacant: boolean
 }
 
 interface Adjustment {
@@ -332,7 +334,9 @@ const DEFAULT_FORM_DATA: LoanData = {
   isShortTermRental: false,
   isVestedInLLCOrCorp: false,
   hasITIN: false,
-  documentationType: 'fullDoc'
+  documentationType: 'fullDoc',
+  acreage: '<5',
+  isVacant: false
 }
 
 /* ── Draggable Floating Panel ── */
@@ -352,7 +356,7 @@ function QuinnGlow({ size = 18, withRing = true }: { size?: number; withRing?: b
       <span
         className="relative font-extrabold tql-font-display"
         style={{
-          color: '#38BDF8',
+          color: '#245F73',
           fontSize: `${Math.round(size * 0.78)}px`,
           lineHeight: 1,
           textShadow: '0 0 6px rgba(56,189,248,0.55), 0 0 12px rgba(56,189,248,0.25)',
@@ -392,7 +396,7 @@ function buildRateQuoteEmail(
 <div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
     <!-- Header -->
-    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #1C4A5A;">
       <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL · Rate Quote</div>
       <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${headline}</div>
@@ -523,7 +527,7 @@ function buildFullQuoteEmail(
 <body style="margin:0;padding:0;background:#F5F4F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
 <div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
-    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+    <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #1C4A5A;">
       <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.85;">TQL · Full Quote</div>
       <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${headline}</div>
@@ -710,7 +714,7 @@ function buildReserveRequestEmail(
 <div style="background:#FAFAF8;padding:18px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);border:1px solid #CBD5E1;">
     <!-- Header -->
-    <tr><td style="background:#245F73;padding:22px 26px;color:#ffffff;border-bottom:3px solid #38BDF8;">
+    <tr><td style="background:#245F73;padding:22px 26px;color:#ffffff;border-bottom:3px solid #1C4A5A;">
       <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.9;">TQL · LOCK DESK</div>
       <div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-top:4px;line-height:1.2;">${broker.loanNumber ? 'Rate Lock Confirmation' : 'Rate Reservation Request'}</div>
@@ -1041,7 +1045,7 @@ export default function App() {
   // visually. Underlying boolean flags drive pricing; this just remembers the
   // user's explicit choice. Initialized from formData on first render.
   const [strChoice, setStrChoice] = useState<'' | 'yes' | 'no'>(
-    () => (DEFAULT_FORM_DATA.isShortTermRental ? 'yes' : '')
+    () => (DEFAULT_FORM_DATA.isShortTermRental ? 'yes' : 'no')
   )
   // Flash Submit popup — captures broker/borrower details before kicking off the 3.4 upload
   const [flashSubmitRate, setFlashSubmitRate] = useState<{
@@ -1777,13 +1781,8 @@ export default function App() {
   // DSCR 5% Fixed PPP — this program is always displayed when DSCR is the
   // selected Doc Type, even if its prices fall outside the 99.000–101.750
   // band. TQL leans on this program as the default investor scenario.
-  const isDSCR5PctPPPProgram = (programName: string): boolean => {
-    const n = String(programName || '').toUpperCase()
-    return /DSCR/.test(n) && /5\s*%\s*.*PPP|PPP\s*5\s*%|5\s*YEAR\s*PPP|5YR\s*PPP/.test(n)
-  }
   const isDSCRSelected = formData.documentationType === 'dscr'
-  const shouldPinDSCR5Pct = (programName: string): boolean =>
-    isDSCRSelected && isDSCR5PctPPPProgram(programName)
+  void isDSCRSelected
 
   // Type for target pricing option
   type TargetPricingOption = {
@@ -2127,7 +2126,8 @@ export default function App() {
 
         {/* ===== DESKTOP TOP NAV (logo + nav + auth) — replaces the fixed sidebar ===== */}
         {!isEmbed && (
-        <div className="hidden lg:flex shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm px-6 lg:px-8 py-4 items-center gap-6">
+        <div className="hidden lg:flex shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm py-3">
+          <div className="max-w-6xl mx-auto w-full px-4 flex items-center gap-4">
           {/* Brand */}
           <div className="flex items-center gap-2.5 mr-2 shrink-0">
             <IconAtom className="w-7 h-7 text-black" />
@@ -2183,6 +2183,7 @@ export default function App() {
                 Guest Mode
               </button>
             )}
+          </div>
           </div>
         </div>
         )}
@@ -2483,6 +2484,19 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="acreage" className="block text-sm font-medium text-slate-900">Acreage</label>
+                    <Select name="acreage" value={formData.acreage || '<5'} onValueChange={(v) => handleInputChange('acreage', v)}>
+                      <SelectTrigger id="acreage" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="<5">&lt;5</SelectItem>
+                        <SelectItem value="6-10">6-10</SelectItem>
+                        <SelectItem value="10-15">10-15</SelectItem>
+                        <SelectItem value="15-20">15-20</SelectItem>
+                        <SelectItem value=">20">&gt;20</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>
@@ -2559,11 +2573,11 @@ export default function App() {
                       <Select name="prepayPeriod" value={formData.prepayPeriod} onValueChange={(v) => handleInputChange('prepayPeriod', v)}>
                         <SelectTrigger id="prepayPeriod" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="60mo">60 Months</SelectItem>
-                          <SelectItem value="48mo">48 Months</SelectItem>
-                          <SelectItem value="36mo">36 Months</SelectItem>
-                          <SelectItem value="24mo">24 Months</SelectItem>
-                          <SelectItem value="12mo">12 Months</SelectItem>
+                          <SelectItem value="60mo">5 Year</SelectItem>
+                          <SelectItem value="48mo">4 Year</SelectItem>
+                          <SelectItem value="36mo">3 Year</SelectItem>
+                          <SelectItem value="24mo">2 Year</SelectItem>
+                          <SelectItem value="12mo">1 Year</SelectItem>
                           <SelectItem value="0mo">None</SelectItem>
                         </SelectContent>
                       </Select>
@@ -2575,12 +2589,23 @@ export default function App() {
                         <SelectContent>
                           <SelectItem value="5pct">5%</SelectItem>
                           <SelectItem value="3pct">3%</SelectItem>
-                          <SelectItem value="5-3-3pct">5-3-3%</SelectItem>
-                          <SelectItem value="declining-5-1">Declining 5-1%</SelectItem>
-                          <SelectItem value="1pct-oh-mi">1% (OH, MI Only)</SelectItem>
+                          <SelectItem value="6mo-interest">6 Mo. Interest</SelectItem>
+                          <SelectItem value="declining-3yr">Declining 3yr (3-2-1%)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    {formData.loanPurpose !== 'purchase' && (
+                    <div className="space-y-1.5">
+                      <label htmlFor="isVacant" className="block text-sm font-medium text-slate-900">Vacant</label>
+                      <Select name="isVacant" value={formData.isVacant ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isVacant', v === 'yes')}>
+                        <SelectTrigger id="isVacant" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no">No</SelectItem>
+                          <SelectItem value="yes">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    )}
                     {formData.documentationType === 'dscr' && (
                       <>
                         <div className="space-y-1.5">
@@ -2629,7 +2654,7 @@ export default function App() {
                         underlying isShortTermRental and isSeasonalProperty
                         flags so downstream OB pricing logic is unchanged. */}
                     <div className="space-y-1.5">
-                      <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental (STR)</label>
+                      <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental</label>
                       <Select
                         name="isShortTermRental"
                         value={strChoice}
@@ -2723,7 +2748,7 @@ export default function App() {
                 type="submit"
                 form="pricing-form"
                 className="max-w-xs ml-auto h-12 px-8 text-white font-semibold text-base rounded-xl shadow-md hover:shadow-lg hover:opacity-90 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-                style={{ backgroundColor: '#38BDF8' }}
+                style={{ backgroundColor: '#245F73' }}
               >
                 Get Pricing
               </button>
@@ -2807,7 +2832,7 @@ export default function App() {
                       )}
                       {formData.occupancyType === 'investment' && formData.prepayPeriod && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-white border tql-border-steel px-2 py-0.5 rounded">
-                          Prepay <span className="tql-text-teal">{formData.prepayPeriod === 'none' || formData.prepayPeriod === '0mo' ? 'None' : formData.prepayPeriod.replace('mo', ' mo').replace('yr', ' yr')}</span>
+                          Prepay <span className="tql-text-teal">{{ '60mo': '5 Year', '48mo': '4 Year', '36mo': '3 Year', '24mo': '2 Year', '12mo': '1 Year', '0mo': 'None', 'none': 'None' }[formData.prepayPeriod] ?? formData.prepayPeriod}</span>
                         </span>
                       )}
                       {formData.lockPeriod && (
@@ -2874,6 +2899,24 @@ export default function App() {
                             ]
                           }
                         }
+                        // Deduplicate rate options by rate value — when multiple investors
+                        // share the same masked program name, keep the best price per rate.
+                        for (const prog of Object.values(byMasked)) {
+                          const byRate: Record<string, RateOption> = {}
+                          for (const opt of prog.rateOptions) {
+                            const rateKey = safeNumber(opt.rate).toFixed(4)
+                            if (!byRate[rateKey]) {
+                              byRate[rateKey] = opt
+                            } else {
+                              const existingPrice = pointsToPrice(safeNumber(byRate[rateKey].points))
+                              const newPrice = pointsToPrice(safeNumber(opt.points))
+                              if (Math.abs(newPrice - 100) < Math.abs(existingPrice - 100)) {
+                                byRate[rateKey] = opt
+                              }
+                            }
+                          }
+                          prog.rateOptions = Object.values(byRate)
+                        }
                         sourcePrograms = Object.values(byMasked)
                       }
 
@@ -2886,8 +2929,8 @@ export default function App() {
                           if (!program || typeof program !== 'object') return null
                           const allRateOptions = Array.isArray(program.rateOptions) ? program.rateOptions : []
                           const programName = program.name || 'Unknown'
-                          const pinned = shouldPinDSCR5Pct(programName)
-                          const filteredRateOptions = (showRawInvestor || pinned)
+                          const pinned = false
+                          const filteredRateOptions = showRawInvestor
                             ? allRateOptions
                             : filterRateOptionsByPrice(allRateOptions)
                           if (filteredRateOptions.length === 0) return null
@@ -2904,17 +2947,14 @@ export default function App() {
                           // Map the user's prepayType selection to a regex that matches
                           // the masked program name (e.g. "5%PPP", "3%PPP").
                           const prepayPctMap: Record<string, string> = {
-                            '5pct': '5', '3pct': '3', '5-3-3pct': '5', 'declining-5-1': '5', '1pct-oh-mi': '1',
+                            '5pct': '5', '3pct': '3', '6mo-interest': '3', 'declining-3yr': '3',
                           }
                           const selectedPct = prepayPctMap[formData.prepayType] || '3'
-                          const wantedPpps = Array.from(new Set(['5', selectedPct]))
-                          const dscrPicks: typeof visiblePrograms = []
-                          for (const pct of wantedPpps) {
-                            const re = new RegExp(`\\b${pct}\\s*%\\s*PPP\\b`, 'i')
-                            const found = visiblePrograms.find(v => re.test(v.programName))
-                            if (found && !dscrPicks.includes(found)) dscrPicks.push(found)
-                          }
-                          if (dscrPicks.length > 0) visiblePrograms = dscrPicks
+                          // Only show the user's selected prepay type — no forced 5% default
+                          const re = new RegExp(`\\b${selectedPct}\\s*%\\s*PPP\\b`, 'i')
+                          const match = visiblePrograms.find(v => re.test(v.programName))
+                          if (match) visiblePrograms = [match]
+                          else if (visiblePrograms.length > 0) visiblePrograms = [visiblePrograms[0]]
                         } else {
                           const tier2 = findSecondBestRate(sourcePrograms)
                           if (tier2) {
@@ -3719,7 +3759,7 @@ export default function App() {
           <div className="fixed inset-0 z-[300] bg-black/40 backdrop-blur-sm" onClick={() => !quoteSending && setQuoteRate(null)} />
           <div className="fixed inset-0 z-[301] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
             <div className="w-full max-w-[560px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.3)] overflow-hidden">
-              <div className="tql-bg-teal px-5 py-4 sm:px-6 flex items-center justify-between border-b-[3px] border-[#38BDF8]">
+              <div className="tql-bg-teal px-5 py-4 sm:px-6 flex items-center justify-between border-b-[3px] border-[#1C4A5A]">
                 <div className="flex items-center gap-3 min-w-0">
                   <img src="/tql-tpo-logo.svg" alt="TQL TPO" className="h-7 w-auto shrink-0" />
                   <div className="min-w-0">
