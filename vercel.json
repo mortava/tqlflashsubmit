@@ -12,9 +12,6 @@
     },
     "api/get-ob-pricing.ts": {
       "maxDuration": 30
-    },
-    "api/get-pricing.ts": {
-      "maxDuration": 30
     }
   }
 }

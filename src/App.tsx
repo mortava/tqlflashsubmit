@@ -219,7 +219,7 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
 
   const raw = data as Record<string, unknown>
 
-  // Sanitize programs array — map both ML and OB field names
+  // Sanitize programs array — normalize OB field names
   let programs: Program[] | undefined
   if (Array.isArray(raw.programs)) {
     programs = raw.programs
@@ -1677,10 +1677,10 @@ export default function App() {
         if (sanitizedResult && sanitizedResult.programs && sanitizedResult.programs.length > 0) {
           setResult(sanitizedResult)
         } else {
-          setResult({ programs: [], mlMessage: 'No eligible programs found' } as any)
+          setResult({ programs: [], apiError: 'No eligible programs found' } as any)
         }
       } else {
-        setResult({ programs: [], mlMessage: typeof obData.error === 'string' ? obData.error : 'No rates returned' } as any)
+        setResult({ programs: [], apiError: typeof obData.error === 'string' ? obData.error : 'No rates returned' } as any)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get pricing')
@@ -1694,7 +1694,7 @@ export default function App() {
   const hasError = (field: keyof LoanData) => !!validationErrors[field]
   const showInvestorDetails = formData.occupancyType === 'investment'
 
-  // Convert points to price — handles both OB format (price=100.408) and ML format (points=-0.408)
+  // Convert points to price — OB sends price (e.g., 100.408); offset form: 100 - points
   const pointsToPrice = (pts: number): number => pts > 50 ? pts : 100 - pts
 
   // ── Rate stack for a SINGLE masked program (99.000–101.750) ──
@@ -1774,7 +1774,7 @@ export default function App() {
   const filterRateOptionsByPrice = (rateOptions: RateOption[]) => {
     return rateOptions.filter(opt => {
       const pts = safeNumber(opt.points)
-      // OB sends price directly (e.g., 100.408); ML sends points offset (e.g., -0.408)
+      // OB sends price directly (e.g., 100.408); offset form uses 100 - points
       const price = pts > 50 ? pts : 100 - pts
       return price >= PRICE_MIN && price <= PRICE_MAX
     })
@@ -2796,7 +2796,7 @@ export default function App() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-[#EF4444] mb-1">No pricing returned</div>
                         <p className="text-xs tql-text-slate leading-relaxed break-words">
-                          {result.apiError || (result as any).mlMessage || 'Optimal Blue returned no eligible products for this scenario.'}
+                          {result.apiError || 'Optimal Blue returned no eligible products for this scenario.'}
                         </p>
                         <p className="text-[11px] tql-text-muted mt-2 leading-relaxed">
                           Check Loan Type, Occupancy, Doc Type, LTV, FICO, and Property details — or email{' '}
