@@ -136,6 +136,8 @@ function buildOBRequest(f: any): any {
     sfr: 'SingleFamily',
     condo: 'Condo',
     'non-warrantable-condo': 'Condo',
+    condotel: 'Condotel',
+    coop: 'Condo',
     townhouse: 'Townhouse',
     '2unit': 'SingleFamily',
     '3unit': 'SingleFamily',

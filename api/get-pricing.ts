@@ -52,7 +52,7 @@ function mapOccupancy(occupancy: string): number {
 }
 
 function mapPropertyType(type: string): number {
-  const map: Record<string, number> = { sfr: 1, condo: 2, 'non-warrantable-condo': 2, townhouse: 3, '2unit': 4, '3unit': 5, '4unit': 6, '5-8unit': 7, '5-9unit': 7 }
+  const map: Record<string, number> = { sfr: 1, condo: 2, 'non-warrantable-condo': 2, condotel: 2, coop: 2, townhouse: 3, '2unit': 4, '3unit': 5, '4unit': 6, '5-8unit': 7, '5-9unit': 7 }
   return map[type] || 1
 }
 

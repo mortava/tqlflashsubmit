@@ -2381,6 +2381,8 @@ export default function App() {
                         <SelectItem value="sfr">Single Family</SelectItem>
                         <SelectItem value="condo">Condo</SelectItem>
                         <SelectItem value="non-warrantable-condo">Non-Warrantable Condo</SelectItem>
+                        <SelectItem value="condotel">Condotel</SelectItem>
+                        <SelectItem value="coop">Co-op</SelectItem>
                         <SelectItem value="townhouse">Townhouse</SelectItem>
                         <SelectItem value="2unit">2 Unit</SelectItem>
                         <SelectItem value="3unit">3 Unit</SelectItem>
