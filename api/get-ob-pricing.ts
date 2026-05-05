@@ -135,6 +135,7 @@ function buildOBRequest(f: any): any {
   const propTypeMap: Record<string, string> = {
     sfr: 'SingleFamily',
     condo: 'Condo',
+    'non-warrantable-condo': 'Condo',
     townhouse: 'Townhouse',
     '2unit': 'SingleFamily',
     '3unit': 'SingleFamily',
@@ -252,7 +253,7 @@ function buildOBRequest(f: any): any {
     debtConsolidation: false,
     // uniqueProperty fires when ANY of the "specialty property" pills is on —
     // OB uses this flag to surface its specialty-property eligibility tier.
-    uniqueProperty: !!(f.isNonWarrantableProject || f.isMixedUsePML || f.is5PlusUnits),
+    uniqueProperty: !!(f.isNonWarrantableProject || f.propertyType === 'non-warrantable-condo' || f.isMixedUsePML || f.is5PlusUnits),
     entityVesting: !!f.isVestedInLLCOrCorp,
     firstTimeInvestor: !!f.isFirstTimeInvestor,
     ruralProperty: !!f.isRuralProperty,

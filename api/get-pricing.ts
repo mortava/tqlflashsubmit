@@ -52,7 +52,7 @@ function mapOccupancy(occupancy: string): number {
 }
 
 function mapPropertyType(type: string): number {
-  const map: Record<string, number> = { sfr: 1, condo: 2, townhouse: 3, '2unit': 4, '3unit': 5, '4unit': 6, '5-8unit': 7, '5-9unit': 7 }
+  const map: Record<string, number> = { sfr: 1, condo: 2, 'non-warrantable-condo': 2, townhouse: 3, '2unit': 4, '3unit': 5, '4unit': 6, '5-8unit': 7, '5-9unit': 7 }
   return map[type] || 1
 }
 
@@ -255,7 +255,7 @@ function buildLOXmlFormat(formData: any): string {
     <field id="sOccTPe">${isDSCR ? 2 : mapOccupancy(formData.occupancyType || 'primary')}</field>
     <field id="sProdSpT">${mapPropertyType(formData.propertyType || 'sfr')}</field>
     <field id="sProdIsSpInRuralArea">${formData.isRuralProperty || false}</field>
-    <field id="sProdIsNonwarrantableProj">${formData.isNonWarrantableProject || false}</field>
+    <field id="sProdIsNonwarrantableProj">${formData.isNonWarrantableProject || formData.propertyType === 'non-warrantable-condo' || false}</field>
     <field id="sLPurposeTPe">${mapLoanPurpose(formData.loanPurpose || 'purchase')}</field>
     <field id="IsPurchaseLoanPanel">false</field>
     <field id="sHouseValPe">${propertyValue}</field>

@@ -99,6 +99,7 @@ interface LoanData {
   documentationType: string
   acreage: string
   isVacant: boolean
+  hasNonOccupantCoBorrower: boolean
 }
 
 interface Adjustment {
@@ -336,7 +337,8 @@ const DEFAULT_FORM_DATA: LoanData = {
   hasITIN: false,
   documentationType: 'fullDoc',
   acreage: '<5',
-  isVacant: false
+  isVacant: false,
+  hasNonOccupantCoBorrower: false
 }
 
 /* ── Draggable Floating Panel ── */
@@ -2289,12 +2291,12 @@ export default function App() {
                   </div>
                   {/* Row 2: Term, Amortization, Payment, Impound Type, Lock Period, Cashout Amount */}
                   <div className="space-y-1.5">
-                    <label htmlFor="loanTerm" className={`block text-sm font-medium ${hasError('loanTerm') ? 'text-[#EF4444]' : 'text-slate-900'}`}>Term *</label>
+                    <label htmlFor="loanTerm" className={`block text-sm font-medium ${hasError('loanTerm') ? 'text-[#EF4444]' : 'text-slate-900'}`}>Loan Term *</label>
                     <Select name="loanTerm" value={formData.loanTerm} onValueChange={(v) => handleInputChange('loanTerm', v)}>
                       <SelectTrigger id="loanTerm" className={`h-11 text-sm border-slate-300 focus:ring-blue-500 ${hasError('loanTerm') ? 'border-red-500' : ''}`}><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="30">30 Year</SelectItem>
-                        <SelectItem value="25">25 Year</SelectItem>
+                        <SelectItem value="40">40 Year</SelectItem>
                         <SelectItem value="20">20 Year</SelectItem>
                         <SelectItem value="15">15 Year</SelectItem>
                         <SelectItem value="10">10 Year</SelectItem>
@@ -2308,11 +2310,7 @@ export default function App() {
                       <SelectTrigger id="amortization" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="fixed">Fixed</SelectItem>
-                        <SelectItem value="arm3">3 Year ARM</SelectItem>
-                        <SelectItem value="arm5">5 Year ARM</SelectItem>
-                        <SelectItem value="arm7">7 Year ARM</SelectItem>
-                        <SelectItem value="arm10">10 Year ARM</SelectItem>
-                        <SelectItem value="other40">Other/40 Year</SelectItem>
+                        <SelectItem value="arm5">ARM (HELOC)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2382,6 +2380,7 @@ export default function App() {
                       <SelectContent>
                         <SelectItem value="sfr">Single Family</SelectItem>
                         <SelectItem value="condo">Condo</SelectItem>
+                        <SelectItem value="non-warrantable-condo">Non-Warrantable Condo</SelectItem>
                         <SelectItem value="townhouse">Townhouse</SelectItem>
                         <SelectItem value="2unit">2 Unit</SelectItem>
                         <SelectItem value="3unit">3 Unit</SelectItem>
@@ -2448,16 +2447,6 @@ export default function App() {
                     <label htmlFor="isRuralProperty" className="block text-sm font-medium text-slate-900">Rural Property</label>
                     <Select name="isRuralProperty" value={formData.isRuralProperty ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isRuralProperty', v === 'yes')}>
                       <SelectTrigger id="isRuralProperty" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="no">No</SelectItem>
-                        <SelectItem value="yes">Yes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="isNonWarrantableProject" className="block text-sm font-medium text-slate-900">Non-Warrantable</label>
-                    <Select name="isNonWarrantableProject" value={formData.isNonWarrantableProject ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isNonWarrantableProject', v === 'yes')}>
-                      <SelectTrigger id="isNonWarrantableProject" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="no">No</SelectItem>
                         <SelectItem value="yes">Yes</SelectItem>
@@ -2549,6 +2538,16 @@ export default function App() {
                       </SelectContent>
                     </Select>
                     {hasError('documentationType') && <p className="text-[10px] text-[#EF4444]">{validationErrors.documentationType}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="hasNonOccupantCoBorrower" className="block text-sm font-medium text-slate-900">Non-Occupant Co-Borrower</label>
+                    <Select name="hasNonOccupantCoBorrower" value={formData.hasNonOccupantCoBorrower ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('hasNonOccupantCoBorrower', v === 'yes')}>
+                      <SelectTrigger id="hasNonOccupantCoBorrower" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-full flex flex-wrap gap-2">
                     <button type="button" id="isSelfEmployed" aria-pressed={formData.isSelfEmployed} onClick={() => handleInputChange('isSelfEmployed', !formData.isSelfEmployed)} className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all border ${formData.isSelfEmployed ? 'tql-bg-teal text-white tql-border-teal shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>Self Employed</button>
@@ -2827,7 +2826,7 @@ export default function App() {
                       )}
                       {formData.amortization && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider tql-text-primary bg-white border tql-border-steel px-2 py-0.5 rounded">
-                          Amort <span className="tql-text-teal">{formData.amortization === 'fixed' ? 'Fixed' : formData.amortization.startsWith('arm') ? formData.amortization.replace('arm', 'ARM ').replace(/(\d)(\d)/, '$1/$2') : formData.amortization}</span>
+                          Amort <span className="tql-text-teal">{formData.amortization === 'fixed' ? 'Fixed' : 'ARM (HELOC)'}</span>
                         </span>
                       )}
                       {formData.occupancyType === 'investment' && formData.prepayPeriod && (
