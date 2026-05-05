@@ -2542,7 +2542,7 @@ export default function App() {
                     {hasError('documentationType') && <p className="text-[10px] text-[#EF4444]">{validationErrors.documentationType}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="hasNonOccupantCoBorrower" className="block text-sm font-medium text-slate-900">Non-Occupant Co-Borrower</label>
+                    <label htmlFor="hasNonOccupantCoBorrower" className="block text-sm font-medium text-slate-900 whitespace-nowrap">Non-Occ Co Borrower</label>
                     <Select name="hasNonOccupantCoBorrower" value={formData.hasNonOccupantCoBorrower ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('hasNonOccupantCoBorrower', v === 'yes')}>
                       <SelectTrigger id="hasNonOccupantCoBorrower" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                       <SelectContent>
