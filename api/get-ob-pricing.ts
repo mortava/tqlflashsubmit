@@ -495,18 +495,38 @@ function normalizeDetailAdjustments(detail: any): any[] {
 // `details` is a map of productId → detail response (quotes[] + adjustments[])
 // returned from /productsearch/{searchId}/products/{productId}.
 function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLockDays = 30): any {
-  const products = data.products || []
+  // OB v4: eligible priceable products are in data.products[].
+  // Ineligible products land in data.notEligibleProducts[] with their reasons.
+  const allProducts = data.products || []
+  // Only process products OB actually priced (status Available or empty).
+  const products = allProducts.filter((p: any) => {
+    const s = String(p.priceStatus || 'Available').toLowerCase()
+    return s === 'available' || s === ''
+  })
 
-  if (Array.isArray(products) && products.length > 0) {
-    console.log('[OB] total products returned:', products.length)
+  if (Array.isArray(allProducts) && allProducts.length > 0) {
+    console.log('[OB] total products returned:', allProducts.length, '| eligible:', products.length)
     console.log('[OB] details fetched for', Object.keys(details).length, 'products')
-    const sampleId = products[0].productId
-    const sampleDetail = details[String(sampleId)]
+    const sampleId = products[0]?.productId
+    const sampleDetail = sampleId ? details[String(sampleId)] : null
     if (sampleDetail) {
       console.log('[OB] sample detail adjustments count:', (sampleDetail.adjustments || []).length)
       console.log('[OB] sample detail quotes count:', (sampleDetail.quotes || []).length)
     }
   }
+
+  // Capture ineligible programs for admin display (ShortTermRental + LTV overlays etc.)
+  const rawIneligible: any[] = Array.isArray(data.notEligibleProducts) ? data.notEligibleProducts : []
+  console.log('[OB] notEligibleProducts count:', rawIneligible.length)
+  const ineligiblePrograms = rawIneligible.map((p: any) => ({
+    rawName: String(p.productName || p.productCode || 'Unknown'),
+    programName: maskProgramName(p.productName || ''),
+    rawInvestor: String(p.investor || ''),
+    productId: p.productId || 0,
+    reasons: Array.isArray(p.notEligibleReasons)
+      ? p.notEligibleReasons.map((r: any) => typeof r === 'string' ? r : (r.reason || r.message || String(r))).filter(Boolean)
+      : [],
+  }))
 
   if (!Array.isArray(products) || products.length === 0) {
     // Check for messages/errors
@@ -518,6 +538,7 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
       rateOptions: [],
       programs: [],
       totalPrograms: 0,
+      ineligiblePrograms,
       error: errorMsg,
     }
   }
@@ -696,6 +717,7 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
     programs,
     totalPrograms: programs.length,
     totalRateOptions: allRateOptions.length,
+    ineligiblePrograms,
     ltv: data.ltv || 0,
     cltv: data.cltv || 0,
     searchId: data.searchId || '',

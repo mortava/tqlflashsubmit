@@ -152,6 +152,14 @@ interface Program {
   rateOptions: RateOption[]
 }
 
+interface IneligibleProgram {
+  rawName: string
+  programName: string
+  rawInvestor: string
+  productId: number
+  reasons: string[]
+}
+
 interface PricingResult {
   rate: number
   apr: number
@@ -161,6 +169,7 @@ interface PricingResult {
   ltvRatio: number
   source?: string
   programs?: Program[]
+  ineligiblePrograms?: IneligibleProgram[]
   apiError?: string
   totalPrograms?: number
   filterApplied?: string
@@ -275,6 +284,16 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
     }
   }
 
+  const ineligiblePrograms: IneligibleProgram[] | undefined = Array.isArray(raw.ineligiblePrograms)
+    ? (raw.ineligiblePrograms as any[]).map(p => ({
+        rawName: String(p.rawName || ''),
+        programName: String(p.programName || ''),
+        rawInvestor: String(p.rawInvestor || ''),
+        productId: typeof p.productId === 'number' ? p.productId : 0,
+        reasons: Array.isArray(p.reasons) ? p.reasons.map(String) : [],
+      }))
+    : undefined
+
   return {
     rate: bestRate,
     apr: bestApr,
@@ -284,6 +303,7 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
     ltvRatio: safeNumber(raw.ltv || raw.ltvRatio, 0),
     source: typeof raw.source === 'string' ? raw.source : undefined,
     programs,
+    ineligiblePrograms,
     apiError: typeof raw.apiError === 'string' ? raw.apiError : undefined,
     totalPrograms: typeof raw.totalPrograms === 'number' ? raw.totalPrograms : (programs?.length || undefined),
     filterApplied: typeof raw.filterApplied === 'string' ? raw.filterApplied : undefined
@@ -1086,6 +1106,8 @@ export default function App() {
   }, [openActionDropdown])
   // Inline per-row adjustments expansion (LLPA breakdown)
   const [expandedAdjRow, setExpandedAdjRow] = useState<string | null>(null)
+  // Program card best-rate adjustments section expand/collapse
+  const [expandedBestRateAdj, setExpandedBestRateAdj] = useState<string | null>(null)
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [stickyBarVisible, setStickyBarVisible] = useState(true)
@@ -3389,22 +3411,45 @@ export default function App() {
                                     })}
                                   </div>
 
-                                  {/* Adjustments detail (best rate) */}
-                                  {bestRate && bestRate.adjustments && bestRate.adjustments.length > 0 && (
-                                    <div className="px-4 py-3 border-t border-slate-200 bg-slate-50">
-                                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Adjustments (Best Rate)</div>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                                        {bestRate.adjustments.map((adj: Adjustment, adjIdx: number) => (
-                                          <div key={adjIdx} className="flex justify-between items-center text-xs bg-white px-2.5 py-1.5 rounded-lg border tql-border-steel">
-                                            <span className="tql-text-primary truncate mr-2">{adj.description}</span>
-                                            <span className={`font-semibold tabular-nums ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
-                                              {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
-                                            </span>
+                                  {/* Adjustments detail (best rate) — expandable list */}
+                                  {bestRate && bestRate.adjustments && bestRate.adjustments.length > 0 && (() => {
+                                    const adjList: Adjustment[] = bestRate.adjustments
+                                    const totalAdj = adjList.reduce((s: number, a: Adjustment) => s + (a.amount || 0), 0)
+                                    const adjKey = `bestrateadj-${programName}`
+                                    const isOpen = expandedBestRateAdj === adjKey
+                                    return (
+                                      <div className="border-t border-slate-200">
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedBestRateAdj(isOpen ? null : adjKey)}
+                                          className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                                        >
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Adjustments</span>
+                                            <span className="text-[10px] text-slate-400">({adjList.length})</span>
                                           </div>
-                                        ))}
+                                          <div className="flex items-center gap-2">
+                                            <span className={`text-[11px] font-semibold tabular-nums ${totalAdj >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
+                                              Net {totalAdj >= 0 ? '+' : ''}{totalAdj.toFixed(3)}
+                                            </span>
+                                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                          </div>
+                                        </button>
+                                        {isOpen && (
+                                          <div className="px-4 pb-3 pt-1 bg-slate-50 border-t border-slate-100">
+                                            {adjList.map((adj: Adjustment, adjIdx: number) => (
+                                              <div key={adjIdx} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 text-xs">
+                                                <span className="tql-text-primary leading-snug">{adj.description}</span>
+                                                <span className={`font-semibold tabular-nums ml-4 shrink-0 ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
+                                                  {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
-                                    </div>
-                                  )}
+                                    )
+                                  })()}
 
                                 </div>
                                 )
@@ -3421,6 +3466,40 @@ export default function App() {
                       </div>
                       )
                     })() : null}
+
+                    {/* Admin — Ineligible Programs (reasons from OB) */}
+                    {showRawInvestor && result.ineligiblePrograms && result.ineligiblePrograms.length > 0 && (
+                      <div className="mt-4 border border-amber-200 bg-amber-50 rounded-xl overflow-hidden">
+                        <div className="px-4 py-2.5 flex items-center gap-2 border-b border-amber-200 bg-amber-100">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Admin · Ineligible Programs ({result.ineligiblePrograms.length})</span>
+                        </div>
+                        <div className="divide-y divide-amber-100">
+                          {result.ineligiblePrograms.map((prog: IneligibleProgram, i: number) => (
+                            <div key={i} className="px-4 py-3">
+                              <div className="flex items-start justify-between gap-3 mb-1.5">
+                                <div>
+                                  <div className="text-[11px] font-semibold text-slate-700">{prog.rawName}</div>
+                                  {prog.rawInvestor && (
+                                    <div className="text-[10px] text-amber-600 font-medium mt-0.5">{prog.rawInvestor}</div>
+                                  )}
+                                </div>
+                                <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-red-600 bg-red-50 border border-red-200">Not Eligible</span>
+                              </div>
+                              {prog.reasons.length > 0 && (
+                                <ol className="mt-1.5 space-y-0.5 list-none">
+                                  {prog.reasons.map((r: string, ri: number) => (
+                                    <li key={ri} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                      <span className="shrink-0 font-semibold text-amber-600">{ri + 1}.</span>
+                                      <span>{r}</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Secondary Access — HIDDEN */}
 
