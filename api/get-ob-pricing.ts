@@ -495,17 +495,14 @@ function normalizeDetailAdjustments(detail: any): any[] {
 // `details` is a map of productId → detail response (quotes[] + adjustments[])
 // returned from /productsearch/{searchId}/products/{productId}.
 function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLockDays = 30): any {
-  // OB v4: eligible priceable products are in data.products[].
+  // OB v4: data.products[] contains all priceable products.
   // Ineligible products land in data.notEligibleProducts[] with their reasons.
-  const allProducts = data.products || []
-  // Only process products OB actually priced (status Available or empty).
-  const products = allProducts.filter((p: any) => {
-    const s = String(p.priceStatus || 'Available').toLowerCase()
-    return s === 'available' || s === ''
-  })
+  // Do NOT filter data.products[] by priceStatus — OB uses varied status strings
+  // ('Available', 'Priced', 'Eligible', etc.) and the array only contains priceable products.
+  const products = data.products || []
 
-  if (Array.isArray(allProducts) && allProducts.length > 0) {
-    console.log('[OB] total products returned:', allProducts.length, '| eligible:', products.length)
+  if (Array.isArray(products) && products.length > 0) {
+    console.log('[OB] total products returned:', products.length)
     console.log('[OB] details fetched for', Object.keys(details).length, 'products')
     const sampleId = products[0]?.productId
     const sampleDetail = sampleId ? details[String(sampleId)] : null
