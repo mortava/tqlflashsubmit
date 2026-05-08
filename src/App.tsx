@@ -1060,6 +1060,7 @@ export default function App() {
   const [rowReserveFields, setRowReserveFields] = useState({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false })
   const [rowSending, setRowSending] = useState(false)
   const [rowStatus, setRowStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [showReserveSuccess, setShowReserveSuccess] = useState(false)
   // Per-program SHARE QUOTE collapsible — keyed by program name. Holds the
   // open program, null = nothing expanded.
   const [openShareProgram, setOpenShareProgram] = useState<string | null>(null)
@@ -1545,6 +1546,7 @@ export default function App() {
       })
       if (res.ok) {
         setRowStatus('success')
+        setShowReserveSuccess(true)
         setTimeout(() => { setActiveRowAction(null); setRowStatus('idle'); setRowReserveFields({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false }) }, 2500)
       } else { setRowStatus('error') }
     } catch { setRowStatus('error') }
@@ -3752,6 +3754,51 @@ export default function App() {
                 <p className="text-[11px] tql-text-muted text-center leading-relaxed">
                   A summary PDF + pricing detail will be emailed from <span className="tql-text-teal font-semibold">TQLQuote@tqltpo.com</span> to <span className="tql-text-teal font-semibold">disclosuredesk@tqlend.com</span> with you cc'd.
                 </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═════════ RATE RESERVATION SUCCESS MODAL ═════════ */}
+      {showReserveSuccess && (
+        <>
+          <div className="fixed inset-0 z-[350] bg-black/50 backdrop-blur-sm" onClick={() => setShowReserveSuccess(false)} />
+          <div className="fixed inset-0 z-[351] flex items-center justify-center p-4 pointer-events-none">
+            <div className="pointer-events-auto bg-white rounded-2xl shadow-[0_24px_64px_rgba(15,23,42,0.22)] w-full max-w-sm overflow-hidden">
+              {/* Header */}
+              <div className="tql-bg-teal px-5 py-4 flex items-center justify-between">
+                <div className="text-[13px] font-bold text-white tracking-tight tql-font-display">Rate Reservation</div>
+                <button
+                  type="button"
+                  onClick={() => setShowReserveSuccess(false)}
+                  className="p-1 text-white/80 hover:text-white transition-colors rounded"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Body */}
+              <div className="px-6 py-8 text-center space-y-3">
+                <div className="flex justify-center">
+                  <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                  </div>
+                </div>
+                <div className="text-[17px] font-bold text-slate-900 tql-font-display leading-snug">Submission Received</div>
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  Lock desk will be in touch soon.<br />Thank you for your business.
+                </p>
+              </div>
+              {/* Footer */}
+              <div className="px-5 pb-5">
+                <button
+                  type="button"
+                  onClick={() => setShowReserveSuccess(false)}
+                  className="w-full py-2.5 text-[13px] font-semibold text-white tql-bg-teal rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
