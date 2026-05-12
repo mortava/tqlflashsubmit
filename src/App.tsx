@@ -2539,11 +2539,10 @@ export default function App() {
                     <Select name="citizenship" value={formData.citizenship} onValueChange={(v) => handleInputChange('citizenship', v)}>
                       <SelectTrigger id="citizenship" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="usCitizen">US Citizen</SelectItem>
+                        <SelectItem value="usCitizen">U.S. Citizen</SelectItem>
                         <SelectItem value="permanentResident">Perm. Resident Alien</SelectItem>
-                        <SelectItem value="nonPermanentResident">Non-Perm. Resident Alien</SelectItem>
+                        <SelectItem value="nonPermanentResident">Non-Perm. Resident/ITIN</SelectItem>
                         <SelectItem value="foreignNational">Foreign National</SelectItem>
-                        <SelectItem value="itin">ITIN</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

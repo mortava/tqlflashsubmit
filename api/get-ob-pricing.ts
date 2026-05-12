@@ -74,12 +74,16 @@ function buildOBRequest(f: any): any {
   const isPurchase = f.loanPurpose === 'purchase'
 
   // ---- borrowerInformation (BorrowerCriteria) ----
+  // OB v4 channel 165481 Citizenship enum — verified via scripts/ob-probe-citizenship.mjs.
+  // Only these four values are accepted; "Permanent" / "PermanentResidentAlien" / "ITIN"
+  // all return HTTP 400 "Error converting value". ITIN borrowers route through
+  // NonPermResidentAlien + hasITIN flag (legacy form state may still use 'itin' key).
   const citizenMap: Record<string, string> = {
     usCitizen: 'USCitizen',
-    permanentResident: 'PermanentResidentAlien',
-    nonPermanentResident: 'NonPermanentResidentAlien',
+    permanentResident: 'PermResidentAlien',
+    nonPermanentResident: 'NonPermResidentAlien',
     foreignNational: 'ForeignNational',
-    itin: 'ITIN',
+    itin: 'NonPermResidentAlien',
   }
   // OB documentation enums — ONLY "Verified" and "None" are valid
   // DSCR must use "Verified" (not "None") to return products
