@@ -8,7 +8,8 @@ import { SignUpPage } from '@/components/auth/SignUpPage'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatPercent } from '@/lib/utils'
-import { validateFormBeforeSubmit } from '@/lib/PricingLogic'
+import { validateFormBeforeSubmit, PRICING_TTL_MS } from '@/lib/PricingLogic'
+import { useExpiringValue } from '@/hooks/use-expiring-value'
 import { ChatAdminPanel } from '@/components/chat-admin-panel'
 const UserChatPage = lazy(() => import('@/pages/UserChatPage'))
 const SubmitLoanPage = lazy(() => import('@/pages/SubmitLoanPage'))
@@ -1027,6 +1028,9 @@ export default function App() {
   const [formData, setFormData] = useState<LoanData>(DEFAULT_FORM_DATA)
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<PricingResult | null>(null)
+  const [pricedAt, setPricedAt] = useState<number | null>(null)
+  const pricing = useExpiringValue(pricedAt, PRICING_TTL_MS)
+  const pricingExpired = pricedAt !== null && !pricing.isFresh
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -1239,6 +1243,7 @@ export default function App() {
     if (result) {
       setResult(null)
       setLpResult(null)
+      setPricedAt(null)
       setOpenShareProgram(null)
     }
 
@@ -1654,7 +1659,7 @@ export default function App() {
       return
     }
 
-    setIsLoading(true); setError(null); setResult(null); setLpResult(null); setLpLoading(true); setObResult(null); setObLoading(true)
+    setIsLoading(true); setError(null); setResult(null); setLpResult(null); setPricedAt(null); setLpLoading(true); setObResult(null); setObLoading(true)
     const isDSCR = formData.documentationType === 'dscr'
     const requestBody = {
       ...formData,
@@ -1700,6 +1705,7 @@ export default function App() {
         const sanitizedResult = sanitizePricingResult({ ...obData.data, source: 'Optimal Blue' })
         if (sanitizedResult && sanitizedResult.programs && sanitizedResult.programs.length > 0) {
           setResult(sanitizedResult)
+          setPricedAt(Date.now())
         } else {
           setResult({ programs: [], apiError: 'No eligible programs found' } as any)
         }
@@ -2168,7 +2174,7 @@ export default function App() {
               <User className="w-4 h-4" />
               Chat Live Now
             </button>
-            <button type="button" onClick={() => { setResult(null); window.scrollTo({ top: 0 }) }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:tql-text-teal transition-colors">
+            <button type="button" onClick={() => { setResult(null); setPricedAt(null); window.scrollTo({ top: 0 }) }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:tql-text-teal transition-colors">
               <IconNewScenario className="w-4 h-4" />
               New Scenario
             </button>
@@ -2807,9 +2813,35 @@ export default function App() {
               </motion.div>
             )}
 
+            {/* Pricing TTL banner — pricing auto-expires 5 min after the OB call */}
+            {pricingExpired && (
+              <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-amber-900">Pricing expired</div>
+                  <p className="text-xs text-amber-800 leading-relaxed mt-0.5">
+                    This pricing is more than 5 minutes old. Rates may have changed — please re-run pricing for current rates.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { const form = document.getElementById('pricing-form') as HTMLFormElement | null; form?.requestSubmit() }}
+                  disabled={isLoading}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold tql-bg-teal text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  Re-Run Pricing
+                </button>
+              </div>
+            )}
+            {result && pricedAt && !pricingExpired && pricing.secondsRemaining > 0 && pricing.secondsRemaining <= 60 && (
+              <div className="text-[11px] font-semibold text-amber-700 mb-2">
+                Pricing expires in {pricing.secondsRemaining}s — re-run for fresh rates.
+              </div>
+            )}
+
             {/* Results */}
             {result && (
-              <motion.div key="results" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
+              <motion.div key="results" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`space-y-4 ${pricingExpired ? 'opacity-50' : ''}`}>
 
                 {/* No results — surface the actual API error, not a placeholder. */}
                 {(!Array.isArray(result.programs) || result.programs.length === 0) && !obLoading ? (

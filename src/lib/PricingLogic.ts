@@ -711,3 +711,20 @@ export default {
   validateScenario,
   validateFormBeforeSubmit
 }
+
+// ============================================================================
+// PRICING TTL (auto cache expiration)
+// ============================================================================
+
+export const PRICING_TTL_MS = 5 * 60 * 1000
+
+export function isPricingFresh(pricedAt: number | null | undefined, now: number = Date.now()): boolean {
+  if (!pricedAt) return false
+  return now - pricedAt < PRICING_TTL_MS
+}
+
+export function pricingSecondsRemaining(pricedAt: number | null | undefined, now: number = Date.now()): number {
+  if (!pricedAt) return 0
+  const remainingMs = PRICING_TTL_MS - (now - pricedAt)
+  return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0
+}
