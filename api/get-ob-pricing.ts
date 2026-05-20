@@ -85,26 +85,9 @@ function buildOBRequest(f: any): any {
     foreignNational: 'ForeignNational',
     itin: 'NonPermResidentAlien',
   }
-  // OB documentation enums — ONLY "Verified" and "None" are valid
-  // DSCR must use "Verified" (not "None") to return products
-  const incomeDocMap: Record<string, string> = {
-    fullDoc: 'Verified', dscr: 'Verified',
-    bankStatement: 'Verified', bankStatement12: 'Verified',
-    bankStatement24: 'Verified', bankStatementOther: 'Verified',
-    assetDepletion: 'Verified', assetUtilization: 'Verified',
-    voe: 'Verified', noRatio: 'None', taxReturns1Yr: 'Verified',
-  }
-  const assetDocMap: Record<string, string> = {
-    fullDoc: 'Verified', dscr: 'Verified',
-    bankStatement: 'Verified', assetDepletion: 'Verified',
-    assetUtilization: 'Verified', voe: 'Verified',
-    noRatio: 'None',
-  }
-  const employDocMap: Record<string, string> = {
-    fullDoc: 'Verified', dscr: 'Verified',
-    bankStatement: 'Verified', voe: 'Verified',
-    noRatio: 'None',
-  }
+  // OB documentation enums — always send "Verified" for all three doc flags.
+  // Per TQL channel: every doc type (incl. noRatio) must report Verified income,
+  // asset, and employment documentation, or OB rejects/blanks the response.
 
   const borrowerInformation: any = {
     citizenship: citizenMap[f.citizenship] || 'USCitizen',
@@ -118,9 +101,9 @@ function buildOBRequest(f: any): any {
     selfEmployed: f.isSelfEmployed !== undefined ? f.isSelfEmployed : true,
     waiveEscrows: f.impoundType === 'noescrow',
     state: f.propertyState || 'CA',
-    incomeDocumentation: incomeDocMap[f.documentationType] || 'Verified',
-    assetDocumentation: assetDocMap[f.documentationType] || 'Verified',
-    employmentDocumentation: employDocMap[f.documentationType] || 'Verified',
+    incomeDocumentation: 'Verified',
+    assetDocumentation: 'Verified',
+    employmentDocumentation: 'Verified',
   }
 
   // ---- propertyInformation (PropertySearchCriteria) ----
