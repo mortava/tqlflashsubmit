@@ -1707,10 +1707,25 @@ export default function App() {
           setResult(sanitizedResult)
           setPricedAt(Date.now())
         } else {
-          setResult({ programs: [], apiError: 'No eligible programs found' } as any)
+          // No eligible programs but the response shape is valid — keep the
+          // ineligiblePrograms list so the broker can see why each program
+          // was disqualified (LTV cap, FICO floor, state, etc.).
+          setResult({
+            ...(sanitizedResult || {}),
+            programs: [],
+            apiError: 'No eligible programs found',
+          } as any)
         }
       } else {
-        setResult({ programs: [], apiError: typeof obData.error === 'string' ? obData.error : 'No rates returned' } as any)
+        // success: false — the API still attaches data.ineligiblePrograms here
+        // (see api/get-ob-pricing.ts handler) so the broker can see why.
+        const errData = (obData as any).data || {}
+        const sanitizedErr = sanitizePricingResult({ ...errData, source: 'Optimal Blue' })
+        setResult({
+          ...(sanitizedErr || {}),
+          programs: [],
+          apiError: typeof obData.error === 'string' ? obData.error : 'No rates returned',
+        } as any)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get pricing')
@@ -2845,22 +2860,57 @@ export default function App() {
 
                 {/* No results — surface the actual API error, not a placeholder. */}
                 {(!Array.isArray(result.programs) || result.programs.length === 0) && !obLoading ? (
-                  <div className="bg-white border border-[#EF4444]/40 rounded-xl p-5">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-[#EF4444] shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-bold text-[#EF4444] mb-1">No pricing returned</div>
-                        <p className="text-xs tql-text-slate leading-relaxed break-words">
-                          {result.apiError || 'Optimal Blue returned no eligible products for this scenario.'}
-                        </p>
-                        <p className="text-[11px] tql-text-muted mt-2 leading-relaxed">
-                          Check Loan Type, Occupancy, Doc Type, LTV, FICO, and Property details — or email{' '}
-                          <a href="mailto:tposupport@tqlend.com" className="tql-text-teal font-semibold hover:underline">tposupport@tqlend.com</a>{' '}
-                          with the scenario for a manual quote.
-                        </p>
+                  <>
+                    <div className="bg-white border border-[#EF4444]/40 rounded-xl p-5">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-[#EF4444] shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold text-[#EF4444] mb-1">No pricing returned</div>
+                          <p className="text-xs tql-text-slate leading-relaxed break-words">
+                            {result.apiError || 'Optimal Blue returned no eligible products for this scenario.'}
+                          </p>
+                          <p className="text-[11px] tql-text-muted mt-2 leading-relaxed">
+                            Check Loan Type, Occupancy, Doc Type, LTV, FICO, and Property details — or email{' '}
+                            <a href="mailto:tposupport@tqlend.com" className="tql-text-teal font-semibold hover:underline">tposupport@tqlend.com</a>{' '}
+                            with the scenario for a manual quote.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Disqualified programs list — pulled from OB's /ineligible
+                        endpoint when zero eligible products. Shown to all brokers,
+                        not just admins, so they can self-diagnose why nothing
+                        priced (LTV cap, FICO floor, state restriction, etc.). */}
+                    {Array.isArray(result.ineligiblePrograms) && result.ineligiblePrograms.length > 0 && (
+                      <div className="bg-white border border-amber-200 rounded-xl overflow-hidden">
+                        <div className="px-4 py-2.5 flex items-center gap-2 border-b border-amber-200 bg-amber-50">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                            Disqualified Programs ({result.ineligiblePrograms.length})
+                          </span>
+                        </div>
+                        <div className="divide-y divide-amber-100">
+                          {result.ineligiblePrograms.map((prog: IneligibleProgram, i: number) => (
+                            <div key={i} className="px-4 py-3">
+                              <div className="text-xs font-semibold text-slate-900 mb-1.5 truncate">
+                                {prog.programName || prog.rawName || 'Program'}
+                              </div>
+                              {Array.isArray(prog.reasons) && prog.reasons.length > 0 ? (
+                                <ul className="text-[11px] tql-text-slate leading-relaxed space-y-0.5 list-disc list-inside">
+                                  {prog.reasons.map((r, ri) => (
+                                    <li key={ri} className="break-words">{r}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <div className="text-[11px] tql-text-muted italic">No reason returned by Optimal Blue.</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (!Array.isArray(result.programs) || result.programs.length === 0) && obLoading ? (
                   <div className="bg-white border tql-border-steel rounded-xl p-6 flex items-center gap-4">
                     <div className="relative shrink-0">
