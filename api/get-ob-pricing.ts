@@ -449,6 +449,48 @@ async function fetchProductDetail(
   return r.json()
 }
 
+// Pulls the full ineligible-product list with disqualification reasons. OB's
+// inline `notEligibleProducts[]` in the productsearch body is a summary; this
+// dedicated endpoint returns the complete list plus richer reason text. We
+// call it whenever the eligible set is empty so the broker sees WHY every
+// program was knocked out (LTV cap, FICO floor, state restriction, etc.).
+async function fetchIneligible(
+  accessToken: string,
+  searchId: string,
+): Promise<any[]> {
+  const url = `${OB_API_BASE_URL}/full/api/businesschannels/${OB_BUSINESS_CHANNEL_ID}/originators/${OB_ORIGINATOR_ID}/productsearch/${searchId}/ineligible`
+  const r = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!r.ok) {
+    console.warn(`[OB] ineligible fetch → HTTP ${r.status}`)
+    return []
+  }
+  const body = await r.json().catch(() => null)
+  // OB returns either an array directly or an object wrapper. Be defensive.
+  if (Array.isArray(body)) return body
+  if (Array.isArray(body?.products)) return body.products
+  if (Array.isArray(body?.notEligibleProducts)) return body.notEligibleProducts
+  if (Array.isArray(body?.ineligibleProducts)) return body.ineligibleProducts
+  return []
+}
+
+function normalizeIneligible(rawIneligible: any[]): any[] {
+  return rawIneligible.map((p: any) => ({
+    rawName: String(p.productName || p.productCode || 'Unknown'),
+    programName: maskProgramName(p.productName || ''),
+    rawInvestor: String(p.investor || ''),
+    productId: p.productId || 0,
+    reasons: Array.isArray(p.notEligibleReasons || p.ineligibleReasons || p.reasons)
+      ? (p.notEligibleReasons || p.ineligibleReasons || p.reasons)
+          .map((r: any) => typeof r === 'string' ? r : (r.reason || r.message || r.description || String(r)))
+          .filter(Boolean)
+      : [],
+  }))
+}
+
 // Clean up OB's verbose adjustment reason strings so they read cleanly in the UI.
 // OB prefixes many rows with "Max of LTV/CLTV/HCLTV is " which the broker asked
 // us to strip. Also normalises " And " connectors to commas for readability.
@@ -809,11 +851,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    // 204 No Content = no results
+    // 204 No Content = no results, and no body so no searchId — nothing we can
+    // GET /ineligible against. Bail with the generic empty message.
     if (response.status === 204) {
       return res.json({
         success: false,
         error: 'No eligible products found in Optimal Blue for this scenario.',
+        data: { ineligiblePrograms: [] },
       })
     }
 
@@ -845,11 +889,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const desiredLockDays = Number(obRequest?.loanInformation?.desiredLockPeriod) || 30
     const result = parseOBResponse(responseData, details, desiredLockDays)
 
+    // When the eligible set is empty, hit the dedicated /ineligible endpoint
+    // so the broker sees WHY every program was disqualified. This list is
+    // richer than the inline notEligibleProducts[] summary already in result.
+    if (result.programs.length === 0 && searchId) {
+      try {
+        const rawIneligible = await fetchIneligible(accessToken, searchId)
+        const extra = normalizeIneligible(rawIneligible)
+        console.log('[OB] /ineligible endpoint returned:', extra.length, 'disqualified programs')
+
+        // Merge with whatever the inline notEligibleProducts[] already gave us,
+        // keyed by productId so we don't double-list a program.
+        const existing = Array.isArray(result.ineligiblePrograms) ? result.ineligiblePrograms : []
+        const byId = new Map<string, any>()
+        for (const p of existing) byId.set(String(p.productId || p.rawName), p)
+        for (const p of extra) {
+          const key = String(p.productId || p.rawName)
+          const prev = byId.get(key)
+          if (prev) {
+            // Union the reasons so we keep both sources' detail.
+            const merged = new Set<string>([...(prev.reasons || []), ...(p.reasons || [])])
+            byId.set(key, { ...prev, reasons: Array.from(merged) })
+          } else {
+            byId.set(key, p)
+          }
+        }
+        result.ineligiblePrograms = Array.from(byId.values())
+      } catch (err) {
+        console.warn('[OB] /ineligible fetch failed:', err instanceof Error ? err.message : err)
+      }
+    }
+
     if (result.error && result.programs.length === 0) {
       return res.json({
         success: false,
         error: result.error,
-        debug: { requestSent: obRequest },
+        data: { ineligiblePrograms: result.ineligiblePrograms || [] },
+        debug: { requestSent: obRequest, searchId },
       })
     }
 
