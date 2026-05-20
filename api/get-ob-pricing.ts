@@ -478,17 +478,31 @@ async function fetchIneligible(
 }
 
 function normalizeIneligible(rawIneligible: any[]): any[] {
-  return rawIneligible.map((p: any) => ({
-    rawName: String(p.productName || p.productCode || 'Unknown'),
-    programName: maskProgramName(p.productName || ''),
-    rawInvestor: String(p.investor || ''),
-    productId: p.productId || 0,
-    reasons: Array.isArray(p.notEligibleReasons || p.ineligibleReasons || p.reasons)
-      ? (p.notEligibleReasons || p.ineligibleReasons || p.reasons)
+  return rawIneligible.map((p: any) => {
+    // OB's /ineligible endpoint uses `ineligibleReason` (singular array).
+    // The inline notEligibleProducts[] on the search response uses
+    // `notEligibleReasons` (plural). Check every known shape.
+    const reasonField =
+      p.ineligibleReason ||
+      p.ineligibleReasons ||
+      p.notEligibleReasons ||
+      p.notEligibleReason ||
+      p.reasons ||
+      p.reason
+    const reasons = Array.isArray(reasonField)
+      ? reasonField
           .map((r: any) => typeof r === 'string' ? r : (r.reason || r.message || r.description || String(r)))
           .filter(Boolean)
-      : [],
-  }))
+          .map(cleanAdjustmentReason)
+      : (typeof reasonField === 'string' && reasonField ? [cleanAdjustmentReason(reasonField)] : [])
+    return {
+      rawName: String(p.productName || p.productCode || 'Unknown'),
+      programName: maskProgramName(p.productName || ''),
+      rawInvestor: String(p.investor || ''),
+      productId: p.productId || 0,
+      reasons,
+    }
+  })
 }
 
 // Clean up OB's verbose adjustment reason strings so they read cleanly in the UI.
