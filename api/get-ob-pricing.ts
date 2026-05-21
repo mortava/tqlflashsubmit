@@ -197,17 +197,20 @@ function buildOBRequest(f: any): any {
   }
 
   // expandedGuidelines (inside loanInformation)
-  // incomeVerificationType — OB v4 channel 165481 accepts only these enums
-  // (all others return HTTP 400 "Error converting value"):
-  //   FullDoc              → Full Document programs (Ascend Alt-A, Elevate)
-  //   WrittenVOE           → Alt-Doc programs (Ascend Alt-A Alt-Doc) — used as
-  //                          the catch-all for bank statement, DSCR, asset
-  //                          utilization, 1-yr tax returns, VOE, etc.
-  //   Stated               → Stated income (returns 0 products on this channel)
-  //   NoIncomeVerification → No-ratio / no-income (returns 0 products on this channel)
-  // OB v4 channel 165481 accepts: FullDoc | WrittenVOE | Stated |
-  // NoIncomeVerification | InvestorDscr. The hyphenated "Investor-DSCR"
-  // form returns HTTP 400 "Error converting value".
+  // incomeVerificationType — OB v4 channel 165481 accepts exactly SIX enums.
+  // Verified empirically via scripts/ob-probe-iv-correct.mjs (2026-05-21):
+  //   FullDoc              → Full Document programs
+  //   WrittenVOE           → Alt-Doc programs — used as the catch-all for
+  //                          bank statement, 1-yr tax returns, VOE, etc.
+  //                          (channel does NOT expose dedicated BankStatement
+  //                          or TaxReturns1Yr enum values)
+  //   AssetRelated         → Asset Depletion / Asset Utilization programs
+  //   Stated               → Stated income
+  //   NoIncomeVerification → No-ratio / no-income
+  //   InvestorDscr         → DSCR (hyphen variant 'Investor-DSCR' returns 400)
+  // Every other value (BankStatement, BankStatement12, BankStatement24,
+  // AssetDepletion, TaxReturns1Yr, 1099, PnL, ProfitAndLoss, VOE, WVOE, etc.)
+  // returns HTTP 400 "Error converting value to type IncomeVerificationType".
   const incomeVerificationMap: Record<string, string> = {
     fullDoc: 'FullDoc',
     dscr: 'InvestorDscr',
@@ -217,8 +220,8 @@ function buildOBRequest(f: any): any {
     bankStatementOther: 'WrittenVOE',
     taxReturns1Yr: 'WrittenVOE',
     voe: 'WrittenVOE',
-    assetDepletion: 'WrittenVOE',
-    assetUtilization: 'WrittenVOE',
+    assetDepletion: 'AssetRelated',
+    assetUtilization: 'AssetRelated',
     noRatio: 'NoIncomeVerification',
     stated: 'Stated',
   }
@@ -262,6 +265,19 @@ function buildOBRequest(f: any): any {
     expandedGuidelines.debtServiceCoverageRatio = parsedDSCR
   }
 
+  // Sibling "standard" underwriting-criteria block — ONLY included when the
+  // borrower is genuinely full-doc. The Standard product family (FNMA / FHLMC
+  // agency Conforming) requires full income/asset documentation, so sending
+  // the Standard block for a DSCR / Bank Statement / 1099 / Asset borrower
+  // would coerce OB into returning agency Conforming products that don't
+  // apply to that borrower's actual loan profile.
+  //
+  // Non-FullDoc scenarios omit `standard` → OB evaluates only Expanded
+  // Guidelines, and the Conforming bucket comes back with only Expanded
+  // products (or empty).
+  const isFullDoc = f.documentationType === 'fullDoc'
+  const standard: any | null = isFullDoc ? { ...expandedGuidelines } : null
+
   // LO compensation: TQL brokers are borrower-paid, so comp is NOT baked into
   // pricing. Use NoBuyerPaid unless the form explicitly indicates lender-paid.
   const loCompensation = f.loanOriginatorPaidBy === 'lender' ? 'YesLenderPaid' : 'NoBuyerPaid'
@@ -297,6 +313,10 @@ function buildOBRequest(f: any): any {
     employeeLoan: 'No',
     communityAffordableSecond: 'No',
     expandedGuidelines,
+    ...(standard ? { standard } : {}),
+    // Surface programs that pass only with exception approval — broker
+    // wants to see the full picture, not just guideline-clean matches.
+    includeEligibilityExceptions: true,
     reducedMI: false,
     representativeFICO: creditScore,
     loanLevelDebtToIncomeRatio: dti,
@@ -304,6 +324,12 @@ function buildOBRequest(f: any): any {
       ? (Number(f.grossRent) || 10000)
       : Math.round((loanAmount * 0.006) / (dti / 100)),
     customerInternalId: 'OBSearch',
+    // OB's UI "Product Type(s)" checkbox group — tells OB to evaluate both
+    // the Standard agency product family and the Expanded Guidelines family.
+    // Both `productFilters` and `productFilter` shipped as fallbacks until
+    // we have OB's canonical schema name confirmed.
+    productFilters: ['Standard', 'ExpandedGuidelines'],
+    productFilter: ['Standard', 'ExpandedGuidelines'],
     // TQL NonQM channel custom product filters — OB returns zero products when
     // these aren't populated. All four fixed to 110 per the channel spec.
     customFields: [
