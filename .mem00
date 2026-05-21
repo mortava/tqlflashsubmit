@@ -1,68 +1,156 @@
-# Session Memory — tqlflashsubmit (TQL Flash Submit / TotalPricer)
-**Date**: 2026-05-01 11:30 CST
+# Session Memory — tqlflashsubmit
+**Date**: 2026-05-21
 **Branch**: master
-**Session Focus**: Form field additions, pricing results dedup fix, accent color unification
+**Session Focus**: OB pricing — fix WVOE mislabeling investigation, hardcode doc Verified flags, surface ineligible-program disqualification reasons to broker
 
 ## Status
-- **Completed**: All 7 requested changes fully implemented, built, pushed, deployed to Vercel
-- **In Progress**: Nothing — clean deploy
-- **Next Up**: Verify live pricing run shows only selected prepay period with no doubled rate rows
+- **Completed**: All 4 commits pushed to origin/master (Vercel auto-deploys).
+  - `201d014` fix(ob): hardcode income/asset/employment documentation to Verified
+  - `5a49292` feat(ob): fetch /ineligible endpoint when zero eligible programs
+  - `0946ca6` feat(ui): show disqualified programs + reasons when zero eligible products
+  - `4c57568` fix(ob): read OB's actual singular ineligibleReason field, not the plural
+- **In Progress**: None
+- **Next Up**: None — broker now sees full disqualification list with cleaned reasons on zero-eligible scenarios.
 - **Blockers**: None
 
 ## Change Tree
 ```
-modified:  src/App.tsx       — 7 feature changes (see Key Decisions)
-modified:  src/index.css     — accent color tokens updated to #245F73
+Session diffs:
+
+  modified:  api/get-ob-pricing.ts (commit 201d014)
+    - Dropped incomeDocMap / assetDocMap / employDocMap
+    - Hardcoded incomeDocumentation/assetDocumentation/
+      employmentDocumentation = 'Verified' on borrowerInformation
+      so noRatio (or any unknown type) can never produce 'None'
+
+  modified:  api/get-ob-pricing.ts (commit 5a49292)
+    - New async fetchIneligible(accessToken, searchId): GETs
+      /full/api/.../productsearch/{searchId}/ineligible with 15s
+      timeout. Defensive on shape: array | .products |
+      .notEligibleProducts | .ineligibleProducts
+    - New normalizeIneligible() shapes OB's raw rows into our
+      { rawName, programName, rawInvestor, productId, reasons[] }
+    - Handler: when result.programs.length === 0 and searchId exists,
+      call fetchIneligible + merge with inline notEligibleProducts
+      (dedupe by productId, union reasons)
+    - 204 No Content branch now returns data:{ineligiblePrograms:[]}
+      for shape consistency
+    - searchId added to debug payload
+
+  modified:  src/App.tsx (commit 0946ca6)
+    - Both no-result paths (success:true + empty programs, AND
+      success:false) now run obData.data through sanitizePricingResult
+      so ineligiblePrograms survives into state
+    - Empty-result UI renders amber-bordered "Disqualified Programs (N)"
+      card under the red "No pricing returned" box, visible to ALL
+      brokers (not admin-gated)
+    - Each row: masked programName + bulleted reason list, or italic
+      "No reason returned by Optimal Blue."
+
+  modified:  api/get-ob-pricing.ts (commit 4c57568)
+    - normalizeIneligible: added singular 'ineligibleReason' to the
+      lookup chain (was only checking plural variants → all reasons
+      were silently dropped)
+    - Single-string fallback for non-array reason fields
+    - Reasons now run through cleanAdjustmentReason() so verbose
+      'Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12'
+      renders as cleaner '>85%, Months of Reserves < 12'
+
+  added:     scripts/ob-probe-incomeverification.mjs (commit 201d014)
+    - Sweeps 40 candidate incomeVerificationType values against OB v4
+    - PROVEN: channel 165481 only accepts 5 values: FullDoc, WrittenVOE,
+      Stated, NoIncomeVerification, InvestorDscr. All BankStatement/
+      AssetDepletion/TaxReturns1Year/1099/PnL variants → HTTP 400
+
+  added:     scripts/ob-probe-ineligible.mjs (commit 4c57568)
+    - Runs an aggressive disqualification scenario (620 FICO, cashout,
+      STR, unique property) and captures full /ineligible response
+    - Writes scripts/ob-ineligible-sample.json for schema reference
+
+  added:     scripts/ob-ineligible-sample.json (untracked — committed in this session)
+    - Real OB /ineligible response: 18 programs × ~75 reasons total
+    - Authoritative reference for the wire shape
 ```
 
 ## Key Decisions
-
-1. **STR label**: Removed "(STR)" suffix; strChoice default changed from empty to 'no' so field shows "No" on load
-
-2. **Header rescale**: Desktop nav wrapped in max-w-6xl mx-auto w-full px-4 inner div; outer container drops px-6/px-8 — header aligns flush with form cards
-
-3. **Acreage dropdown**: Added to Property Details after 5+ Units; new acreage: string in LoanData + DEFAULT_FORM_DATA; values: less than 5 (default), 6-10, 10-15, 15-20, greater than 20
-
-4. **Vacant dropdown**: Added to Investor Details; new isVacant: boolean (default false); hidden when loanPurpose === 'purchase'
-
-5. **Prepay Period labels**: Values kept (60mo/48mo/36mo/24mo/12mo/0mo); display text changed to 5 Year / 4 Year / 3 Year / 2 Year / 1 Year / None. Results bar pill updated via lookup map.
-
-6. **Prepay Type list**: Changed to 5% / 3% / 6 Mo. Interest / Declining 3yr (3-2-1%). prepayPctMap: 6mo-interest and declining-3yr both map to '3'
-
-7. **CRITICAL Results Fix**:
-   - Rate dedup (Step 1): After merging same-named programs, rate options deduplicated by rate value, keeping best price per rate. Prevents 5+5=10 doubled rows.
-   - DSCR filter (Step 3): Removed forced '5' from wantedPpps — only shows selectedPct program. Removed shouldPinDSCR5Pct; pinned = false always in broker view.
-
-8. **Accent colors**: All #38BDF8 sky-blue changed to #245F73: Get Pricing button, QuinnGlow Q, email borders, share panel header. CSS tokens --color-blue-500/600 and --tql-link updated to #245F73.
-
-## Vercel Deploy Note
-api/ENCOMPASS DATA FILES/ (spaces) caused failure plus Hobby plan 12-fn limit exceeded. Files were duplicates of root-level handlers. Removed subdirectory. Current fn count: 10 of 12 max.
-Real handlers: api/encompass-auth.ts, api/encompass-submit.ts, api/encompass-upload.ts, api/_lib/encompass-token.ts (lib, not fn)
+- **bankStatement → WrittenVOE is correct, not a bug.** OB v4 channel 165481
+  only accepts 5 enum values for incomeVerificationType (probed empirically,
+  every other value HTTP 400). WrittenVOE is the only legal value for
+  alt-doc scenarios on this channel.
+- **All three doc flags hardcoded to 'Verified'** regardless of broker
+  doc-type selection (per user instruction). noRatio → 'None' edge case
+  removed.
+- **Reason field is `ineligibleReason` (SINGULAR)** on the /ineligible
+  endpoint, but `notEligibleReasons` (plural) on inline notEligibleProducts.
+  Parser now checks both; this was the root cause of empty reasons[]
+  before commit 4c57568.
+- **Disqualified-programs card visible to ALL brokers**, not admin-gated.
+  Broker self-diagnoses LTV/FICO/state issues without emailing tposupport.
+- **cleanAdjustmentReason() applied to ineligible reasons** — same cleanup
+  helper used for LLPA reasons. Strips "Max of LTV/CLTV/HCLTV is " prefix,
+  converts ", And " connectors to commas.
 
 ## Commands
 ```bash
-npm run dev          # vite dev port 5173
-npm run build        # tsc -b && vite build
-npx vercel --prod --yes
+# Dev
+npm run dev
+
+# Typecheck
+npx tsc --noEmit
+
+# Build
+npm run build
+
+# Probe OB incomeVerificationType enum (1 token call + 40 probes)
+node scripts/ob-probe-incomeverification.mjs
+
+# Probe OB /ineligible endpoint (1 search + 1 GET, dumps full response)
+node scripts/ob-probe-ineligible.mjs
+
+# Deploy (auto on push to master)
+git push origin master
 ```
 
 ## Technical Notes
-- matchesPrepayPeriod() maps 60mo to 5 YR PPP, 36mo to 3 YR PPP etc. — values unchanged, only labels changed
-- findSecondBestRate() Tier 2 logic still applies for non-DSCR; DSCR now uses filtered match + rate dedup
-- isDSCRSelected kept as void no-op for TS strict mode — can delete next session
-- Admin passcode: TQLFAITH; Reserve TO: lockdesk@tqlend.com; Submit TO: disclosuredesk@tqlend.com
+- **OB v4 channel 165481 incomeVerificationType enum (probed 2026-05-19):**
+  - `FullDoc` → Ascend Alt-A + Elevate full-doc programs
+  - `WrittenVOE` → Alt-Doc programs (Ascend Alt-A Alt-Doc) — catch-all
+    for bank stmt, DSCR (when not InvestorDscr), tax 1yr, asset, VOE
+  - `Stated` → 0 products on this channel
+  - `NoIncomeVerification` → 0 products on this channel
+  - `InvestorDscr` → DSCR products (hyphen variant `Investor-DSCR` is 400)
+- **OB /ineligible endpoint response shape** (sample at
+  scripts/ob-ineligible-sample.json):
+  ```
+  {
+    searchId, amiPercentage, amiPercentageFFIEC,
+    ineligibleProducts: [
+      { productName, productId, investor, investorId, loanType,
+        amortizationType, amortizationTerm, priceStatus,
+        ineligibleStatus: "Disqualified",
+        ineligibleReason: [string, string, ...],   ← SINGULAR
+        guidelines: [{ documentDescription, guidelineLink }]
+      },
+      ...
+    ]
+  }
+  ```
+- **CustomProductFilter01–04 are hardcoded to '110'** at api/get-ob-pricing.ts:
+  ~327. OB returns zero products when missing. Possible future enhancement:
+  derive these per-scenario to surface specific Bank Statement / Asset /
+  DSCR product flavors. Not investigated this session.
+- **18 disqualified programs × ~75 reasons** is typical volume for a
+  zero-eligible scenario. UI handles arbitrary count via .map().
 
 ## Recent Commits
 ```
-9de8a68 fix: remove duplicate api/encompass-files dir
-f55da1b fix: rename api dir to remove spaces
-a3e160a feat: form field updates, results dedup fix, accent color unification
-f5c8a9a feat: add disabled Rental Survey Type field
-338ae52 feat: add embed=1 query param for iframe embedding
+4c57568 fix(ob): read OB's actual singular ineligibleReason field, not the plural
+0946ca6 feat(ui): show disqualified programs + reasons when zero eligible products
+5a49292 feat(ob): fetch /ineligible endpoint when zero eligible programs
+201d014 fix(ob): hardcode income/asset/employment documentation to Verified
+3b578a1 feat: 5-minute pricing TTL with auto-expiration banner
 ```
 
 ## Uncommitted Changes
-None — all committed and deployed.
-
-## Latest Prod URL
-https://submit.tqltpo.com
+None — about to commit/push this .mem00 + scripts/ob-ineligible-sample.json
+via /pushit.

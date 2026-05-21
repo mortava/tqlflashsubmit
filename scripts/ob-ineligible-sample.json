@@ -1,0 +1,826 @@
+{
+  "search": {
+    "searchId": "178365363E1779297840",
+    "eligibleCount": 0
+  },
+  "ineligible": {
+    "searchId": "178365363E1779297840",
+    "amiPercentage": 0,
+    "amiPercentageFFIEC": 0,
+    "ineligibleProducts": [
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Income Verification Type is Written VOE",
+          "Max of LTV/CLTV/HCLTV > 85",
+          "Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101782722,
+        "productName": "Prime Time 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Interest Only is No",
+          "Income Verification Type is Written VOE",
+          "Max of LTV/CLTV/HCLTV > 85",
+          "Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101782726,
+        "productName": "Prime Time 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Months of Reserves < 6",
+          "Citizenship is U.S. Citizen",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784208,
+        "productName": "Foreign National DSCR 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Months of Reserves < 6",
+          "Citizenship is U.S. Citizen",
+          "Income Verification Type is Written VOE",
+          "Interest Only is No"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784211,
+        "productName": "Foreign National DSCR 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Months of Reserves < 6",
+          "Citizenship is U.S. Citizen",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784222,
+        "productName": "Foreign National DSCR 5% Fixed PPP 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Months of Reserves < 6",
+          "Citizenship is U.S. Citizen",
+          "Income Verification Type is Written VOE",
+          "Interest Only is No"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784225,
+        "productName": "Foreign National DSCR 5% Fixed PPP 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784316,
+        "productName": "DSCR V 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Income Verification Type is Written VOE",
+          "Interest Only is No"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784319,
+        "productName": "DSCR V 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784330,
+        "productName": "DSCR V 5% Fixed PPP 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Income Verification Type is Written VOE",
+          "Interest Only is No"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784333,
+        "productName": "DSCR V 5% Fixed PPP 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Number of Units is 1 Unit",
+          "Max of LTV/CLTV/HCLTV > 75",
+          "FICO < 700",
+          "1st Mtg Loan Amt (Total) is <= $1.5M, And Months of Reserves < 6",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784363,
+        "productName": "DSCR V Multi Mixed Use 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Number of Units is 1 Unit",
+          "Max of LTV/CLTV/HCLTV > 75",
+          "FICO < 700",
+          "1st Mtg Loan Amt (Total) is <= $1.5M, And Months of Reserves < 6",
+          "Income Verification Type is Written VOE",
+          "Interest Only is No"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784365,
+        "productName": "DSCR V Multi Mixed Use 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Number of Units is 1 Unit",
+          "Max of LTV/CLTV/HCLTV > 75",
+          "FICO < 700",
+          "1st Mtg Loan Amt (Total) is <= $1.5M, And Months of Reserves < 6",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784372,
+        "productName": "DSCR V Multi Mixed Use 5% Fixed PPP 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Number of Units is 1 Unit",
+          "Max of LTV/CLTV/HCLTV > 75",
+          "FICO < 700",
+          "1st Mtg Loan Amt (Total) is <= $1.5M, And Months of Reserves < 6",
+          "Income Verification Type is Written VOE",
+          "Interest Only is No"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784374,
+        "productName": "DSCR V Multi Mixed Use 5% Fixed PPP 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Max of LTV/CLTV/HCLTV > 85",
+          "Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784385,
+        "productName": "Prime Time Alt Doc 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Interest Only is No",
+          "Max of LTV/CLTV/HCLTV > 85",
+          "Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101784389,
+        "productName": "Prime Time Alt Doc 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Max of LTV/CLTV/HCLTV > 85",
+          "Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101785449,
+        "productName": "Prime Time P&L w/ 2 Mo Bank Statements 30 Yr Fixed - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "ineligibleReason": [
+          "Unique Property is Yes",
+          "Max of LTV/CLTV/HCLTV > 85",
+          "Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12",
+          "Interest Only is No",
+          "Income Verification Type is Written VOE"
+        ],
+        "ineligibleStatus": "Disqualified",
+        "amortizationTerm": "30",
+        "amortizationType": "Fixed",
+        "investorId": 171755,
+        "investor": "TQL- New Custom Products",
+        "loanType": "NonConforming",
+        "priceStatus": "Available",
+        "pendingUpdate": false,
+        "productCode": "",
+        "productId": 101785453,
+        "productName": "Prime Time P&L w/ 2 Mo Bank Statements 30 Yr Fixed I/O - EG",
+        "guidelines": [
+          {
+            "documentDescription": "VMC Non Agency Seller Guide",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=71857_03022026_0701402523.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          },
+          {
+            "documentDescription": "VMC Non Agency Loan LTV Matrix",
+            "guidelineLink": {
+              "rel": "self",
+              "href": "https://marketplace.optimalblue.com/full/api/guideline?isIndex=False&value=80100_03022026_0702206177.pdf",
+              "action": "GET",
+              "fileExtension": "pdf",
+              "types": [
+                "application/pdf"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
