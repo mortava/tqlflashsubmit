@@ -407,8 +407,8 @@ function buildRateQuoteEmail(
 <meta name="color-scheme" content="light"/>
 <title>${headline}</title>
 </head>
-<body style="margin:0;padding:0;background:#F5F4F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
-<div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
+<body style="margin:0;padding:0;background:#E2E8F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
+<div style="max-width:100%;width:100%;background:#E2E8F0;padding:16px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
     <!-- Header -->
     <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #1C4A5A;">
@@ -434,7 +434,7 @@ function buildRateQuoteEmail(
     </td></tr>
     <!-- Stats row -->
     <tr><td style="padding:8px 24px 20px 24px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF8;border-radius:10px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F1F5F9;border-radius:10px;">
         <tr>
           <td width="50%" style="padding:14px 16px;text-align:left;border-right:1px solid #CBD5E1;">
             <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${rate.apr.toFixed(3)}%</div>
@@ -475,7 +475,7 @@ function buildRateQuoteEmail(
     <tr><td style="padding:0 24px 16px 24px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">All Rate / Price Options</div>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#ffffff;">
-        <tr style="background:#FAFAF8;">
+        <tr style="background:#F1F5F9;">
           <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;">Program</td>
           <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Rate</td>
           <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Price</td>
@@ -498,7 +498,7 @@ function buildRateQuoteEmail(
       <div style="text-align:center;margin-top:10px;font-size:11px;color:#4D4D4D;line-height:1.5;">Reply to this email to lock or request changes.</div>
     </td></tr>
     <!-- Footer -->
-    <tr><td style="padding:14px 24px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
+    <tr><td style="padding:14px 24px;background:#F1F5F9;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
       Total Quality Lending · Flash Submit · Quote generated ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
     </td></tr>
   </table>
@@ -539,8 +539,8 @@ function buildFullQuoteEmail(
 <meta name="color-scheme" content="light"/>
 <title>${headline}</title>
 </head>
-<body style="margin:0;padding:0;background:#F5F4F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
-<div style="max-width:100%;width:100%;background:#F5F4F1;padding:16px 12px;">
+<body style="margin:0;padding:0;background:#E2E8F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
+<div style="max-width:100%;width:100%;background:#E2E8F0;padding:16px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);">
     <tr><td style="background:#245F73;padding:22px 24px;color:#ffffff;border-bottom:3px solid #1C4A5A;">
       <img src="https://submit.tqltpo.com/tql-tpo-logo.svg" alt="TQL TPO" width="180" height="34" style="display:block;border:0;outline:0;margin-bottom:10px;" />
@@ -563,7 +563,7 @@ function buildFullQuoteEmail(
       </table>
     </td></tr>
     <tr><td style="padding:8px 24px 20px 24px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF8;border-radius:10px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F1F5F9;border-radius:10px;">
         <tr>
           <td width="50%" style="padding:14px 16px;text-align:left;border-right:1px solid #CBD5E1;">
             <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${highlight.apr.toFixed(3)}%</div>
@@ -593,7 +593,7 @@ function buildFullQuoteEmail(
     <tr><td style="padding:0 24px 16px 24px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Full Rate Stack (99.000 – 101.750)</div>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:8px;border-collapse:separate;background:#ffffff;">
-        <tr style="background:#FAFAF8;">
+        <tr style="background:#F1F5F9;">
           <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;">Program</td>
           <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Rate</td>
           <td style="padding:8px;font-size:10px;font-weight:700;color:#245F73;letter-spacing:1px;text-transform:uppercase;text-align:right;">Price</td>
@@ -606,13 +606,13 @@ function buildFullQuoteEmail(
     ${noteHtml ? `
     <tr><td style="padding:0 24px 18px 24px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Notes from your TQL rep</div>
-      <div style="background:#FAFAF8;border:1px solid #CBD5E1;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.55;color:#0B1220;white-space:pre-wrap;">${noteHtml}</div>
+      <div style="background:#F1F5F9;border:1px solid #CBD5E1;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.55;color:#0B1220;white-space:pre-wrap;">${noteHtml}</div>
     </td></tr>` : ''}
     <tr><td style="padding:8px 24px 24px 24px;">
       <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open in TQL Flash Submit</a>
       <div style="text-align:center;margin-top:10px;font-size:11px;color:#4D4D4D;line-height:1.5;">Reply to lock or request changes.</div>
     </td></tr>
-    <tr><td style="padding:14px 24px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
+    <tr><td style="padding:14px 24px;background:#F1F5F9;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;">
       Total Quality Lending · Flash Submit · Quote generated ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
     </td></tr>
   </table>
@@ -725,8 +725,8 @@ function buildReserveRequestEmail(
 <meta name="color-scheme" content="light"/>
 <title>Rate Reservation Request</title>
 </head>
-<body style="margin:0;padding:0;background:#FAFAF8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
-<div style="background:#FAFAF8;padding:18px 12px;">
+<body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1220;-webkit-font-smoothing:antialiased;">
+<div style="background:#F1F5F9;padding:18px 12px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.08);border:1px solid #CBD5E1;">
     <!-- Header -->
     <tr><td style="background:#245F73;padding:22px 26px;color:#ffffff;border-bottom:3px solid #1C4A5A;">
@@ -754,7 +754,7 @@ function buildReserveRequestEmail(
 
     <!-- APR + P&I -->
     <tr><td style="padding:8px 26px 18px 26px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF8;border:1px solid #CBD5E1;border-radius:10px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F1F5F9;border:1px solid #CBD5E1;border-radius:10px;">
         <tr>
           <td width="50%" style="padding:14px 18px;text-align:left;border-right:1px solid #CBD5E1;">
             <div style="font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.3px;">${highlight.apr.toFixed(3)}%</div>
@@ -771,7 +771,7 @@ function buildReserveRequestEmail(
     <!-- Investor (raw, ADMIN view) -->
     <tr><td style="padding:0 26px 16px 26px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Investor Program (raw)</div>
-      <div style="background:#FAFAF8;border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;font-size:13px;color:#0B1220;font-weight:600;">${rawDisplay}${highlight.lockPeriod ? `<span style="color:#4D4D4D;font-weight:500;"> · ${highlight.lockPeriod} days lock</span>` : ''}</div>
+      <div style="background:#F1F5F9;border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;font-size:13px;color:#0B1220;font-weight:600;">${rawDisplay}${highlight.lockPeriod ? `<span style="color:#4D4D4D;font-weight:500;"> · ${highlight.lockPeriod} days lock</span>` : ''}</div>
     </td></tr>
 
     <!-- Broker contact -->
@@ -801,7 +801,7 @@ function buildReserveRequestEmail(
     <tr><td style="padding:0 26px 18px 26px;">
       <div style="font-size:10px;font-weight:700;color:#245F73;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Rate Ladder for ${rawDisplay}</div>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #CBD5E1;border-radius:10px;border-collapse:separate;background:#ffffff;overflow:hidden;">
-        <tr style="background:#FAFAF8;">
+        <tr style="background:#F1F5F9;">
           <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;">Program/PPP</td>
           <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;text-align:right;">Rate</td>
           <td style="padding:9px 10px;font-size:9px;font-weight:700;color:#245F73;letter-spacing:1.2px;text-transform:uppercase;text-align:right;">Price</td>
@@ -816,7 +816,7 @@ function buildReserveRequestEmail(
       <a href="https://submit.tqltpo.com/" style="display:block;background:#245F73;color:#ffffff;text-decoration:none;text-align:center;padding:14px 16px;border-radius:10px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Open Pricing in TotalPricer</a>
     </td></tr>
 
-    <tr><td style="padding:14px 26px;background:#FAFAF8;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;letter-spacing:0.3px;">
+    <tr><td style="padding:14px 26px;background:#F1F5F9;border-top:1px solid #CBD5E1;font-size:10px;color:#4D4D4D;line-height:1.5;text-align:center;letter-spacing:0.3px;">
       Total Quality Lending · TotalPricer · NMLS #1234567 · Equal Housing Lender
     </td></tr>
   </table>
@@ -2644,11 +2644,8 @@ export default function App() {
                         name="prepayType"
                         value={formData.prepayType}
                         onValueChange={(v) => {
-                          // Single "Prepay Fee" field drives both prepayType and prepayPeriod.
-                          // 5% → 60mo (5yr) PPP, 3% → 36mo (3yr) PPP, none → 0mo (No Prepay).
                           handleInputChange('prepayType', v)
-                          const periodMap: Record<string, string> = { '5pct': '60mo', '3pct': '36mo', 'none': '0mo' }
-                          handleInputChange('prepayPeriod', periodMap[v] || '0mo')
+                          if (v === 'none') handleInputChange('prepayPeriod', '0mo')
                         }}
                       >
                         <SelectTrigger id="prepayType" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
@@ -2656,6 +2653,28 @@ export default function App() {
                           <SelectItem value="5pct">5%</SelectItem>
                           <SelectItem value="3pct">3%</SelectItem>
                           <SelectItem value="none">No Prepay</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="prepayPeriod" className="block text-sm font-medium text-slate-900">Prepay Period</label>
+                      <Select
+                        name="prepayPeriod"
+                        value={formData.prepayPeriod}
+                        onValueChange={(v) => {
+                          handleInputChange('prepayPeriod', v)
+                          if (v === '0mo') handleInputChange('prepayType', 'none')
+                          else if (formData.prepayType === 'none') handleInputChange('prepayType', '5pct')
+                        }}
+                      >
+                        <SelectTrigger id="prepayPeriod" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="60mo">5 Year</SelectItem>
+                          <SelectItem value="48mo">4 Year</SelectItem>
+                          <SelectItem value="36mo">3 Year</SelectItem>
+                          <SelectItem value="24mo">2 Year</SelectItem>
+                          <SelectItem value="12mo">1 Year</SelectItem>
+                          <SelectItem value="0mo">No Prepay</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

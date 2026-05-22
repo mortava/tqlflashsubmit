@@ -183,7 +183,7 @@ function buildEmailHtml(body: RequestBody): string {
   `).join('')
   return `
 <!DOCTYPE html>
-<html><body style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#F5F4F1;margin:0;padding:24px;color:#0B1220;">
+<html><body style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#E2E8F0;margin:0;padding:24px;color:#0B1220;">
   <div style="max-width:680px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
     <div style="background:#245F73;color:white;padding:20px 24px;">
       <div style="font-size:18px;font-weight:700;letter-spacing:0.5px;">TQL FLASH SUBMIT</div>
@@ -238,7 +238,7 @@ function buildEmailHtml(body: RequestBody): string {
       <table style="width:100%;border-collapse:collapse;font-size:12px;">${adjustmentsRows}</table>
       ` : ''}
 
-      <div style="margin-top:22px;padding:14px 16px;background:#F5F4F1;border-radius:8px;font-size:12px;color:#4D4D4D;">
+      <div style="margin-top:22px;padding:14px 16px;background:#E2E8F0;border-radius:8px;font-size:12px;color:#4D4D4D;">
         A full PDF summary is attached. This submission is now ready for 3.4 upload to Encompass.
       </div>
     </div>
