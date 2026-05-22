@@ -37,14 +37,6 @@ const IconSubmitLoan = ({ className = "w-4 h-4" }: { className?: string }) => (
 )
 
 
-const IconAtom = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none">
-    <ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" strokeWidth="1.5" transform="rotate(-45 12 12)" />
-    <ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" strokeWidth="1.5" transform="rotate(45 12 12)" />
-    <circle cx="12" cy="12" r="2" fill="currentColor" />
-  </svg>
-)
-
 interface LoanData {
   // Loan Information
   lienPosition: string
@@ -1065,6 +1057,16 @@ export default function App() {
   const [rowSending, setRowSending] = useState(false)
   const [rowStatus, setRowStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [showReserveSuccess, setShowReserveSuccess] = useState(false)
+  // Register New Loan modal — opened from each row's Actions dropdown.
+  // Asks the broker for email + company, then which access path they want:
+  // (1) "I have access" = TQL Workspace login → email TPO + redirect to
+  //     https://tqltpo.encompasstpoconnect.com/#/content/idplogin
+  // (2) "I need access" = no login yet → email TPO support to provision
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [registerContext, setRegisterContext] = useState<{ programName: string; rate: number; price: number } | null>(null)
+  const [registerFields, setRegisterFields] = useState({ email: '', company: '' })
+  const [registerStatus, setRegisterStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [registerError, setRegisterError] = useState<string | null>(null)
   // Per-program SHARE QUOTE collapsible — keyed by program name. Holds the
   // open program, null = nothing expanded.
   const [openShareProgram, setOpenShareProgram] = useState<string | null>(null)
@@ -1558,6 +1560,81 @@ export default function App() {
     finally { setRowSending(false) }
   }
 
+  // Register New Loan flow — fires from the row Actions dropdown. Two paths:
+  //  1. hasAccess  → "NEW FILE BEING SUBMITTED" email to TPO + redirect to the
+  //                  TQL Encompass TPO Connect IDP login page
+  //  2. needsAccess → "NEW USER ACCESS REQUEST" email to TPO (no redirect)
+  // Both paths require email + company. The redirect happens AFTER the email
+  // resolves so TPO always has the broker's coordinates on file.
+  const handleRegisterLoan = async (intent: 'hasAccess' | 'needsAccess') => {
+    if (!registerFields.email.trim() || !registerFields.company.trim()) {
+      setRegisterError('Email and Company Name are both required.')
+      return
+    }
+    setRegisterError(null)
+    setRegisterStatus('sending')
+
+    const accessLevel = intent === 'hasAccess'
+      ? 'Has TQL Workspace Login'
+      : 'Needs Access — Provision Request'
+    const subject = intent === 'hasAccess'
+      ? 'NEW FILE BEING SUBMITTED'
+      : 'NEW USER ACCESS REQUEST'
+
+    const ctx = registerContext
+    const programLine = ctx
+      ? `<tr><td style="padding:6px 0;color:#666;">Program</td><td style="padding:6px 0;color:#0B1220;">${ctx.programName} — ${ctx.rate.toFixed(3)}% @ ${ctx.price.toFixed(3)}</td></tr>`
+      : ''
+
+    const html = `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+        <h2 style="margin:0 0 16px;color:#0B1220;font-size:18px;">${subject}</h2>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+          <tr><td style="padding:6px 0;color:#666;">User Email</td><td style="padding:6px 0;color:#0B1220;font-weight:600;">${registerFields.email}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Company</td><td style="padding:6px 0;color:#0B1220;font-weight:600;">${registerFields.company}</td></tr>
+          <tr><td style="padding:6px 0;color:#666;">Access Level</td><td style="padding:6px 0;color:#0B1220;font-weight:600;">${accessLevel}</td></tr>
+          ${programLine}
+          <tr><td style="padding:6px 0;color:#666;">Submitted</td><td style="padding:6px 0;color:#0B1220;">${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</td></tr>
+        </table>
+        <p style="color:#999;font-size:11px;margin-top:24px;">Automated notification from TQL Total Quality Lending TPO Pricer.</p>
+      </div>`
+
+    try {
+      const r = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'TQL TotalPricer <TQLQuote@tqltpo.com>',
+          to: 'tposupport@tqlend.com',
+          subject,
+          html,
+        }),
+      })
+      if (!r.ok) {
+        const errBody = await r.json().catch(() => ({}))
+        throw new Error(errBody.error || `HTTP ${r.status}`)
+      }
+      setRegisterStatus('sent')
+      // Redirect path #1 — broker already has the TQL Workspace login.
+      if (intent === 'hasAccess') {
+        setTimeout(() => {
+          window.location.href = 'https://tqltpo.encompasstpoconnect.com/#/content/idplogin'
+        }, 600)
+        return
+      }
+      // Path #2 — provisioning request, close after a brief confirmation.
+      setTimeout(() => {
+        setShowRegisterModal(false)
+        setRegisterStatus('idle')
+        setRegisterFields({ email: '', company: '' })
+        setRegisterContext(null)
+      }, 1800)
+    } catch (err) {
+      setRegisterStatus('error')
+      setRegisterError(err instanceof Error ? err.message : 'Email send failed.')
+    }
+  }
+
   // Flash Submit handler — sends the loan package to the disclosure desk
   // with the PDF pricing summary attached, then hands off to the 3.4 upload flow.
   const handleFlashSubmit = async () => {
@@ -1971,13 +2048,9 @@ export default function App() {
       <aside className="hidden flex-col fixed left-0 top-0 h-screen w-[200px] bg-white border-r border-slate-200 z-50">
         {/* Brand */}
         <div className="px-4 py-4 border-b border-slate-200">
-          <div className="flex items-center gap-2.5">
-            <IconAtom className="w-8 h-8 text-black" />
-            <div className="leading-tight">
-              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Total</span><span className="tql-text-teal">Pricer</span></span>
-              <div className="text-[9px] text-slate-400 tracking-wide mt-0.5">Total Quality Lending</div>
-            </div>
-          </div>
+          <a href="/" className="flex items-center">
+            <img src="/tql-tpo-logo-bw.svg" alt="Total Quality Lending TPO" className="h-8 w-auto" />
+          </a>
         </div>
 
         {/* Nav */}
@@ -2044,13 +2117,9 @@ export default function App() {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <IconAtom className="w-6 h-6 text-black" />
-          <div className="leading-tight">
-            <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Total</span><span className="tql-text-teal">Pricer</span></span>
-            <div className="text-[8px] text-slate-400 tracking-wide">Total Quality Lending</div>
-          </div>
-        </div>
+        <a href="/" className="flex items-center">
+          <img src="/tql-tpo-logo-bw.svg" alt="Total Quality Lending TPO" className="h-7 w-auto" />
+        </a>
         <div className="w-8" />
       </header>
       )}
@@ -2061,13 +2130,9 @@ export default function App() {
           <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setMobileMenuOpen(false)} />
           <div className="fixed left-0 top-0 h-full w-[260px] bg-white z-[201] flex flex-col shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <IconAtom className="w-6 h-6 text-black" />
-                <div className="leading-tight">
-                  <span className="text-[15px] font-bold tracking-[-0.02em]"><span className="text-slate-900">TQL </span><span className="tql-text-teal">Pricer</span></span>
-                  <div className="text-[8px] text-slate-400 tracking-wide">Total Quality Lending</div>
-                </div>
-              </div>
+              <a href="/" className="flex items-center" onClick={() => setMobileMenuOpen(false)}>
+                <img src="/tql-tpo-logo-bw.svg" alt="Total Quality Lending TPO" className="h-7 w-auto" />
+              </a>
               <button type="button" onClick={() => setMobileMenuOpen(false)} className="p-1 text-slate-400 hover:text-slate-900">
                 <X className="w-5 h-5" />
               </button>
@@ -2139,12 +2204,9 @@ export default function App() {
         <div className="hidden lg:flex shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm py-3">
           <div className="max-w-6xl mx-auto w-full px-4 flex items-center gap-4">
           {/* Brand */}
-          <div className="flex items-center gap-2.5 mr-2 shrink-0">
-            <IconAtom className="w-7 h-7 text-black" />
-            <div className="leading-tight">
-              <span className="text-[20px] font-bold tracking-[-0.02em]"><span className="text-slate-900">Total</span><span className="tql-text-teal">Pricer</span></span>
-            </div>
-          </div>
+          <a href="/" className="flex items-center mr-2 shrink-0">
+            <img src="/tql-tpo-logo-bw.svg" alt="Total Quality Lending TPO" className="h-9 w-auto" />
+          </a>
 
           {/* Primary nav */}
           <nav className="flex items-center gap-1 ml-auto">
@@ -3225,19 +3287,17 @@ export default function App() {
                                                       type="button"
                                                       onClick={(e) => {
                                                         e.stopPropagation()
-                                                        setActiveRowAction(isActiveRow && activeRowAction?.type === 'reserve' ? null : {
-                                                          type: 'reserve', programName, optIdx,
-                                                          rate: safeNumber(opt.rate), price, payment,
-                                                          apr: safeNumber(opt.apr), description: opt.description || programName
-                                                        })
-                                                        setRowReserveFields({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false })
-                                                        setRowStatus('idle')
+                                                        setRegisterContext({ programName, rate: safeNumber(opt.rate), price })
+                                                        setRegisterFields({ email: '', company: '' })
+                                                        setRegisterStatus('idle')
+                                                        setRegisterError(null)
+                                                        setShowRegisterModal(true)
                                                         setOpenActionDropdown(null)
                                                       }}
                                                       className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                     >
-                                                      <Lock className="w-3.5 h-3.5" />
-                                                      Reserve / Lock Rate
+                                                      <IconSubmitLoan className="w-3.5 h-3.5" />
+                                                      Register New Loan
                                                     </button>
                                                   </div>,
                                                   document.body
@@ -3406,19 +3466,17 @@ export default function App() {
                                                 <button
                                                   type="button"
                                                   onClick={() => {
-                                                    setActiveRowAction({
-                                                      type: 'reserve', programName, optIdx,
-                                                      rate: safeNumber(opt.rate), price, payment,
-                                                      apr: safeNumber(opt.apr), description: opt.description || programName
-                                                    })
-                                                    setRowReserveFields({ name: '', email: '', scenarioName: '', loanNumber: '', confirmed: false })
-                                                    setRowStatus('idle')
+                                                    setRegisterContext({ programName, rate: safeNumber(opt.rate), price })
+                                                    setRegisterFields({ email: '', company: '' })
+                                                    setRegisterStatus('idle')
+                                                    setRegisterError(null)
+                                                    setShowRegisterModal(true)
                                                     setOpenActionDropdown(null)
                                                   }}
                                                   className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-[12px] font-semibold tql-text-primary hover:bg-[color:var(--tql-bg)] hover:tql-text-teal transition-colors"
                                                 >
-                                                  <Lock className="w-3.5 h-3.5" />
-                                                  Reserve / Lock Rate
+                                                  <IconSubmitLoan className="w-3.5 h-3.5" />
+                                                  Register New Loan
                                                 </button>
                                               </div>,
                                               document.body
@@ -3814,6 +3872,113 @@ export default function App() {
                   className="w-full py-2.5 text-[13px] font-semibold text-white tql-bg-teal rounded-xl hover:opacity-90 transition-opacity"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═════════ REGISTER NEW LOAN MODAL ═════════ */}
+      {showRegisterModal && (
+        <>
+          <div className="fixed inset-0 z-[350] bg-black/50 backdrop-blur-sm" onClick={() => { if (registerStatus !== 'sending') setShowRegisterModal(false) }} />
+          <div className="fixed inset-0 z-[351] flex items-center justify-center p-4 pointer-events-none">
+            <div className="pointer-events-auto bg-white rounded-2xl shadow-[0_24px_64px_rgba(15,23,42,0.22)] w-full max-w-md overflow-hidden">
+              <div className="tql-bg-teal px-5 py-4 flex items-center justify-between">
+                <div className="text-[13px] font-bold text-white tracking-tight tql-font-display">Register New Loan</div>
+                <button type="button" onClick={() => setShowRegisterModal(false)} className="p-1 text-white/80 hover:text-white transition-colors rounded" aria-label="Close">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-6 py-5 space-y-4">
+                {registerContext && (
+                  <div className="text-[12px] text-slate-600 leading-relaxed">
+                    <span className="font-semibold text-slate-900">{registerContext.programName}</span><br />
+                    {registerContext.rate.toFixed(3)}% @ {registerContext.price.toFixed(3)}
+                  </div>
+                )}
+
+                {/* Inputs */}
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="register-email" className="block text-[12px] font-semibold text-slate-700 mb-1">Your Email</label>
+                    <input
+                      id="register-email"
+                      type="email"
+                      autoComplete="email"
+                      value={registerFields.email}
+                      onChange={(e) => setRegisterFields(f => ({ ...f, email: e.target.value }))}
+                      disabled={registerStatus === 'sending'}
+                      className="w-full h-10 px-3 text-[13px] border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--tql-teal)] focus:border-transparent"
+                      placeholder="you@brokerage.com"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="register-company" className="block text-[12px] font-semibold text-slate-700 mb-1">Company Name</label>
+                    <input
+                      id="register-company"
+                      type="text"
+                      autoComplete="organization"
+                      value={registerFields.company}
+                      onChange={(e) => setRegisterFields(f => ({ ...f, company: e.target.value }))}
+                      disabled={registerStatus === 'sending'}
+                      className="w-full h-10 px-3 text-[13px] border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--tql-teal)] focus:border-transparent"
+                      placeholder="Your Brokerage Co."
+                    />
+                  </div>
+                </div>
+
+                {registerError && (
+                  <div className="text-[12px] text-[#EF4444] bg-red-50 border border-red-100 rounded-md px-3 py-2">{registerError}</div>
+                )}
+
+                {registerStatus === 'sent' && (
+                  <div className="text-[12px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    Email sent to tposupport@tqlend.com. Redirecting…
+                  </div>
+                )}
+
+                {/* Two access-path buttons rendered as the user-facing "checkboxes" */}
+                <div className="space-y-2 pt-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Select Your Access Level</div>
+                  <button
+                    type="button"
+                    onClick={() => handleRegisterLoan('hasAccess')}
+                    disabled={registerStatus === 'sending' || registerStatus === 'sent'}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left rounded-xl border-2 tql-border-teal bg-white hover:tql-bg-teal hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-bold tql-text-teal group-hover:text-white">I have TQL Workspace Login</div>
+                      <div className="text-[11px] text-slate-500 group-hover:text-white/80 mt-0.5">Sends a notification, then redirects you to log in &amp; upload.</div>
+                    </div>
+                    <ChevronDown className="w-4 h-4 shrink-0 -rotate-90 tql-text-teal group-hover:text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRegisterLoan('needsAccess')}
+                    disabled={registerStatus === 'sending' || registerStatus === 'sent'}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-bold text-slate-900">I need to Get Access</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">TPO Support will reach out to provision your TQL Workspace login.</div>
+                    </div>
+                    <Mail className="w-4 h-4 shrink-0 text-slate-400" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-5 pb-5">
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  disabled={registerStatus === 'sending'}
+                  className="w-full py-2.5 text-[13px] font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
+                >
+                  {registerStatus === 'sending' ? 'Sending…' : 'Cancel'}
                 </button>
               </div>
             </div>

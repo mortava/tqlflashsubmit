@@ -1,94 +1,99 @@
 # Session Memory — tqlflashsubmit
 **Date**: 2026-05-21
 **Branch**: master
-**Session Focus**: OB pricing — fix WVOE mislabeling investigation, hardcode doc Verified flags, surface ineligible-program disqualification reasons to broker
+**Session Focus**: OB pricing accuracy (PersonalBankStmt enums, AssetRelated, standard sibling block); broker UI rebrand (#007BE0 + BW logo); Register New Loan flow replacing Reserve/Lock Rate
 
 ## Status
-- **Completed**: All 4 commits pushed to origin/master (Vercel auto-deploys).
-  - `201d014` fix(ob): hardcode income/asset/employment documentation to Verified
-  - `5a49292` feat(ob): fetch /ineligible endpoint when zero eligible programs
-  - `0946ca6` feat(ui): show disqualified programs + reasons when zero eligible products
-  - `4c57568` fix(ob): read OB's actual singular ineligibleReason field, not the plural
-- **In Progress**: None
-- **Next Up**: None — broker now sees full disqualification list with cleaned reasons on zero-eligible scenarios.
-- **Blockers**: None
+- **Completed**: every change committed; previous shipments + this commit pushed and Vercel-deployed.
+- **In Progress**: None.
+- **Next Up**: User can extend the Register flow with a 3rd checkbox ("Add Company Name") if desired, plus confirm both email subjects land in the right TPO inbox.
+- **Blockers**: None.
 
 ## Change Tree
 ```
-Session diffs:
+This session's commits on master:
 
-  modified:  api/get-ob-pricing.ts (commit 201d014)
-    - Dropped incomeDocMap / assetDocMap / employDocMap
-    - Hardcoded incomeDocumentation/assetDocumentation/
-      employmentDocumentation = 'Verified' on borrowerInformation
-      so noRatio (or any unknown type) can never produce 'None'
+  201d014  fix(ob): hardcode income/asset/employment documentation to Verified
+  5a49292  feat(ob): fetch /ineligible endpoint when zero eligible programs
+  0946ca6  feat(ui): show disqualified programs + reasons when zero eligible products
+  4c57568  fix(ob): read OB's actual singular ineligibleReason field, not the plural
+  d139f19  chore: refresh .mem00 checkpoint + commit OB ineligible probe sample
+  8ea80b5  fix(ob): add AssetRelated income type, standard sibling block, productFilters
+  0e433d7  feat(ob+ui): PersonalBankStmt12/24Mos enums + single Prepay Fee field + show all prepay variants
+  1073f28  fix(build): remove orphaned findSecondBestRate (used only by removed filter)
+  <pending> feat(ui): TQL TPO BW logo replaces TotalPricer text; teal accent → #007BE0; Actions → Register New Loan flow
 
-  modified:  api/get-ob-pricing.ts (commit 5a49292)
-    - New async fetchIneligible(accessToken, searchId): GETs
-      /full/api/.../productsearch/{searchId}/ineligible with 15s
-      timeout. Defensive on shape: array | .products |
-      .notEligibleProducts | .ineligibleProducts
-    - New normalizeIneligible() shapes OB's raw rows into our
-      { rawName, programName, rawInvestor, productId, reasons[] }
-    - Handler: when result.programs.length === 0 and searchId exists,
-      call fetchIneligible + merge with inline notEligibleProducts
-      (dedupe by productId, union reasons)
-    - 204 No Content branch now returns data:{ineligiblePrograms:[]}
-      for shape consistency
-    - searchId added to debug payload
+This commit's diff:
 
-  modified:  src/App.tsx (commit 0946ca6)
-    - Both no-result paths (success:true + empty programs, AND
-      success:false) now run obData.data through sanitizePricingResult
-      so ineligiblePrograms survives into state
-    - Empty-result UI renders amber-bordered "Disqualified Programs (N)"
-      card under the red "No pricing returned" box, visible to ALL
-      brokers (not admin-gated)
-    - Each row: masked programName + bulleted reason list, or italic
-      "No reason returned by Optimal Blue."
+  added:     public/tql-tpo-logo-bw.svg          ← Copied from
+                                                   C:\Users\beach\Downloads\totalqualitylendingtpo_logo_bw.svg
+                                                   (47 KB, embedded image)
 
-  modified:  api/get-ob-pricing.ts (commit 4c57568)
-    - normalizeIneligible: added singular 'ineligibleReason' to the
-      lookup chain (was only checking plural variants → all reasons
-      were silently dropped)
-    - Single-string fallback for non-array reason fields
-    - Reasons now run through cleanAdjustmentReason() so verbose
-      'Max of LTV/CLTV/HCLTV is >85%, And Months of Reserves < 12'
-      renders as cleaner '>85%, Months of Reserves < 12'
+  modified:  src/index.css
+    --tql-teal       #245F73 → #007BE0
+    --tql-teal-hover #1C4A5A → #0061B0
+    --tql-link       #245F73 → #007BE0
+    --color-blue-500/600   #245F73 → #007BE0
+    Everything using .tql-text-teal / .tql-bg-teal / .tql-border-teal /
+    --tql-teal var inherits the new accent automatically.
 
-  added:     scripts/ob-probe-incomeverification.mjs (commit 201d014)
-    - Sweeps 40 candidate incomeVerificationType values against OB v4
-    - PROVEN: channel 165481 only accepts 5 values: FullDoc, WrittenVOE,
-      Stated, NoIncomeVerification, InvestorDscr. All BankStatement/
-      AssetDepletion/TaxReturns1Year/1099/PnL variants → HTTP 400
-
-  added:     scripts/ob-probe-ineligible.mjs (commit 4c57568)
-    - Runs an aggressive disqualification scenario (620 FICO, cashout,
-      STR, unique property) and captures full /ineligible response
-    - Writes scripts/ob-ineligible-sample.json for schema reference
-
-  added:     scripts/ob-ineligible-sample.json (untracked — committed in this session)
-    - Real OB /ineligible response: 18 programs × ~75 reasons total
-    - Authoritative reference for the wire shape
+  modified:  src/App.tsx
+    - 4 IconAtom+"TotalPricer" brand blocks replaced with
+      <img src="/tql-tpo-logo-bw.svg" /> wrapped in <a href="/">
+        - desktop hidden sidebar
+        - desktop top nav (max-w-6xl header)
+        - mobile sticky header
+        - mobile slide-out drawer
+    - IconAtom helper component deleted (no remaining callers)
+    - New state hooks (right after rowReserveFields):
+        showRegisterModal, registerContext (program+rate+price),
+        registerFields ({email, company}), registerStatus, registerError
+    - New handler handleRegisterLoan(intent) — sends to /api/send-email
+        intent='hasAccess'  → subject "NEW FILE BEING SUBMITTED"
+                              redirect to https://tqltpo.encompasstpoconnect.com/#/content/idplogin
+        intent='needsAccess'→ subject "NEW USER ACCESS REQUEST"
+                              closes modal after 1.8s confirmation
+      Both: TO=tposupport@tqlend.com, FROM=TQLQuote@tqltpo.com,
+            HTML body includes (email, company, accessLevel, program, timestamp)
+    - Desktop + mobile row Actions dropdowns: "Reserve / Lock Rate" entry
+      replaced with single "Register New Loan" entry that opens the modal
+      with the row's program/rate/price as context
+    - New modal block inserted before the User Admin Passcode modal:
+        - email input + company input (both required, validated)
+        - 2 access-level buttons rendered as the user-facing "checkboxes"
+        - sending/sent/error states with inline messaging
 ```
 
 ## Key Decisions
-- **bankStatement → WrittenVOE is correct, not a bug.** OB v4 channel 165481
-  only accepts 5 enum values for incomeVerificationType (probed empirically,
-  every other value HTTP 400). WrittenVOE is the only legal value for
-  alt-doc scenarios on this channel.
-- **All three doc flags hardcoded to 'Verified'** regardless of broker
-  doc-type selection (per user instruction). noRatio → 'None' edge case
-  removed.
-- **Reason field is `ineligibleReason` (SINGULAR)** on the /ineligible
-  endpoint, but `notEligibleReasons` (plural) on inline notEligibleProducts.
-  Parser now checks both; this was the root cause of empty reasons[]
-  before commit 4c57568.
-- **Disqualified-programs card visible to ALL brokers**, not admin-gated.
-  Broker self-diagnoses LTV/FICO/state issues without emailing tposupport.
-- **cleanAdjustmentReason() applied to ineligible reasons** — same cleanup
-  helper used for LLPA reasons. Strips "Max of LTV/CLTV/HCLTV is " prefix,
-  converts ", And " connectors to commas.
+- **PersonalBankStmt enum casing is exact.** Channel 165481 accepts
+  PersonalBankStmt12Mos / PersonalBankStmt24Mos / BusinessBankStmt12Mos /
+  BusinessBankStmt24Mos. Even tiny variants (BankStmt12Mos, PersonalBankStmt12Mo
+  singular, PersonalBankStatement12Mos) fail with HTTP 400. My prior probe
+  missed these because I tested case variants like BankStatement12, not the
+  exact Stmt+Mos abbreviation.
+- **Income map now routes bank-statement / alt-doc / tax / VOE-ish scenarios
+  to PersonalBankStmt12Mos** (12mo for catch-all, 24mo only when explicitly
+  selected). assetDepletion / assetUtilization continue to use AssetRelated.
+  voe still uses WrittenVOE (legitimate VOE program).
+- **Prepay UI collapsed from two fields to one.** "Prepay Fee" with three
+  options (5% / 3% / No Prepay) is the only control. Internally it syncs
+  prepayPeriod (5pct→60mo, 3pct→36mo, none→0mo) so all existing pricing
+  logic + display helpers continue to function.
+- **Broker view no longer filters down to one program.** All prepay variants
+  returned by OB are visible; the "Selected Prepay" badge highlights the
+  broker's choice. Admin view was always like this.
+- **Register New Loan replaces Reserve/Lock Rate** in the row Actions
+  dropdown. The Reserve/Lock email pipeline still exists (handler
+  handleRowReserve + activeRowAction state) but is no longer reachable
+  from the broker UI. Left in place in case user wants to reinstate it.
+- **Two access intents = two emails, not two checkboxes.** Implemented as
+  two stacked action buttons inside the modal — both function as
+  one-click "checkbox-and-submit" per the user's spec. Visually
+  distinguished: "I have access" = bordered teal (primary), "I need
+  access" = bordered slate (secondary).
+- **All emails route through Resend** via /api/send-email. FROM address
+  must end in a verified domain (tqltpo.com or tqlend.com); our default
+  TQLQuote@tqltpo.com passes the verification check.
 
 ## Commands
 ```bash
@@ -98,59 +103,57 @@ npm run dev
 # Typecheck
 npx tsc --noEmit
 
-# Build
+# Build (catches TS6133 unused-var errors)
 npm run build
 
-# Probe OB incomeVerificationType enum (1 token call + 40 probes)
-node scripts/ob-probe-incomeverification.mjs
+# Probes (each requires .env.local with OB_* vars)
+node scripts/ob-probe-personalbankstmt.mjs      # bank stmt enum casing
+node scripts/ob-probe-iv-correct.mjs            # full incomeVerificationType sweep
+node scripts/ob-probe-ineligible.mjs            # /ineligible endpoint dump
+node scripts/ob-verify-iv-mappings.mjs          # end-to-end scenario sanity check
 
-# Probe OB /ineligible endpoint (1 search + 1 GET, dumps full response)
-node scripts/ob-probe-ineligible.mjs
-
-# Deploy (auto on push to master)
-git push origin master
+# Ship
+git push origin master && npx vercel --prod --yes
 ```
 
 ## Technical Notes
-- **OB v4 channel 165481 incomeVerificationType enum (probed 2026-05-19):**
-  - `FullDoc` → Ascend Alt-A + Elevate full-doc programs
-  - `WrittenVOE` → Alt-Doc programs (Ascend Alt-A Alt-Doc) — catch-all
-    for bank stmt, DSCR (when not InvestorDscr), tax 1yr, asset, VOE
-  - `Stated` → 0 products on this channel
-  - `NoIncomeVerification` → 0 products on this channel
-  - `InvestorDscr` → DSCR products (hyphen variant `Investor-DSCR` is 400)
-- **OB /ineligible endpoint response shape** (sample at
-  scripts/ob-ineligible-sample.json):
-  ```
-  {
-    searchId, amiPercentage, amiPercentageFFIEC,
-    ineligibleProducts: [
-      { productName, productId, investor, investorId, loanType,
-        amortizationType, amortizationTerm, priceStatus,
-        ineligibleStatus: "Disqualified",
-        ineligibleReason: [string, string, ...],   ← SINGULAR
-        guidelines: [{ documentDescription, guidelineLink }]
-      },
-      ...
-    ]
-  }
-  ```
-- **CustomProductFilter01–04 are hardcoded to '110'** at api/get-ob-pricing.ts:
-  ~327. OB returns zero products when missing. Possible future enhancement:
-  derive these per-scenario to surface specific Bank Statement / Asset /
-  DSCR product flavors. Not investigated this session.
-- **18 disqualified programs × ~75 reasons** is typical volume for a
-  zero-eligible scenario. UI handles arbitrary count via .map().
+- **OB v4 channel 165481 incomeVerificationType — verified accepted (2026-05-21)**
+  FullDoc | WrittenVOE | AssetRelated | Stated | NoIncomeVerification |
+  InvestorDscr | PersonalBankStmt12Mos | PersonalBankStmt24Mos |
+  BusinessBankStmt12Mos | BusinessBankStmt24Mos
+- **Bank-statement enum casing is case-AND-shape-sensitive.** Required
+  exactly: `Personal` or `Business` + `BankStmt` (abbreviated, NOT
+  `BankStatement`) + `12Mos`/`24Mos` (plural `Mos`, NOT `Mo` or `12`).
+- **borrowerInformation requires IncomeDocumentation, AssetDocumentation,
+  and EmploymentDocumentation** — undocumented in OB sample JSON but
+  enforced by channel 165481 with HTTP 400 if omitted. All three now
+  hardcoded to 'Verified'.
+- **expandedGuidelines sibling `standard` block** is sent only when
+  documentationType === 'fullDoc'. Routes OB to evaluate both Standard
+  agency and Expanded Guidelines families simultaneously.
+- **/ineligible endpoint response shape** — wrapper object with
+  `ineligibleProducts: [{ productName, productId, investor,
+  ineligibleReason: [strings] (SINGULAR), ineligibleStatus, ... }]`.
+  Parser handles both singular + plural variants now.
+- **Brand asset path** /public/tql-tpo-logo-bw.svg — served by Vite at
+  root /tql-tpo-logo-bw.svg. 47KB file (embeds a PNG inside the SVG;
+  not optimized — fine for now).
+- **Resend FROM enforcement** at api/send-email.ts. Any value not
+  ending in @tqltpo.com or @tqlend.com (and equivalent subdomains)
+  falls back to TQLQuote@tqltpo.com.
 
 ## Recent Commits
 ```
-4c57568 fix(ob): read OB's actual singular ineligibleReason field, not the plural
-0946ca6 feat(ui): show disqualified programs + reasons when zero eligible products
-5a49292 feat(ob): fetch /ineligible endpoint when zero eligible programs
-201d014 fix(ob): hardcode income/asset/employment documentation to Verified
-3b578a1 feat: 5-minute pricing TTL with auto-expiration banner
+1073f28  fix(build): remove orphaned findSecondBestRate
+0e433d7  feat(ob+ui): PersonalBankStmt12/24Mos enums + single Prepay Fee field + show all prepay variants
+8ea80b5  fix(ob): add AssetRelated income type, standard sibling block, productFilters
+d139f19  chore: refresh .mem00 checkpoint + commit OB ineligible probe sample
+4c57568  fix(ob): read OB's actual singular ineligibleReason field, not the plural
+0946ca6  feat(ui): show disqualified programs + reasons when zero eligible products
+5a49292  feat(ob): fetch /ineligible endpoint when zero eligible programs
+201d014  fix(ob): hardcode income/asset/employment documentation to Verified
 ```
 
 ## Uncommitted Changes
-None — about to commit/push this .mem00 + scripts/ob-ineligible-sample.json
-via /pushit.
+None — pending commit (this branding/Register flow change + this checkpoint)
+about to ship via /pushit.

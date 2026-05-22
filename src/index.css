@@ -32,9 +32,9 @@
   --tql-bg: #FAFAF8;
   --tql-text: #0B1220;
   --tql-navy: #0F172A;
-  --tql-teal: #245F73;
-  --tql-teal-hover: #1C4A5A;
-  --tql-link: #245F73;
+  --tql-teal: #007BE0;
+  --tql-teal-hover: #0061B0;
+  --tql-link: #007BE0;
   --tql-sky: #38BDF8;
   --tql-card: #F8FAFC;
   --tql-steel: #CBD5E1;
@@ -60,8 +60,8 @@
   --color-slate-700: #1E293B;
   --color-slate-800: #0F172A;  /* TQL navy */
   --color-slate-900: #0B1220;  /* TQL primary text */
-  --color-blue-600:  #245F73;  /* TQL teal accent */
-  --color-blue-500:  #245F73;
+  --color-blue-600:  #007BE0;  /* TQL teal accent */
+  --color-blue-500:  #007BE0;
 }
 
 @layer base {
