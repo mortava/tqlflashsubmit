@@ -1776,43 +1776,6 @@ export default function App() {
     return unique
   }
 
-  // ── 2ND-BEST RATE: tier-2 broker-facing rate ──
-  // Collects every qualifying rate option across every program in the
-  // 99.500–101.750 band, sorts (rate ASC, price DESC) so the top entry is the
-  // absolute best, then returns index 1 — the next-tier-down combination.
-  // Falls back to the absolute best if only one rate qualifies.
-  const findSecondBestRate = (programs: Program[] | undefined): {
-    program: Program; opt: RateOption; price: number
-  } | null => {
-    if (!Array.isArray(programs) || programs.length === 0) return null
-    const candidates: Array<{ program: Program; opt: RateOption; price: number }> = []
-    for (const program of programs) {
-      if (!program || !Array.isArray(program.rateOptions)) continue
-      for (const opt of program.rateOptions) {
-        if (!opt) continue
-        const pts = safeNumber(opt.points)
-        const price = safeNumber(opt.price) || (pts > 50 ? pts : 100 - pts)
-        if (price < 99.5 || price > 101.75) continue
-        const rate = safeNumber(opt.rate)
-        if (rate <= 0) continue
-        candidates.push({ program, opt, price })
-      }
-    }
-    if (candidates.length === 0) return null
-    candidates.sort((a, b) => {
-      if (Math.abs(a.opt.rate - b.opt.rate) > 1e-6) return a.opt.rate - b.opt.rate
-      return b.price - a.price
-    })
-    // The very best is intentionally withheld from broker view — surface tier-2.
-    // Skip every entry that ties with the absolute best (same rate AND price)
-    // so brokers always see a truly different combo.
-    const top = candidates[0]
-    const tier2 = candidates.find((c, i) =>
-      i > 0 && (Math.abs(c.opt.rate - top.opt.rate) > 1e-6 || Math.abs(c.price - top.price) > 1e-6)
-    )
-    return tier2 || top
-  }
-
   // Filter rate options to only show prices between 99.000 and 101.750 (TQL target range)
   const PRICE_MIN = 99.0
   const PRICE_MAX = 101.75
