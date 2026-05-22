@@ -2812,8 +2812,7 @@ export default function App() {
               <button
                 type="submit"
                 form="pricing-form"
-                className="max-w-xs ml-auto h-12 px-8 text-white font-semibold text-base rounded-xl shadow-md hover:shadow-lg hover:opacity-90 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-                style={{ backgroundColor: '#245F73' }}
+                className="mx-auto w-full max-w-md h-12 px-10 text-white font-semibold text-base rounded-xl shadow-md hover:shadow-lg hover:opacity-90 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 tql-bg-teal"
               >
                 Get Pricing
               </button>
