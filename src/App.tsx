@@ -2614,28 +2614,23 @@ export default function App() {
                 {!collapsedSections.has('investor') && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-4">
                     <div className="space-y-1.5">
-                      <label htmlFor="prepayPeriod" className="block text-sm font-medium text-slate-900">Prepay Period</label>
-                      <Select name="prepayPeriod" value={formData.prepayPeriod} onValueChange={(v) => handleInputChange('prepayPeriod', v)}>
-                        <SelectTrigger id="prepayPeriod" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="60mo">5 Year</SelectItem>
-                          <SelectItem value="48mo">4 Year</SelectItem>
-                          <SelectItem value="36mo">3 Year</SelectItem>
-                          <SelectItem value="24mo">2 Year</SelectItem>
-                          <SelectItem value="12mo">1 Year</SelectItem>
-                          <SelectItem value="0mo">None</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="prepayType" className="block text-sm font-medium text-slate-900">Prepay Type</label>
-                      <Select name="prepayType" value={formData.prepayType} onValueChange={(v) => handleInputChange('prepayType', v)}>
+                      <label htmlFor="prepayType" className="block text-sm font-medium text-slate-900">Prepay Fee</label>
+                      <Select
+                        name="prepayType"
+                        value={formData.prepayType}
+                        onValueChange={(v) => {
+                          // Single "Prepay Fee" field drives both prepayType and prepayPeriod.
+                          // 5% → 60mo (5yr) PPP, 3% → 36mo (3yr) PPP, none → 0mo (No Prepay).
+                          handleInputChange('prepayType', v)
+                          const periodMap: Record<string, string> = { '5pct': '60mo', '3pct': '36mo', 'none': '0mo' }
+                          handleInputChange('prepayPeriod', periodMap[v] || '0mo')
+                        }}
+                      >
                         <SelectTrigger id="prepayType" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="5pct">5%</SelectItem>
                           <SelectItem value="3pct">3%</SelectItem>
-                          <SelectItem value="6mo-interest">6 Mo. Interest</SelectItem>
-                          <SelectItem value="declining-3yr">Declining 3yr (3-2-1%)</SelectItem>
+                          <SelectItem value="none">No Prepay</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -3044,34 +3039,11 @@ export default function App() {
                         })
                         .filter((p): p is { program: Program; programName: string; filteredRateOptions: RateOption[]; pinned: boolean } => p !== null)
 
-                      // Step 3: BROKER VIEW — narrow to the tier-2 program (non-DSCR) or
-                      // the 5% PPP + user-selected-prepay-type pair (DSCR). ADMIN VIEW
-                      // sees every program with raw investor names.
-                      if (!showRawInvestor) {
-                        const isDSCR = formData.documentationType === 'dscr'
-                        if (isDSCR) {
-                          // Map the user's prepayType selection to a regex that matches
-                          // the masked program name (e.g. "5%PPP", "3%PPP").
-                          const prepayPctMap: Record<string, string> = {
-                            '5pct': '5', '3pct': '3', '6mo-interest': '3', 'declining-3yr': '3',
-                          }
-                          const selectedPct = prepayPctMap[formData.prepayType] || '3'
-                          // Only show the user's selected prepay type — no forced 5% default
-                          const re = new RegExp(`\\b${selectedPct}\\s*%\\s*PPP\\b`, 'i')
-                          const match = visiblePrograms.find(v => re.test(v.programName))
-                          if (match) visiblePrograms = [match]
-                          else if (visiblePrograms.length > 0) visiblePrograms = [visiblePrograms[0]]
-                        } else {
-                          const tier2 = findSecondBestRate(sourcePrograms)
-                          if (tier2) {
-                            const target = tier2.program.name
-                            const match = visiblePrograms.find(v => v.programName === target)
-                            if (match) visiblePrograms = [match]
-                          } else if (visiblePrograms.length > 0) {
-                            visiblePrograms = [visiblePrograms[0]]
-                          }
-                        }
-                      }
+                      // Step 3: Broker now sees ALL prepay variants (5% / 3% / No Prepay)
+                      // for each program family — no more single-program collapse. Admin
+                      // continues to see every program with raw investor names. The
+                      // "Selected Prepay" badge below still highlights the broker's
+                      // chosen prepay so it's easy to spot at a glance.
 
                       // Pinned DSCR 5% PPP rides to the top when DSCR is selected.
                       visiblePrograms.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))

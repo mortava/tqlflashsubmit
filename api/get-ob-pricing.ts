@@ -197,28 +197,30 @@ function buildOBRequest(f: any): any {
   }
 
   // expandedGuidelines (inside loanInformation)
-  // incomeVerificationType — OB v4 channel 165481 accepts exactly SIX enums.
-  // Verified empirically via scripts/ob-probe-iv-correct.mjs (2026-05-21):
+  // incomeVerificationType — OB v4 channel 165481 accepts these enums.
+  // Verified empirically via scripts/ob-probe-personalbankstmt.mjs (2026-05-21):
   //   FullDoc              → Full Document programs
-  //   WrittenVOE           → Alt-Doc programs — used as the catch-all for
-  //                          bank statement, 1-yr tax returns, VOE, etc.
-  //                          (channel does NOT expose dedicated BankStatement
-  //                          or TaxReturns1Yr enum values)
+  //   PersonalBankStmt12Mos → 12-mo personal bank statement programs
+  //   PersonalBankStmt24Mos → 24-mo personal bank statement programs
+  //   BusinessBankStmt12Mos → 12-mo business bank statement programs
+  //   BusinessBankStmt24Mos → 24-mo business bank statement programs
+  //   WrittenVOE           → Written VOE alt-doc programs
   //   AssetRelated         → Asset Depletion / Asset Utilization programs
   //   Stated               → Stated income
   //   NoIncomeVerification → No-ratio / no-income
-  //   InvestorDscr         → DSCR (hyphen variant 'Investor-DSCR' returns 400)
-  // Every other value (BankStatement, BankStatement12, BankStatement24,
-  // AssetDepletion, TaxReturns1Yr, 1099, PnL, ProfitAndLoss, VOE, WVOE, etc.)
-  // returns HTTP 400 "Error converting value to type IncomeVerificationType".
+  //   InvestorDscr         → DSCR
+  // Casing is strict — BankStatement, BankStmt12Mos, PersonalBankStatement12Mos,
+  // PersonalBankStmt12Mo (singular), TaxReturns1Yr, 1099, PnL, ProfitAndLoss,
+  // VOE, WVOE etc. all return HTTP 400 "Error converting value".
   const incomeVerificationMap: Record<string, string> = {
     fullDoc: 'FullDoc',
     dscr: 'InvestorDscr',
-    bankStatement: 'WrittenVOE',
-    bankStatement12: 'WrittenVOE',
-    bankStatement24: 'WrittenVOE',
-    bankStatementOther: 'WrittenVOE',
-    taxReturns1Yr: 'WrittenVOE',
+    bankStatement: 'PersonalBankStmt12Mos',
+    bankStatement12: 'PersonalBankStmt12Mos',
+    bankStatement24: 'PersonalBankStmt24Mos',
+    bankStatementOther: 'PersonalBankStmt12Mos',
+    altDoc: 'PersonalBankStmt12Mos',
+    taxReturns1Yr: 'PersonalBankStmt12Mos',
     voe: 'WrittenVOE',
     assetDepletion: 'AssetRelated',
     assetUtilization: 'AssetRelated',
