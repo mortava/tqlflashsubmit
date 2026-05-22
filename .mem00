@@ -1,159 +1,73 @@
 # Session Memory — tqlflashsubmit
-**Date**: 2026-05-21
+**Date**: 2026-05-22
 **Branch**: master
-**Session Focus**: OB pricing accuracy (PersonalBankStmt enums, AssetRelated, standard sibling block); broker UI rebrand (#007BE0 + BW logo); Register New Loan flow replacing Reserve/Lock Rate
+**Session Focus**: Slate-grey email rebrand + restore standalone Prepay Period dropdown.
 
 ## Status
-- **Completed**: every change committed; previous shipments + this commit pushed and Vercel-deployed.
-- **In Progress**: None.
-- **Next Up**: User can extend the Register flow with a 3rd checkbox ("Add Company Name") if desired, plus confirm both email subjects land in the right TPO inbox.
+- **Completed**: Email backgrounds switched cream→slate-grey across all 4 templates. Standalone Prepay Period dropdown added back to Investor Details section, fully tested in browser. Committed (7f9f84d), pushed to origin/master, deployed to Vercel production.
+- **In Progress**: —
+- **Next Up**: —
 - **Blockers**: None.
 
 ## Change Tree
 ```
-This session's commits on master:
+modified:  src/App.tsx
+  - buildRateQuoteEmail / buildFullQuoteEmail / buildReserveRequestEmail:
+      outer body bg #F5F4F1 -> #E2E8F0 (slate-200)
+      inner panels   #FAFAF8 -> #F1F5F9 (slate-100)
+  - Investor Details section (line ~2640):
+      Prepay Fee dropdown no longer overwrites prepayPeriod (only sets period
+      to '0mo' when fee='none').
+      NEW Prepay Period dropdown: 5/4/3/2/1 Year + No Prepay
+      (values: 60mo/48mo/36mo/24mo/12mo/0mo).
+      Bidirectional sync — selecting "No Prepay" on either field clears the
+      other; picking a year while Fee='none' restores Fee->'5pct'.
 
-  201d014  fix(ob): hardcode income/asset/employment documentation to Verified
-  5a49292  feat(ob): fetch /ineligible endpoint when zero eligible programs
-  0946ca6  feat(ui): show disqualified programs + reasons when zero eligible products
-  4c57568  fix(ob): read OB's actual singular ineligibleReason field, not the plural
-  d139f19  chore: refresh .mem00 checkpoint + commit OB ineligible probe sample
-  8ea80b5  fix(ob): add AssetRelated income type, standard sibling block, productFilters
-  0e433d7  feat(ob+ui): PersonalBankStmt12/24Mos enums + single Prepay Fee field + show all prepay variants
-  1073f28  fix(build): remove orphaned findSecondBestRate (used only by removed filter)
-  <pending> feat(ui): TQL TPO BW logo replaces TotalPricer text; teal accent → #007BE0; Actions → Register New Loan flow
-
-This commit's diff:
-
-  added:     public/tql-tpo-logo-bw.svg          ← Copied from
-                                                   C:\Users\beach\Downloads\totalqualitylendingtpo_logo_bw.svg
-                                                   (47 KB, embedded image)
-
-  modified:  src/index.css
-    --tql-teal       #245F73 → #007BE0
-    --tql-teal-hover #1C4A5A → #0061B0
-    --tql-link       #245F73 → #007BE0
-    --color-blue-500/600   #245F73 → #007BE0
-    Everything using .tql-text-teal / .tql-bg-teal / .tql-border-teal /
-    --tql-teal var inherits the new accent automatically.
-
-  modified:  src/App.tsx
-    - 4 IconAtom+"TotalPricer" brand blocks replaced with
-      <img src="/tql-tpo-logo-bw.svg" /> wrapped in <a href="/">
-        - desktop hidden sidebar
-        - desktop top nav (max-w-6xl header)
-        - mobile sticky header
-        - mobile slide-out drawer
-    - IconAtom helper component deleted (no remaining callers)
-    - New state hooks (right after rowReserveFields):
-        showRegisterModal, registerContext (program+rate+price),
-        registerFields ({email, company}), registerStatus, registerError
-    - New handler handleRegisterLoan(intent) — sends to /api/send-email
-        intent='hasAccess'  → subject "NEW FILE BEING SUBMITTED"
-                              redirect to https://tqltpo.encompasstpoconnect.com/#/content/idplogin
-        intent='needsAccess'→ subject "NEW USER ACCESS REQUEST"
-                              closes modal after 1.8s confirmation
-      Both: TO=tposupport@tqlend.com, FROM=TQLQuote@tqltpo.com,
-            HTML body includes (email, company, accessLevel, program, timestamp)
-    - Desktop + mobile row Actions dropdowns: "Reserve / Lock Rate" entry
-      replaced with single "Register New Loan" entry that opens the modal
-      with the row's program/rate/price as context
-    - New modal block inserted before the User Admin Passcode modal:
-        - email input + company input (both required, validated)
-        - 2 access-level buttons rendered as the user-facing "checkboxes"
-        - sending/sent/error states with inline messaging
+modified:  api/flash-submit-request.ts
+  - Disclosure-desk submission email: bg #F5F4F1 -> #E2E8F0
+    (body wrapper + bottom summary box).
 ```
 
 ## Key Decisions
-- **PersonalBankStmt enum casing is exact.** Channel 165481 accepts
-  PersonalBankStmt12Mos / PersonalBankStmt24Mos / BusinessBankStmt12Mos /
-  BusinessBankStmt24Mos. Even tiny variants (BankStmt12Mos, PersonalBankStmt12Mo
-  singular, PersonalBankStatement12Mos) fail with HTTP 400. My prior probe
-  missed these because I tested case variants like BankStatement12, not the
-  exact Stmt+Mos abbreviation.
-- **Income map now routes bank-statement / alt-doc / tax / VOE-ish scenarios
-  to PersonalBankStmt12Mos** (12mo for catch-all, 24mo only when explicitly
-  selected). assetDepletion / assetUtilization continue to use AssetRelated.
-  voe still uses WrittenVOE (legitimate VOE program).
-- **Prepay UI collapsed from two fields to one.** "Prepay Fee" with three
-  options (5% / 3% / No Prepay) is the only control. Internally it syncs
-  prepayPeriod (5pct→60mo, 3pct→36mo, none→0mo) so all existing pricing
-  logic + display helpers continue to function.
-- **Broker view no longer filters down to one program.** All prepay variants
-  returned by OB are visible; the "Selected Prepay" badge highlights the
-  broker's choice. Admin view was always like this.
-- **Register New Loan replaces Reserve/Lock Rate** in the row Actions
-  dropdown. The Reserve/Lock email pipeline still exists (handler
-  handleRowReserve + activeRowAction state) but is no longer reachable
-  from the broker UI. Left in place in case user wants to reinstate it.
-- **Two access intents = two emails, not two checkboxes.** Implemented as
-  two stacked action buttons inside the modal — both function as
-  one-click "checkbox-and-submit" per the user's spec. Visually
-  distinguished: "I have access" = bordered teal (primary), "I need
-  access" = bordered slate (secondary).
-- **All emails route through Resend** via /api/send-email. FROM address
-  must end in a verified domain (tqltpo.com or tqlend.com); our default
-  TQLQuote@tqltpo.com passes the verification check.
+- Picked slate-200 (#E2E8F0) for outer and slate-100 (#F1F5F9) for inner accents — gives clean "slate-grey" feel without losing readability against the white card and blue (#245F73) header.
+- Header (#245F73 teal-blue) and CTA buttons left untouched per user spec.
+- Decoupled Prepay Fee from Prepay Period (previously Fee auto-set Period). Kept a thin coupling: "No Prepay" on either side syncs the other, so we never end up with `Fee=5%, Period=No Prepay` (invalid).
+- Default values unchanged: `prepayType='3pct'`, `prepayPeriod='36mo'` (Investor Details opens at Fee=3%, Period=3 Year).
 
 ## Commands
 ```bash
-# Dev
-npm run dev
+# Dev server
+npx vite --port 5183
 
-# Typecheck
+# Type check
 npx tsc --noEmit
 
-# Build (catches TS6133 unused-var errors)
-npm run build
+# Production build
+npx vite build
 
-# Probes (each requires .env.local with OB_* vars)
-node scripts/ob-probe-personalbankstmt.mjs      # bank stmt enum casing
-node scripts/ob-probe-iv-correct.mjs            # full incomeVerificationType sweep
-node scripts/ob-probe-ineligible.mjs            # /ineligible endpoint dump
-node scripts/ob-verify-iv-mappings.mjs          # end-to-end scenario sanity check
-
-# Ship
-git push origin master && npx vercel --prod --yes
+# Deploy (production)
+npx vercel --prod --yes
 ```
 
 ## Technical Notes
-- **OB v4 channel 165481 incomeVerificationType — verified accepted (2026-05-21)**
-  FullDoc | WrittenVOE | AssetRelated | Stated | NoIncomeVerification |
-  InvestorDscr | PersonalBankStmt12Mos | PersonalBankStmt24Mos |
-  BusinessBankStmt12Mos | BusinessBankStmt24Mos
-- **Bank-statement enum casing is case-AND-shape-sensitive.** Required
-  exactly: `Personal` or `Business` + `BankStmt` (abbreviated, NOT
-  `BankStatement`) + `12Mos`/`24Mos` (plural `Mos`, NOT `Mo` or `12`).
-- **borrowerInformation requires IncomeDocumentation, AssetDocumentation,
-  and EmploymentDocumentation** — undocumented in OB sample JSON but
-  enforced by channel 165481 with HTTP 400 if omitted. All three now
-  hardcoded to 'Verified'.
-- **expandedGuidelines sibling `standard` block** is sent only when
-  documentationType === 'fullDoc'. Routes OB to evaluate both Standard
-  agency and Expanded Guidelines families simultaneously.
-- **/ineligible endpoint response shape** — wrapper object with
-  `ineligibleProducts: [{ productName, productId, investor,
-  ineligibleReason: [strings] (SINGULAR), ineligibleStatus, ... }]`.
-  Parser handles both singular + plural variants now.
-- **Brand asset path** /public/tql-tpo-logo-bw.svg — served by Vite at
-  root /tql-tpo-logo-bw.svg. 47KB file (embeds a PNG inside the SVG;
-  not optimized — fine for now).
-- **Resend FROM enforcement** at api/send-email.ts. Any value not
-  ending in @tqltpo.com or @tqlend.com (and equivalent subdomains)
-  falls back to TQLQuote@tqltpo.com.
+- Investor Details section is gated by `showInvestorDetails = formData.occupancyType === 'investment'` (src/App.tsx:1817). Both Prepay fields live inside that conditional, so they only render for Investment.
+- `prepayPeriod` values are stored as `"<n>mo"` strings (60mo, 48mo, 36mo, 24mo, 12mo, 0mo). The pricing engine's `matchesPrepayPeriod()` (src/App.tsx:1895) reads these to filter eligible programs.
+- Small-balance loan validation (src/App.tsx:1342) requires `prepayPeriod >= 24` for loans under $100K — adding 12mo/24mo as new selectable options is compatible with that gate.
+- Email HTML lives inline in `src/App.tsx` (~lines 390–820) and `api/flash-submit-request.ts` (~line 184). There are no separate email template files — search by hex code if updating brand colors.
+- Browser test confirmed: occupancy=Investment shows both fields; occupancy=Primary hides both; bidirectional sync works in both directions.
+
+## Production URL
+- https://submit.tqltpo.com (custom domain)
+- Latest deploy: https://tqlflashsubmit-n36wxfao8-james-projects-d94c6754.vercel.app
 
 ## Recent Commits
 ```
-1073f28  fix(build): remove orphaned findSecondBestRate
-0e433d7  feat(ob+ui): PersonalBankStmt12/24Mos enums + single Prepay Fee field + show all prepay variants
-8ea80b5  fix(ob): add AssetRelated income type, standard sibling block, productFilters
-d139f19  chore: refresh .mem00 checkpoint + commit OB ineligible probe sample
-4c57568  fix(ob): read OB's actual singular ineligibleReason field, not the plural
-0946ca6  feat(ui): show disqualified programs + reasons when zero eligible products
-5a49292  feat(ob): fetch /ineligible endpoint when zero eligible programs
-201d014  fix(ob): hardcode income/asset/employment documentation to Verified
+7f9f84d feat(ui+email): slate-grey email background + restore standalone Prepay Period field
+3098eb9 style(ui): Get Pricing button -> brand blue (#007BE0), centered, wider (max-w-md)
+ece55fc feat(ui): TQL TPO BW logo replaces TotalPricer text; teal accent -> #007BE0
+1073f28 fix(build): remove orphaned findSecondBestRate
+0e433d7 feat(ob+ui): PersonalBankStmt12/24Mos enums + single Prepay Fee field
 ```
 
 ## Uncommitted Changes
-None — pending commit (this branding/Register flow change + this checkpoint)
-about to ship via /pushit.
+None — all committed and deployed.

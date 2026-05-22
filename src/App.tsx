@@ -683,8 +683,8 @@ function buildReserveRequestEmail(
     hasITIN: 'Has ITIN', isRuralProperty: 'Rural Property', isNonWarrantableProject: 'Non-Warrantable',
     isMixedUsePML: 'Mixed Use', is5PlusUnits: '5+ Units', isSeasonalProperty: 'Seasonal',
     isShortTermRental: 'Short-Term Rental', isCrossCollateralized: 'Cross-Collateralized',
-    isVestedInLLCOrCorp: 'Vested in LLC/Corp', prepayPeriod: 'Prepay Period',
-    prepayType: 'Prepay Type', dscrEntityType: 'DSCR Entity', dscrRatio: 'DSCR Range',
+    isVestedInLLCOrCorp: 'Vested in LLC/Corp', prepayPeriod: 'Prepayment Penalty',
+    prepayType: 'Prepay Fee Type', dscrEntityType: 'DSCR Entity', dscrRatio: 'DSCR Range',
     dscrManualInput: 'DSCR %', presentHousingExpense: 'Present Housing Expense',
     grossRent: 'Gross Rent', loanOriginatorPaidBy: 'LO Paid By',
   }
@@ -1344,7 +1344,7 @@ export default function App() {
 
       if (formData.occupancyType !== 'investment') scopeErrors.push('Property Use must be Investment')
       if (formData.documentationType !== 'dscr') scopeErrors.push('Income Doc Type must be DSCR')
-      if (prepayMonths < 24) scopeErrors.push('Prepay Period must be 24 months or more')
+      if (prepayMonths < 24) scopeErrors.push('Prepayment Penalty must be 24 months or more')
 
       if (scopeErrors.length > 0) {
         errors.loanAmount = `Scenario out of Scope — ${scopeErrors.join('; ')}`
@@ -1945,14 +1945,14 @@ export default function App() {
         const points = safeNumber(opt.points)
         const price = pointsToPrice(points)
 
-        // Investment DSCR prepay-based price caps
-        const isInvDSCR = formData.occupancyType === 'investment' && formData.documentationType === 'dscr'
+        // Investment prepay-term-based price caps (all Investment loans)
+        const isInvestment = formData.occupancyType === 'investment'
         let maxPrice = 101.5
-        if (isInvDSCR) {
+        if (isInvestment) {
           const prepay = formData.prepayPeriod || ''
           if (prepay === '24mo' || prepay === '2yr') maxPrice = 100.750
-          else if (prepay === '12mo' || prepay === '1yr') maxPrice = 100.0
-          else if (prepay === '0mo' || prepay === 'none' || prepay === '') maxPrice = 99.5
+          else if (prepay === '12mo' || prepay === '1yr') maxPrice = 100.000
+          else if (prepay === '0mo' || prepay === 'none' || prepay === '') maxPrice = 99.750
         }
 
         if (price >= 99.5 && price <= maxPrice) {
@@ -1989,13 +1989,13 @@ export default function App() {
           const points = safeNumber(opt.points)
           const price = 100 - points
 
-          const isInvDSCR = formData.occupancyType === 'investment' && formData.documentationType === 'dscr'
+          const isInvestment = formData.occupancyType === 'investment'
           let maxPrice = 101.5
-          if (isInvDSCR) {
+          if (isInvestment) {
             const prepay = formData.prepayPeriod || ''
             if (prepay === '24mo' || prepay === '2yr') maxPrice = 100.750
-            else if (prepay === '12mo' || prepay === '1yr') maxPrice = 100.0
-            else if (prepay === '0mo' || prepay === 'none' || prepay === '') maxPrice = 99.5
+            else if (prepay === '12mo' || prepay === '1yr') maxPrice = 100.000
+            else if (prepay === '0mo' || prepay === 'none' || prepay === '') maxPrice = 99.750
           }
 
           if (price >= 99.5 && price <= maxPrice) {
@@ -2639,32 +2639,22 @@ export default function App() {
                 {!collapsedSections.has('investor') && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-4">
                     <div className="space-y-1.5">
-                      <label htmlFor="prepayType" className="block text-sm font-medium text-slate-900">Prepay Fee</label>
-                      <Select
-                        name="prepayType"
-                        value={formData.prepayType}
-                        onValueChange={(v) => {
-                          handleInputChange('prepayType', v)
-                          if (v === 'none') handleInputChange('prepayPeriod', '0mo')
-                        }}
-                      >
-                        <SelectTrigger id="prepayType" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5pct">5%</SelectItem>
-                          <SelectItem value="3pct">3%</SelectItem>
-                          <SelectItem value="none">No Prepay</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="prepayPeriod" className="block text-sm font-medium text-slate-900">Prepay Period</label>
+                      <label htmlFor="prepayPeriod" className="block text-sm font-medium text-slate-900">Prepayment Penalty</label>
                       <Select
                         name="prepayPeriod"
                         value={formData.prepayPeriod}
                         onValueChange={(v) => {
                           handleInputChange('prepayPeriod', v)
-                          if (v === '0mo') handleInputChange('prepayType', 'none')
-                          else if (formData.prepayType === 'none') handleInputChange('prepayType', '5pct')
+                          if (v === '0mo') {
+                            handleInputChange('prepayType', 'none')
+                          } else {
+                            // 1yr term requires 5% Fixed (3% Fixed needs min 2yr)
+                            if (v === '12mo' && formData.prepayType === '3pct') {
+                              handleInputChange('prepayType', '5pct')
+                            } else if (formData.prepayType === 'none') {
+                              handleInputChange('prepayType', v === '12mo' ? '5pct' : '5pct')
+                            }
+                          }
                         }}
                       >
                         <SelectTrigger id="prepayPeriod" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
@@ -2674,7 +2664,28 @@ export default function App() {
                           <SelectItem value="36mo">3 Year</SelectItem>
                           <SelectItem value="24mo">2 Year</SelectItem>
                           <SelectItem value="12mo">1 Year</SelectItem>
-                          <SelectItem value="0mo">No Prepay</SelectItem>
+                          <SelectItem value="0mo">None</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="prepayType" className="block text-sm font-medium text-slate-900">Prepay Fee Type</label>
+                      <Select
+                        name="prepayType"
+                        value={formData.prepayType}
+                        onValueChange={(v) => {
+                          // 3% Fixed has a 2yr minimum — block if current term is 1yr
+                          if (v === '3pct' && formData.prepayPeriod === '12mo') return
+                          handleInputChange('prepayType', v)
+                          if (v === 'none') handleInputChange('prepayPeriod', '0mo')
+                          else if (formData.prepayPeriod === '0mo') handleInputChange('prepayPeriod', '36mo')
+                        }}
+                      >
+                        <SelectTrigger id="prepayType" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5pct">5% Fixed</SelectItem>
+                          <SelectItem value="3pct" disabled={formData.prepayPeriod === '12mo'}>3% Fixed (min 2yr)</SelectItem>
+                          <SelectItem value="none">No Prepay</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
