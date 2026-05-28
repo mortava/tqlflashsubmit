@@ -347,20 +347,21 @@ function buildOBRequest(f: any): any {
       if (expandedOn) list.push('ExpandedGuidelines')
       return list.length > 0 ? list : ['Standard', 'ExpandedGuidelines']
     })(),
-    // TQL NonQM channel custom product filters — each filter maps to a specific
-    // borrower/property flag so OB returns the matching LLPA adjustment. Sending
-    // '110' activates the filter for that scenario, '0' leaves it inactive.
-    //   CustomProductFilter01 → reserved (channel baseline, always active)
-    //   CustomProductFilter02 → Short Term Rental
-    //   CustomProductFilter03 → Vacant
-    //   CustomProductFilter04 → Rural Property
-    //   CustomList1           → 5–9 Units (multi-family overlay)
+    // TQL NonQM channel custom product filters — verified against
+    // /support/api/businesschannels/{id}/customquestions (see
+    // scripts/fetch-custom-fields.mjs). OB's dropdown codes are:
+    //   Yes = 109   No = 110
+    // Field mapping (per OB's customquestions schema, NOT guessable from names):
+    //   CustomProductFilter01 → 5+ Units            → f.is5PlusUnits
+    //   CustomProductFilter02 → Short Term Rental   → f.isShortTermRental
+    //   CustomProductFilter03 → Vacant              → f.isVacant
+    //   CustomProductFilter04 → Rural               → f.isRuralProperty
+    // Send the OB code as a NUMBER (the schema declares numeric values).
     customFields: [
-      { customFieldInputName: 'CustomProductFilter01', customFieldValue: '110', columnName: 'CustomLenderField4' },
-      { customFieldInputName: 'CustomProductFilter02', customFieldValue: f.isShortTermRental ? '110' : '0', columnName: 'CustomLenderField5' },
-      { customFieldInputName: 'CustomProductFilter03', customFieldValue: f.isVacant ? '110' : '0', columnName: 'CustomLenderField7' },
-      { customFieldInputName: 'CustomProductFilter04', customFieldValue: f.isRuralProperty ? '110' : '0', columnName: 'CustomLenderField8' },
-      { customFieldInputName: 'CustomList1', customFieldValue: f.is5PlusUnits ? '110' : '0', columnName: 'CustomLenderField9' },
+      { customFieldInputName: 'CustomProductFilter01', customFieldValue: f.is5PlusUnits      ? 109 : 110, columnName: 'CustomLenderField4' },
+      { customFieldInputName: 'CustomProductFilter02', customFieldValue: f.isShortTermRental ? 109 : 110, columnName: 'CustomLenderField5' },
+      { customFieldInputName: 'CustomProductFilter03', customFieldValue: f.isVacant          ? 109 : 110, columnName: 'CustomLenderField7' },
+      { customFieldInputName: 'CustomProductFilter04', customFieldValue: f.isRuralProperty   ? 109 : 110, columnName: 'CustomLenderField8' },
     ],
   }
 
