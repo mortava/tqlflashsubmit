@@ -98,6 +98,10 @@ interface LoanData {
   // OB "Product Type(s)" checkbox group — both default to true
   checkProductTypeFilter_1: boolean   // Standard
   checkProductTypeFilter_10: boolean  // Expanded Guidelines
+  // OB CustomProductFilter05 — investor overlay
+  isFirstTimeInvestor: boolean
+  // OB CustomLenderField11 — appraisal/market overlay
+  isDecliningMarket: boolean
 }
 
 interface Adjustment {
@@ -360,6 +364,8 @@ const DEFAULT_FORM_DATA: LoanData = {
   propertyTBD: false,
   checkProductTypeFilter_1: true,
   checkProductTypeFilter_10: true,
+  isFirstTimeInvestor: false,
+  isDecliningMarket: false,
 }
 
 /* ── Draggable Floating Panel ── */
@@ -2615,6 +2621,26 @@ export default function App() {
                         <SelectItem value="10-15">10-15</SelectItem>
                         <SelectItem value="15-20">15-20</SelectItem>
                         <SelectItem value=">20">&gt;20</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="isDecliningMarket" className="block text-sm font-medium text-slate-900">Declining Market</label>
+                    <Select name="isDecliningMarket" value={formData.isDecliningMarket ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isDecliningMarket', v === 'yes')}>
+                      <SelectTrigger id="isDecliningMarket" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="isFirstTimeInvestor" className="block text-sm font-medium text-slate-900">First Time Investor</label>
+                    <Select name="isFirstTimeInvestor" value={formData.isFirstTimeInvestor ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isFirstTimeInvestor', v === 'yes')}>
+                      <SelectTrigger id="isFirstTimeInvestor" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

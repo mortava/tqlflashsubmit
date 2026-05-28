@@ -64,6 +64,23 @@ async function getOBToken(): Promise<string> {
 // Maps our unified form body → Optimal Blue Full Product Search v4
 // Spec: https://digitalmarketplace.optimalblue.com/api-details#api=fullsearch-v4
 
+// Acreage form values are bucketed ranges; OB CustomNumeric01 expects a single
+// number. Use the upper bound so overlays that fire at thresholds (e.g. ≥10ac,
+// ≥20ac) match the broker's worst-case acreage selection.
+function acreageToNumber(bucket: string | undefined): number {
+  switch (bucket) {
+    case '<5':   return 5
+    case '6-10': return 10
+    case '10-15': return 15
+    case '15-20': return 20
+    case '>20':  return 25
+    default: {
+      const n = parseFloat(String(bucket || '0'))
+      return isFinite(n) ? n : 0
+    }
+  }
+}
+
 function buildOBRequest(f: any): any {
   const loanAmount = Number(f.loanAmount) || 400000
   const propertyValue = Number(f.propertyValue) || 500000
@@ -356,12 +373,20 @@ function buildOBRequest(f: any): any {
     //   CustomProductFilter02 → Short Term Rental   → f.isShortTermRental
     //   CustomProductFilter03 → Vacant              → f.isVacant
     //   CustomProductFilter04 → Rural               → f.isRuralProperty
+    //   CustomProductFilter05 → First Time Investor → f.isFirstTimeInvestor
+    //   CustomLenderField11   → Declining Market    → f.isDecliningMarket
+    //   CustomNumeric01       → Acreage (Text/numeric — send the upper bound
+    //                                    of the bracket so overlays trigger
+    //                                    correctly at their thresholds)
     // Send the OB code as a NUMBER (the schema declares numeric values).
     customFields: [
-      { customFieldInputName: 'CustomProductFilter01', customFieldValue: f.is5PlusUnits      ? 109 : 110, columnName: 'CustomLenderField4' },
-      { customFieldInputName: 'CustomProductFilter02', customFieldValue: f.isShortTermRental ? 109 : 110, columnName: 'CustomLenderField5' },
-      { customFieldInputName: 'CustomProductFilter03', customFieldValue: f.isVacant          ? 109 : 110, columnName: 'CustomLenderField7' },
-      { customFieldInputName: 'CustomProductFilter04', customFieldValue: f.isRuralProperty   ? 109 : 110, columnName: 'CustomLenderField8' },
+      { customFieldInputName: 'CustomProductFilter01', customFieldValue: f.is5PlusUnits         ? 109 : 110, columnName: 'CustomLenderField4' },
+      { customFieldInputName: 'CustomProductFilter02', customFieldValue: f.isShortTermRental    ? 109 : 110, columnName: 'CustomLenderField5' },
+      { customFieldInputName: 'CustomProductFilter03', customFieldValue: f.isVacant             ? 109 : 110, columnName: 'CustomLenderField7' },
+      { customFieldInputName: 'CustomProductFilter04', customFieldValue: f.isRuralProperty      ? 109 : 110, columnName: 'CustomLenderField8' },
+      { customFieldInputName: 'CustomProductFilter05', customFieldValue: f.isFirstTimeInvestor  ? 109 : 110, columnName: 'CustomLenderField10' },
+      { customFieldInputName: 'CustomLenderField11',   customFieldValue: f.isDecliningMarket    ? 109 : 110, columnName: 'CustomLenderField11' },
+      { customFieldInputName: 'CustomNumeric01',       customFieldValue: acreageToNumber(f.acreage),         columnName: 'CustomLenderField9'  },
     ],
   }
 
