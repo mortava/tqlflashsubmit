@@ -93,6 +93,11 @@ interface LoanData {
   acreage: string
   isVacant: boolean
   hasNonOccupantCoBorrower: boolean
+  // Property TBD — when Yes, auto-fills Florida / Hillsborough / Tampa / 33602
+  propertyTBD: boolean
+  // OB "Product Type(s)" checkbox group — both default to true
+  checkProductTypeFilter_1: boolean   // Standard
+  checkProductTypeFilter_10: boolean  // Expanded Guidelines
 }
 
 interface Adjustment {
@@ -351,7 +356,10 @@ const DEFAULT_FORM_DATA: LoanData = {
   documentationType: 'fullDoc',
   acreage: '<5',
   isVacant: false,
-  hasNonOccupantCoBorrower: false
+  hasNonOccupantCoBorrower: false,
+  propertyTBD: false,
+  checkProductTypeFilter_1: true,
+  checkProductTypeFilter_10: true,
 }
 
 /* ── Draggable Floating Panel ── */
@@ -1291,6 +1299,14 @@ export default function App() {
       // Auto-set hasITIN when citizenship is ITIN
       if (field === 'citizenship') {
         updated.hasITIN = value === 'itin'
+      }
+      // TBD = Yes → default the property location to Tampa, FL 33602
+      // (Hillsborough County). Broker can still edit after the auto-fill.
+      if (field === 'propertyTBD' && value === true) {
+        updated.propertyState = 'FL'
+        updated.propertyCounty = 'Hillsborough'
+        updated.propertyCity = 'Tampa'
+        updated.propertyZip = '33602'
       }
       return updated
     })
@@ -2418,6 +2434,36 @@ export default function App() {
                     <label htmlFor="cashoutAmount" className="block text-sm font-medium text-slate-900">Cashout Amount</label>
                     <Input id="cashoutAmount" name="cashoutAmount" value={formData.cashoutAmount} onChange={(e) => handleInputChange('cashoutAmount', formatNumberInput(e.target.value))} icon={<DollarSign className="w-3.5 h-3.5" />} className="h-11 text-sm border-slate-300 focus:ring-blue-500" />
                   </div>
+                  {/* Loan Type — OB Product Type checkbox group. Both checked
+                      by default so the broker sees Standard + Expanded
+                      Guidelines unless they explicitly narrow the search. */}
+                  <div className="space-y-1.5 col-span-full">
+                    <label className="block text-sm font-medium text-slate-900">Loan Type</label>
+                    <div className="flex flex-wrap gap-4 pt-1">
+                      <label htmlFor="check_ProductTypeFilter_1" className="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input
+                          id="check_ProductTypeFilter_1"
+                          name="check_ProductTypeFilter_1"
+                          type="checkbox"
+                          checked={formData.checkProductTypeFilter_1}
+                          onChange={(e) => handleInputChange('checkProductTypeFilter_1', e.target.checked)}
+                          className="w-4 h-4 accent-black rounded"
+                        />
+                        Standard
+                      </label>
+                      <label htmlFor="check_ProductTypeFilter_10" className="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input
+                          id="check_ProductTypeFilter_10"
+                          name="check_ProductTypeFilter_10"
+                          type="checkbox"
+                          checked={formData.checkProductTypeFilter_10}
+                          onChange={(e) => handleInputChange('checkProductTypeFilter_10', e.target.checked)}
+                          className="w-4 h-4 accent-black rounded"
+                        />
+                        Expanded Guidelines
+                      </label>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -2475,6 +2521,20 @@ export default function App() {
                         <SelectItem value="2">2</SelectItem>
                         <SelectItem value="3">3</SelectItem>
                         <SelectItem value="4">4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* TBD = Yes auto-fills FL / Hillsborough / Tampa / 33602
+                      so the broker can price a scenario without a confirmed
+                      subject property. Toggling back to No leaves the broker
+                      to overwrite the values manually. */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="propertyTBD" className="block text-sm font-medium text-slate-900">TBD</label>
+                    <Select name="propertyTBD" value={formData.propertyTBD ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('propertyTBD', v === 'yes')}>
+                      <SelectTrigger id="propertyTBD" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

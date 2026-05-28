@@ -326,19 +326,41 @@ function buildOBRequest(f: any): any {
       ? (Number(f.grossRent) || 10000)
       : Math.round((loanAmount * 0.006) / (dti / 100)),
     customerInternalId: 'OBSearch',
-    // OB's UI "Product Type(s)" checkbox group — tells OB to evaluate both
-    // the Standard agency product family and the Expanded Guidelines family.
-    // Both `productFilters` and `productFilter` shipped as fallbacks until
-    // we have OB's canonical schema name confirmed.
-    productFilters: ['Standard', 'ExpandedGuidelines'],
-    productFilter: ['Standard', 'ExpandedGuidelines'],
-    // TQL NonQM channel custom product filters — OB returns zero products when
-    // these aren't populated. All four fixed to 110 per the channel spec.
+    // OB's UI "Product Type(s)" checkbox group — broker chooses Standard,
+    // Expanded Guidelines, or both. Defaults to BOTH so the broker sees the
+    // full pricing universe. Form fields:
+    //   check_ProductTypeFilter_1  → Standard
+    //   check_ProductTypeFilter_10 → Expanded Guidelines
+    productFilters: (() => {
+      const standardOn = f.checkProductTypeFilter_1 !== false
+      const expandedOn = f.checkProductTypeFilter_10 !== false
+      const list: string[] = []
+      if (standardOn) list.push('Standard')
+      if (expandedOn) list.push('ExpandedGuidelines')
+      return list.length > 0 ? list : ['Standard', 'ExpandedGuidelines']
+    })(),
+    productFilter: (() => {
+      const standardOn = f.checkProductTypeFilter_1 !== false
+      const expandedOn = f.checkProductTypeFilter_10 !== false
+      const list: string[] = []
+      if (standardOn) list.push('Standard')
+      if (expandedOn) list.push('ExpandedGuidelines')
+      return list.length > 0 ? list : ['Standard', 'ExpandedGuidelines']
+    })(),
+    // TQL NonQM channel custom product filters — each filter maps to a specific
+    // borrower/property flag so OB returns the matching LLPA adjustment. Sending
+    // '110' activates the filter for that scenario, '0' leaves it inactive.
+    //   CustomProductFilter01 → reserved (channel baseline, always active)
+    //   CustomProductFilter02 → Short Term Rental
+    //   CustomProductFilter03 → Vacant
+    //   CustomProductFilter04 → Rural Property
+    //   CustomList1           → 5–9 Units (multi-family overlay)
     customFields: [
       { customFieldInputName: 'CustomProductFilter01', customFieldValue: '110', columnName: 'CustomLenderField4' },
-      { customFieldInputName: 'CustomProductFilter02', customFieldValue: '110', columnName: 'CustomLenderField5' },
-      { customFieldInputName: 'CustomProductFilter03', customFieldValue: '110', columnName: 'CustomLenderField7' },
-      { customFieldInputName: 'CustomProductFilter04', customFieldValue: '110', columnName: 'CustomLenderField8' },
+      { customFieldInputName: 'CustomProductFilter02', customFieldValue: f.isShortTermRental ? '110' : '0', columnName: 'CustomLenderField5' },
+      { customFieldInputName: 'CustomProductFilter03', customFieldValue: f.isVacant ? '110' : '0', columnName: 'CustomLenderField7' },
+      { customFieldInputName: 'CustomProductFilter04', customFieldValue: f.isRuralProperty ? '110' : '0', columnName: 'CustomLenderField8' },
+      { customFieldInputName: 'CustomList1', customFieldValue: f.is5PlusUnits ? '110' : '0', columnName: 'CustomLenderField9' },
     ],
   }
 
