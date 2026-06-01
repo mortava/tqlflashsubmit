@@ -613,7 +613,7 @@ function normalizeDetailAdjustments(detail: any): any[] {
 // ================= Parse OB v4 QMPricingResponse =================
 // `details` is a map of productId → detail response (quotes[] + adjustments[])
 // returned from /productsearch/{searchId}/products/{productId}.
-function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLockDays = 30): any {
+function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLockDays = 30, strSelected = false): any {
   // OB v4: data.products[] contains all priceable products.
   // Ineligible products land in data.notEligibleProducts[] with their reasons.
   // Do NOT filter data.products[] by priceStatus — OB uses varied status strings
@@ -684,6 +684,25 @@ function parseOBResponse(data: any, details: Record<string, any> = {}, desiredLo
     const detail = details[String(p.productId)] || null
     const detailAdjustments = detail ? normalizeDetailAdjustments(detail) : []
     const allQuotes: any[] = Array.isArray(detail?.quotes) ? detail.quotes : []
+
+    // Short Term Rental: OB applies the STR overlay inside the base/par price
+    // for these investors rather than emitting a named LLPA row, so it never
+    // surfaces in detailAdjustments like the other rules. When the borrower
+    // selected STR, append OB's own short-term-rental advisory as a breakdown
+    // line so it reads alongside the other adjustments (no dollar value — OB
+    // does not itemize an STR adjustor).
+    if (strSelected) {
+      const strNote = (Array.isArray(detail?.notesAndAdvisories) ? detail.notesAndAdvisories : [])
+        .find((n: any) => /short.?term|\bstr\b|rental/i.test(String(n)))
+      detailAdjustments.push({
+        description: 'Short Term Rental',
+        amount: 0,
+        rateAdj: 0,
+        type: 'Advisory',
+        advisory: true,
+        note: String(strNote || 'Short-term rental restrictions and/or adjustments may apply.').trim(),
+      })
+    }
 
     // OB returns the same rate at multiple lock periods (30/45/60) each with a
     // different price. The user picks a single desired lock in the form — keep
@@ -977,7 +996,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const desiredLockDays = Number(obRequest?.loanInformation?.desiredLockPeriod) || 30
-    const result = parseOBResponse(responseData, details, desiredLockDays)
+    const result = parseOBResponse(responseData, details, desiredLockDays, !!formData?.isShortTermRental)
 
     // When the eligible set is empty, hit the dedicated /ineligible endpoint
     // so the broker sees WHY every program was disqualified. This list is

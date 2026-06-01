@@ -109,6 +109,8 @@ interface Adjustment {
   amount: number      // Price adjustment (e.g., -1.500, 0.500)
   rateAdj?: number    // Rate adjustment (e.g., 0.000%, 0.125%)
   percentage?: number // Alternative rate field
+  advisory?: boolean  // Advisory row (e.g., Short Term Rental) — show note, not a value
+  note?: string       // Advisory text shown in place of a numeric adjustor
 }
 
 interface RateOption {
@@ -255,7 +257,9 @@ const sanitizePricingResult = (data: unknown): PricingResult | null => {
                 adjustments: Array.isArray(o.adjustments) ? o.adjustments.map((adj: any) => ({
                   description: String(adj.description || ''),
                   amount: safeNumber(adj.amount),
-                  rateAdj: safeNumber(adj.rateAdj)
+                  rateAdj: safeNumber(adj.rateAdj),
+                  advisory: !!adj.advisory,
+                  note: adj.note ? String(adj.note) : undefined
                 })) : []
               }))
           : []
@@ -1432,6 +1436,9 @@ export default function App() {
       ? `<table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
           <tr style="background:#f8fafc;"><th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">Description</th><th style="text-align:right;padding:8px 12px;color:#64748b;font-weight:600;">Adjustment</th></tr>
           ${targetPricing.adjustments.map(adj => {
+            if (adj.advisory) {
+              return `<tr style="border-top:1px solid #e2e8f0;"><td style="padding:8px 12px;color:#334155;">${adj.description}</td><td style="padding:8px 12px;text-align:right;font-style:italic;color:#64748b;">${adj.note || 'see note'}</td></tr>`
+            }
             const val = adj.amount || 0
             const color = val > 0 ? '#059669' : val < 0 ? '#dc2626' : '#475569'
             return `<tr style="border-top:1px solid #e2e8f0;"><td style="padding:8px 12px;color:#334155;">${adj.description}</td><td style="padding:8px 12px;text-align:right;font-weight:600;color:${color};">${val > 0 ? '+' : ''}${val.toFixed(3)}</td></tr>`
@@ -2644,6 +2651,45 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Short Term Rental (STR) — always shown here in Property
+                      Information. Selecting Yes flips both the underlying
+                      isShortTermRental and isSeasonalProperty flags so
+                      downstream OB pricing logic is unchanged. */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental</label>
+                    <Select
+                      name="isShortTermRental"
+                      value={strChoice}
+                      onValueChange={(v) => {
+                        const choice = v === 'yes' ? 'yes' : 'no'
+                        setStrChoice(choice)
+                        const yes = choice === 'yes'
+                        handleInputChange('isShortTermRental', yes)
+                        handleInputChange('isSeasonalProperty', yes)
+                      }}
+                    >
+                      <SelectTrigger id="isShortTermRental" className="h-11 text-sm border-slate-300 focus:ring-blue-500">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Vacant — always shown here in Property Information,
+                      defaults to No so the OB API receives an explicit value
+                      on every quote regardless of loan purpose. */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="isVacant" className="block text-sm font-medium text-slate-900">Vacant</label>
+                    <Select name="isVacant" value={formData.isVacant ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isVacant', v === 'yes')}>
+                      <SelectTrigger id="isVacant" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>
@@ -2775,18 +2821,6 @@ export default function App() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {formData.loanPurpose !== 'purchase' && (
-                    <div className="space-y-1.5">
-                      <label htmlFor="isVacant" className="block text-sm font-medium text-slate-900">Vacant</label>
-                      <Select name="isVacant" value={formData.isVacant ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isVacant', v === 'yes')}>
-                        <SelectTrigger id="isVacant" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no">No</SelectItem>
-                          <SelectItem value="yes">Yes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    )}
                     {formData.documentationType === 'dscr' && (
                       <>
                         <div className="space-y-1.5">
@@ -2830,32 +2864,6 @@ export default function App() {
                         </div>
                       </>
                     )}
-                    {/* Short Term Rental (STR) — dropdown replaces the legacy
-                        Seasonal/STR pill. Selecting Yes flips both the
-                        underlying isShortTermRental and isSeasonalProperty
-                        flags so downstream OB pricing logic is unchanged. */}
-                    <div className="space-y-1.5">
-                      <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental</label>
-                      <Select
-                        name="isShortTermRental"
-                        value={strChoice}
-                        onValueChange={(v) => {
-                          const choice = v === 'yes' ? 'yes' : 'no'
-                          setStrChoice(choice)
-                          const yes = choice === 'yes'
-                          handleInputChange('isShortTermRental', yes)
-                          handleInputChange('isSeasonalProperty', yes)
-                        }}
-                      >
-                        <SelectTrigger id="isShortTermRental" className="h-11 text-sm border-slate-300 focus:ring-blue-500">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no">No</SelectItem>
-                          <SelectItem value="yes">Yes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                     {/* Rental Survey Type — disabled placeholder; investor logic
                         will wire up once underwriting confirms the doc matrix. */}
                     <div className="space-y-1.5">
@@ -3446,12 +3454,19 @@ export default function App() {
                                                   </div>
                                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
                                                     {adjustments.map((adj: Adjustment, i: number) => (
-                                                      <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-white border tql-border-steel">
-                                                        <span className="text-[11px] tql-text-primary truncate" title={adj.description}>{adj.description}</span>
-                                                        <span className={`text-[11px] font-semibold tabular-nums ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
-                                                          {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
-                                                        </span>
-                                                      </div>
+                                                      adj.advisory ? (
+                                                        <div key={i} className="md:col-span-2 lg:col-span-3 flex items-start gap-2 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-200">
+                                                          <span className="text-[11px] font-semibold text-amber-900 shrink-0">{adj.description}:</span>
+                                                          <span className="text-[11px] italic text-amber-800 leading-snug">{adj.note}</span>
+                                                        </div>
+                                                      ) : (
+                                                        <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-white border tql-border-steel">
+                                                          <span className="text-[11px] tql-text-primary truncate" title={adj.description}>{adj.description}</span>
+                                                          <span className={`text-[11px] font-semibold tabular-nums ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
+                                                            {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
+                                                          </span>
+                                                        </div>
+                                                      )
                                                     ))}
                                                   </div>
                                                 </td>
@@ -3629,12 +3644,19 @@ export default function App() {
                                         {isOpen && (
                                           <div className="px-4 pb-3 pt-1 bg-slate-50 border-t border-slate-100">
                                             {adjList.map((adj: Adjustment, adjIdx: number) => (
-                                              <div key={adjIdx} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 text-xs">
-                                                <span className="tql-text-primary leading-snug">{adj.description}</span>
-                                                <span className={`font-semibold tabular-nums ml-4 shrink-0 ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
-                                                  {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
-                                                </span>
-                                              </div>
+                                              adj.advisory ? (
+                                                <div key={adjIdx} className="flex items-start gap-2 py-1.5 border-b border-slate-100 last:border-0 text-xs">
+                                                  <span className="font-semibold text-amber-900 shrink-0">{adj.description}:</span>
+                                                  <span className="italic text-amber-800 leading-snug">{adj.note}</span>
+                                                </div>
+                                              ) : (
+                                                <div key={adjIdx} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 text-xs">
+                                                  <span className="tql-text-primary leading-snug">{adj.description}</span>
+                                                  <span className={`font-semibold tabular-nums ml-4 shrink-0 ${adj.amount >= 0 ? 'tql-text-link' : 'text-[#EF4444]'}`}>
+                                                    {adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(3)}
+                                                  </span>
+                                                </div>
+                                              )
                                             ))}
                                           </div>
                                         )}
