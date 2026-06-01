@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Globe, ShieldCheck, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, GripHorizontal, Lock, Printer, Share2 } from 'lucide-react'
+import { DollarSign, Loader2, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, X, Zap, Mail, LogOut, User, HelpCircle, Send, BarChart3, Menu, Sun, GripHorizontal, Lock, Printer, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { LoginPage } from '@/components/auth/LoginPage'
@@ -1049,9 +1049,6 @@ export default function App() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
-  const [lpResult, setLpResult] = useState<any>(null)
-  const [lpLoading, setLpLoading] = useState(false)
-  const [lpUnlocked] = useState(false)
   const [, setObResult] = useState<any>(null)
   const [obLoading, setObLoading] = useState(false)
   // ChatCom & User Chat lightbox overlays
@@ -1266,7 +1263,6 @@ export default function App() {
     // Clear stale pricing results when any form field changes after pricing
     if (result) {
       setResult(null)
-      setLpResult(null)
       setPricedAt(null)
       setOpenShareProgram(null)
     }
@@ -1769,7 +1765,7 @@ export default function App() {
       return
     }
 
-    setIsLoading(true); setError(null); setResult(null); setLpResult(null); setPricedAt(null); setLpLoading(true); setObResult(null); setObLoading(true)
+    setIsLoading(true); setError(null); setResult(null); setPricedAt(null); setObResult(null); setObLoading(true)
     const isDSCR = formData.documentationType === 'dscr'
     const requestBody = {
       ...formData,
@@ -1842,7 +1838,6 @@ export default function App() {
     } finally {
       setIsLoading(false)
       setObLoading(false)
-      setLpLoading(false)
     }
   }
 
@@ -3749,130 +3744,6 @@ export default function App() {
                     )}
 
                     {/* Secondary Access — HIDDEN */}
-
-                    {/* LP Loading */}
-                    {(lpUnlocked || formData.isCrossCollateralized) && lpLoading && !lpResult && (
-                      <div className="mt-4 border border-slate-200 bg-white rounded-xl p-6 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Globe className="w-5 h-5 text-slate-400" />
-                          <span className="text-sm text-slate-400 font-medium tracking-wide">Scanning national pricing engines...</span>
-                        </div>
-                        <div className="skeleton-card h-12 w-full" />
-                        <div className="skeleton-card h-12 w-full" />
-                        <div className="skeleton h-4 w-40" />
-                      </div>
-                    )}
-
-                    {/* LP Results */}
-                    {(lpUnlocked || formData.isCrossCollateralized) && lpResult && lpResult.rateOptions && lpResult.rateOptions.length > 0 && (() => {
-                      const isInvestment = formData.occupancyType === 'investment'
-                      const prepayMonths = parseInt(formData.prepayPeriod) || 0
-                      const priceCeiling = 103.000
-                      const adjustedLpRates = lpResult.rateOptions
-                        .map((opt: any) => {
-                          const prog = (opt.program || '').toUpperCase()
-                          const needsMargin = prog.includes('TITANIUM ADVANTAGE') || prog.includes('CASH FLOW ADVANTAGE')
-                          const marginAdj = needsMargin ? 1.375 : 0
-                          return {
-                            ...opt,
-                            price: safeNumber(opt.price) - 0.125 - marginAdj,
-                            totalAdjustments: safeNumber(opt.totalAdjustments) - marginAdj,
-                          }
-                        })
-                      const filteredLpRates = (() => {
-                        const sorted = adjustedLpRates
-                          .filter((opt: any) => opt.price >= 99.500 && opt.price <= priceCeiling)
-                          .filter((opt: any, idx: number, arr: any[]) => {
-                            const rateStep = Math.round(opt.rate / 0.125) * 0.125
-                            return idx === arr.findIndex((o: any) => Math.round(o.rate / 0.125) * 0.125 === rateStep)
-                          })
-                        const result: any[] = []
-                        let lastPrice = -Infinity
-                        for (const opt of sorted) {
-                          if (result.length > 0 && opt.price <= lastPrice) break
-                          result.push(opt)
-                          lastPrice = opt.price
-                        }
-                        return result
-                      })()
-                      const closestPrice = filteredLpRates.length > 0
-                        ? Math.min(...filteredLpRates.map((o: any) => Math.abs(o.price - 100)))
-                        : 999
-                      const prepayLabel = isInvestment && prepayMonths > 0 ? ` - ${prepayMonths} Month Prepay` : ''
-                      return (
-                        <div className="mt-4 border border-slate-200 bg-white rounded-xl overflow-hidden">
-                          <div className="px-5 pt-5 pb-3">
-                            <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
-                              <div className="flex items-center gap-2.5">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-slate-50">
-                                  <Zap className="w-4 h-4 text-slate-900" />
-                                </div>
-                                <div className="text-base font-semibold text-slate-900 tracking-tight">National Wholesale Rate Results{prepayLabel}</div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1.5 text-[11px] tql-text-link bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-[4px] font-medium">
-                                  <ShieldCheck className="w-3 h-3" />Verified
-                                </div>
-                                <span className="text-[11px] font-mono text-slate-400">{filteredLpRates.length} rates</span>
-                              </div>
-                            </div>
-                            <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                              <Globe className="w-3 h-3 text-slate-400" />
-                              We just checked all of the Industry Leading Pricing Engines for you.
-                            </p>
-                          </div>
-                          <div className="px-5 pb-5">
-                            {filteredLpRates.length > 0 ? (
-                              <div className="overflow-x-auto rounded-lg border border-slate-200">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="border-b border-slate-200">
-                                      <th className="text-right py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Rate</th>
-                                      <th className="text-right py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Price</th>
-                                      <th className="text-right py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Payment</th>
-                                      <th className="text-right py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Price Adj.</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {filteredLpRates.map((opt: any, idx: number) => {
-                                      const isClosest = Math.abs(opt.price - 100) === closestPrice
-                                      return (
-                                        <tr key={idx} className={`border-t border-slate-100 transition-colors duration-150 ${isClosest ? 'bg-slate-50' : 'hover:bg-slate-50'}`}>
-                                          <td className="py-2.5 px-4 text-right font-semibold text-slate-900 font-mono">{safeNumber(opt.rate).toFixed(3)}%</td>
-                                          <td className={`py-2.5 px-4 text-right font-mono ${opt.price >= 100 ? 'tql-text-link font-semibold' : 'text-slate-900'}`}>{safeNumber(opt.price).toFixed(3)}</td>
-                                          <td className="py-2.5 px-4 text-right text-slate-900 font-mono">{opt.payment > 0 ? formatCurrency(safeNumber(opt.payment)) : '-'}</td>
-                                          <td className="py-2.5 px-4 text-right font-mono">
-                                            {opt.totalAdjustments !== 0 ? (
-                                              <span className={opt.totalAdjustments > 0 ? 'tql-text-link' : 'text-[#EF4444]'}>
-                                                {opt.totalAdjustments > 0 ? '+' : ''}{safeNumber(opt.totalAdjustments).toFixed(3)}
-                                              </span>
-                                            ) : <span className="text-slate-400">-</span>}
-                                          </td>
-                                        </tr>
-                                      )
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-slate-400 text-center py-3">
-                                {adjustedLpRates.length} rates returned, none in price range
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })()}
-
-                    {/* LP empty */}
-                    {(lpUnlocked || formData.isCrossCollateralized) && !lpLoading && lpResult && (!lpResult.rateOptions || lpResult.rateOptions.length === 0) && (
-                      <div className="mt-4 border border-slate-200 bg-white rounded-xl p-6">
-                        <div className="flex flex-col items-center gap-2">
-                          <Globe className="w-5 h-5 text-slate-400" />
-                          <p className="text-sm text-slate-400 text-center">No LP market rates available for this scenario</p>
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </motion.div>
