@@ -86,6 +86,9 @@ interface LoanData {
   isCrossCollateralized: boolean
   isMixedUsePML: boolean
   is5PlusUnits: boolean
+  // Exact 5-9 multifamily unit count ('no' = not a 5-9 unit property).
+  // Drives is5PlusUnits (true whenever a 5-9 count is selected).
+  unitsFivePlus: string
   isShortTermRental: boolean
   isVestedInLLCOrCorp: boolean
   hasITIN: boolean
@@ -358,6 +361,7 @@ const DEFAULT_FORM_DATA: LoanData = {
   isCrossCollateralized: false,
   isMixedUsePML: false,
   is5PlusUnits: false,
+  unitsFivePlus: 'no',
   isShortTermRental: false,
   isVestedInLLCOrCorp: false,
   hasITIN: false,
@@ -699,7 +703,7 @@ function buildReserveRequestEmail(
     structureType: 'Structure', creditScore: 'FICO', dti: 'DTI %', citizenship: 'Citizenship',
     documentationType: 'Doc Type', isSelfEmployed: 'Self-Employed', isFTHB: 'First-Time Buyer',
     hasITIN: 'Has ITIN', isRuralProperty: 'Rural Property', isNonWarrantableProject: 'Non-Warrantable',
-    isMixedUsePML: 'Mixed Use', is5PlusUnits: '5+ Units', isSeasonalProperty: 'Seasonal',
+    isMixedUsePML: 'Mixed Use', is5PlusUnits: '5-9 Units', unitsFivePlus: '5-9 Units', isSeasonalProperty: 'Seasonal',
     isShortTermRental: 'Short-Term Rental', isCrossCollateralized: 'Cross-Collateralized',
     isVestedInLLCOrCorp: 'Vested in LLC/Corp', prepayPeriod: 'Prepayment Penalty',
     prepayType: 'Prepay Fee Type', dscrEntityType: 'DSCR Entity', dscrRatio: 'DSCR Range',
@@ -2608,13 +2612,28 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* 5-9 Units — exact multifamily unit count. "No" means the
+                      property is not a 5-9 unit building. Selecting any count
+                      flips is5PlusUnits, which drives OB's CustomProductFilter01
+                      (5+ Units). Defaults to No. */}
                   <div className="space-y-1.5">
-                    <label htmlFor="is5PlusUnits" className="block text-sm font-medium text-slate-900">5+ Units</label>
-                    <Select name="is5PlusUnits" value={formData.is5PlusUnits ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('is5PlusUnits', v === 'yes')}>
-                      <SelectTrigger id="is5PlusUnits" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                    <label htmlFor="unitsFivePlus" className="block text-sm font-medium text-slate-900">5-9 Units</label>
+                    <Select
+                      name="unitsFivePlus"
+                      value={formData.unitsFivePlus || 'no'}
+                      onValueChange={(v) => {
+                        handleInputChange('unitsFivePlus', v)
+                        handleInputChange('is5PlusUnits', v !== 'no')
+                      }}
+                    >
+                      <SelectTrigger id="unitsFivePlus" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="no">No</SelectItem>
-                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="6">6</SelectItem>
+                        <SelectItem value="7">7</SelectItem>
+                        <SelectItem value="8">8</SelectItem>
+                        <SelectItem value="9">9</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2652,9 +2671,11 @@ export default function App() {
                     </Select>
                   </div>
                   {/* Short Term Rental (STR) — always shown here in Property
-                      Information. Selecting Yes flips both the underlying
-                      isShortTermRental and isSeasonalProperty flags so
-                      downstream OB pricing logic is unchanged. */}
+                      Information. Selecting Yes flips the underlying
+                      isShortTermRental + isSeasonalProperty flags AND clears
+                      Vacant, because a Vacant property cannot also be an
+                      operating short-term rental (the two are mutually
+                      exclusive). Vacant is a separate field — see below. */}
                   <div className="space-y-1.5">
                     <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental</label>
                     <Select
@@ -2666,6 +2687,8 @@ export default function App() {
                         const yes = choice === 'yes'
                         handleInputChange('isShortTermRental', yes)
                         handleInputChange('isSeasonalProperty', yes)
+                        // STR = Yes → Vacant does not apply; force it to No.
+                        if (yes) handleInputChange('isVacant', false)
                       }}
                     >
                       <SelectTrigger id="isShortTermRental" className="h-11 text-sm border-slate-300 focus:ring-blue-500">
@@ -2677,18 +2700,29 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Vacant — always shown here in Property Information,
-                      defaults to No so the OB API receives an explicit value
-                      on every quote regardless of loan purpose. */}
+                  {/* Vacant — its own field, independent of Short Term Rental.
+                      When STR = Yes, Vacant does not apply: the control is
+                      disabled and reads N/A, and OB receives Vacant = No. */}
                   <div className="space-y-1.5">
-                    <label htmlFor="isVacant" className="block text-sm font-medium text-slate-900">Vacant</label>
-                    <Select name="isVacant" value={formData.isVacant ? 'yes' : 'no'} onValueChange={(v) => handleInputChange('isVacant', v === 'yes')}>
-                      <SelectTrigger id="isVacant" className="h-11 text-sm border-slate-300 focus:ring-blue-500"><SelectValue /></SelectTrigger>
+                    <label htmlFor="isVacant" className={`block text-sm font-medium ${formData.isShortTermRental ? 'text-slate-400' : 'text-slate-900'}`}>Vacant</label>
+                    <Select
+                      name="isVacant"
+                      value={formData.isShortTermRental ? 'na' : (formData.isVacant ? 'yes' : 'no')}
+                      disabled={formData.isShortTermRental}
+                      onValueChange={(v) => handleInputChange('isVacant', v === 'yes')}
+                    >
+                      <SelectTrigger id="isVacant" className="h-11 text-sm border-slate-300 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
+                        {formData.isShortTermRental && <SelectItem value="na">N/A</SelectItem>}
                         <SelectItem value="no">No</SelectItem>
                         <SelectItem value="yes">Yes</SelectItem>
                       </SelectContent>
                     </Select>
+                    {formData.isShortTermRental && (
+                      <p className="text-[10px] text-slate-400">Not applicable for short-term rentals.</p>
+                    )}
                   </div>
                 </div>
               )}

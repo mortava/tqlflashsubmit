@@ -262,16 +262,19 @@ function buildOBRequest(f: any): any {
     mortgageLatesx120_12Mos: 0,
     mortgageLatesx120_13to24Mos: 0,
     debtConsolidation: false,
-    // uniqueProperty fires when ANY of the "specialty property" pills is on —
-    // OB uses this flag to surface its specialty-property eligibility tier.
-    uniqueProperty: !!(f.isNonWarrantableProject || f.isMixedUsePML || f.is5PlusUnits),
+    // uniqueProperty is ALWAYS No. Mixed Use and 5-9 Units are their own
+    // distinct form fields/overlays (Mixed Use is captured separately; 5-9
+    // Units routes through CustomProductFilter01) — they must NOT roll up into
+    // OB's generic specialty-property flag.
+    uniqueProperty: false,
     entityVesting: !!f.isVestedInLLCOrCorp,
     firstTimeInvestor: !!f.isFirstTimeInvestor,
     ruralProperty: !!f.isRuralProperty,
     shortTermRental: !!f.isShortTermRental,
-    // vacantUnleased mirrors the Seasonal/STR pill — second-home / vacation /
-    // STR scenarios route through this flag for OB's underwriting overlays.
-    vacantUnleased: !!f.isSeasonalProperty,
+    // vacantUnleased is driven solely by the Vacant field — NOT by STR/Seasonal.
+    // A short-term rental is an operating property, so when STR = Yes, Vacant
+    // does not apply and this flag is forced off.
+    vacantUnleased: !f.isShortTermRental && !!f.isVacant,
   }
 
   // DSCR ratio — required in expandedGuidelines when incomeVerificationType is
@@ -382,7 +385,7 @@ function buildOBRequest(f: any): any {
     customFields: [
       { customFieldInputName: 'CustomProductFilter01', customFieldValue: f.is5PlusUnits         ? 109 : 110, columnName: 'CustomLenderField4' },
       { customFieldInputName: 'CustomProductFilter02', customFieldValue: f.isShortTermRental    ? 109 : 110, columnName: 'CustomLenderField5' },
-      { customFieldInputName: 'CustomProductFilter03', customFieldValue: f.isVacant             ? 109 : 110, columnName: 'CustomLenderField7' },
+      { customFieldInputName: 'CustomProductFilter03', customFieldValue: (!f.isShortTermRental && f.isVacant) ? 109 : 110, columnName: 'CustomLenderField7' },
       { customFieldInputName: 'CustomProductFilter04', customFieldValue: f.isRuralProperty      ? 109 : 110, columnName: 'CustomLenderField8' },
       { customFieldInputName: 'CustomProductFilter05', customFieldValue: f.isFirstTimeInvestor  ? 109 : 110, columnName: 'CustomLenderField10' },
       { customFieldInputName: 'CustomLenderField11',   customFieldValue: f.isDecliningMarket    ? 109 : 110, columnName: 'CustomLenderField11' },
