@@ -2665,12 +2665,10 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Short Term Rental (STR) — always shown here in Property
-                      Information. Selecting Yes flips the underlying
-                      isShortTermRental + isSeasonalProperty flags AND clears
-                      Vacant, because a Vacant property cannot also be an
-                      operating short-term rental (the two are mutually
-                      exclusive). Vacant is a separate field — see below. */}
+                  {/* Short Term Rental (STR) — a plain Yes/No that passes to OB
+                      verbatim regardless of income doc type; OB decides
+                      eligibility. Selecting Yes flips isShortTermRental +
+                      isSeasonalProperty and clears Vacant (mutually exclusive). */}
                   <div className="space-y-1.5">
                     <label htmlFor="isShortTermRental" className="block text-sm font-medium text-slate-900">Short Term Rental</label>
                     <Select

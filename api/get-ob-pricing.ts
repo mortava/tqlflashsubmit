@@ -270,6 +270,11 @@ function buildOBRequest(f: any): any {
     entityVesting: !!f.isVestedInLLCOrCorp,
     firstTimeInvestor: !!f.isFirstTimeInvestor,
     ruralProperty: !!f.isRuralProperty,
+    // Short Term Rental passes through to OB as the borrower selected it (Yes/No)
+    // regardless of income doc type — OB decides eligibility. NOTE: empirically
+    // FullDoc + STR=Yes returns zero eligible products in this channel (see
+    // scripts/ob-probe-str-fulldoc.mjs); that is OB's product-guideline call,
+    // not something we suppress here.
     shortTermRental: !!f.isShortTermRental,
     // vacantUnleased is driven solely by the Vacant field — NOT by STR/Seasonal.
     // A short-term rental is an operating property, so when STR = Yes, Vacant
