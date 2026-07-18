@@ -1,5 +1,5 @@
 -- ============================================================
--- OpenPrice Chat — Role-Based User System
+-- QUALR Chat — Role-Based User System
 -- Run this in Supabase Dashboard → SQL Editor
 -- Then enable Realtime on new tables as needed
 -- ============================================================
@@ -110,7 +110,7 @@ BEGIN
         'display_name', v_user.display_name,
         'role', v_user.role,
         'company_id', v_user.company_id,
-        'company_name', COALESCE(v_company_name, 'OpenBroker Labs')
+        'company_name', COALESCE(v_company_name, 'Qualr LOS')
       )
     );
   ELSE
@@ -258,7 +258,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Seed Data
 -- ============================================================
 
--- DEFY TPO company
+-- TPO company
 INSERT INTO public.chat_companies (id, name)
 VALUES ('00000000-0000-0000-0000-000000000001', 'DEFY TPO')
 ON CONFLICT (id) DO NOTHING;
@@ -266,9 +266,9 @@ ON CONFLICT (id) DO NOTHING;
 -- Super Admin: chatv1@qualr.com
 INSERT INTO public.chat_system_users (email, password_hash, display_name, role, company_id)
 VALUES (
-  'chatv1@qualr.com',
-  crypt('myPlantshop25$', gen_salt('bf')),
-  'OpenBroker Labs Admin',
+  'sales@qualr.com',
+  crypt('suPlantshop25$', gen_salt('bf')),
+  'Qualr LOS Admin',
   'super_admin',
   NULL
 ) ON CONFLICT (email) DO NOTHING;
@@ -277,8 +277,8 @@ VALUES (
 INSERT INTO public.chat_system_users (email, password_hash, display_name, role, company_id)
 VALUES (
   'service@defytpo.com',
-  crypt('opPlantshop25%', gen_salt('bf')),
-  'DEFY TPO Admin',
+  crypt('suPlantshop25%', gen_salt('bf')),
+  'TPO Admin',
   'company_admin',
   '00000000-0000-0000-0000-000000000001'
 ) ON CONFLICT (email) DO NOTHING;
