@@ -1,5 +1,5 @@
 -- ============================================================
--- OpenPrice Live Chat — Supabase Table Setup
+-- QUAKR Chat — Supabase Table Setup
 -- Run this in Supabase Dashboard → SQL Editor
 -- Then enable Realtime on both tables:
 --   Dashboard → Database → Replication → Enable for chat_conversations & chat_messages
