@@ -26,14 +26,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Caller-supplied FROM is allowed but only when it ends with one of TQL's
   // verified Resend domains. Anything else falls back to the default sender.
-  const VERIFIED_DOMAINS = ['tqltpo.com', 'tqlend.com']
+  const VERIFIED_DOMAINS = ['defywholesale.com', 'defytpo.com']
   const isVerifiedFrom = (() => {
     if (typeof from !== 'string' || !from) return false
     const m = from.match(/<([^>]+)>/)
     const addr = (m ? m[1] : from).trim().toLowerCase()
     return VERIFIED_DOMAINS.some(d => addr.endsWith('@' + d) || addr.endsWith('.' + d))
   })()
-  const fromAddress = isVerifiedFrom ? from : 'TQL TotalPricer <TQLQuote@tqltpo.com>'
+  const fromAddress = isVerifiedFrom ? from : 'TQL TotalPricer <quotes@defywholesale.com>'
 
   try {
     const response = await fetch(RESEND_API_URL, {
